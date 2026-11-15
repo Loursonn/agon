@@ -5,8 +5,8 @@ import type { HyroxAlert } from "@/features/shared/types/hyrox";
 import type { CompareKind } from "@/lib/hyrox/raceCompare";
 
 /**
- * « Comparer à » (coach) : course précédente, plan de course ou médiane du
- * niveau ; change la colonne Écart et le pointillé d'allure. Les alertes de la
+ * « Comparer à » (coach) : l'objectif de la course ou la course précédente ;
+ * change la colonne Écart et le pointillé d'allure. Les alertes de la
  * course (`alerts()`) à droite.
  */
 export default function RaceCompareBar({ value, onChange, options, alerts }: {
@@ -24,7 +24,7 @@ export default function RaceCompareBar({ value, onChange, options, alerts }: {
             const on = o.key === value;
             return (
               <button key={o.key} type="button" role="radio" aria-checked={on} disabled={!o.available} onClick={() => onChange(o.key)}
-                title={o.available ? undefined : o.key === "plan" ? "Aucun plan de course pour cette course" : "Pas de course précédente"}
+                title={o.available ? undefined : o.key === "objective" ? "Pas d'objectif : il manque des temps de run" : "Pas de course précédente"}
                 style={{
                   height: 30, padding: "0 12px", borderRadius: 7, border: "none", fontSize: 12.5, fontFamily: "inherit", whiteSpace: "nowrap",
                   background: on ? C.s2 : "transparent", color: !o.available ? C.tx3 : on ? C.tx : C.tx2,

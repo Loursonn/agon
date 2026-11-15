@@ -177,7 +177,7 @@ describe("constats complémentaires", () => {
     const lvl: Record<string, number> = { run_2: 300, run_3: 310, run_4: 300, run_5: 320, run_6: 320, run_7: 325, run_8: 340 };
     const withLevel = athleteFindings({ analysis: a, above: null, gains: null, sv2: null, levelP50: (k) => lvl[k] ?? null });
     expect(withLevel[0].text).toBe("Après sled pull, ton run a ralenti de 5 s/km par rapport à ta croisière (runs 2 à 7), contre −15 d'habitude à ton niveau.");
-    expect(f[2].text).toBe("Roxzone : 7 min 30 s, soit 46 s de plus que la médiane de ton niveau.");
+    expect(f[2].text).toBe("Roxzone : 7 min 30 s, soit 46 s de plus que l'objectif.");
   });
 
   it("activité de la course : durée la plus proche du chrono, au moins 80 %", () => {

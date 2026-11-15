@@ -107,6 +107,39 @@ export const RELEASE_NOTES: ReleaseNote[] = [
     ],
   },
   {
+    id: "2026-11-15-hyrox-course-contre-objectif",
+    date: "2026-11-15",
+    kind: "feature",
+    title: "HYROX : chaque course est analysée contre son objectif",
+    summary:
+      "L'analyse d'une course HYROX ne compare plus l'athlète à la médiane de sa catégorie : chaque segment est jugé contre l'objectif de la course, en secondes.",
+    sections: [
+      {
+        title: "L'objectif de la course",
+        points: [
+          "C'est le plan de course s'il y en a un. Sinon, Agon construit l'objectif à partir de l'allure moyenne des 8 runs du jour : les stations, la Roxzone et la forme des runs attendues chez les athlètes qui courent à cette allure.",
+          "En haut de l'analyse : le chrono, puis l'écart à l'objectif (en avance, dans l'objectif ou en retard), avec l'allure de run visée.",
+        ],
+      },
+      {
+        title: "Segment par segment",
+        points: [
+          "La frise et le tableau des 17 segments montrent l'objectif et l'écart de chaque segment : vert en avance, gris dans l'objectif (2 % de marge), orange en retard.",
+          "Un run 1 nettement plus rapide que prévu est signalé « départ rapide », jamais comme un point fort.",
+          "Points forts, points à travailler et « où gagner du temps » sont comptés en secondes contre l'objectif.",
+          "Côté coach, « Comparer à » propose l'objectif ou la course précédente.",
+        ],
+      },
+      {
+        title: "Ce qui disparaît",
+        points: [
+          "Les positions « top x % » calculées, les couleurs fort / dans la norme / à travailler, le profil runner / hybride et l'équivalence de chrono entre catégories. Seul le rang officiel de la course reste affiché.",
+          "Dans Ma saison, le profil des stations devient l'écart de chaque station à l'objectif de la dernière course.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-15-volume-course-semaine",
     date: "2026-11-15",
     kind: "feature",

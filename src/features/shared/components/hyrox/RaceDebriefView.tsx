@@ -4,42 +4,43 @@ import { CARD, KICKER, LABEL, MONO } from "@/features/shared/components/seance/s
 import type { DebriefItem, RaceDebrief, StripSegment } from "@/lib/hyrox/raceDebrief";
 import type { GainItem } from "@/lib/hyrox/raceWatch";
 import { fmtClock } from "@/lib/seance";
-import { STANDING_LEGEND, standingColor } from "./raceAnalysisShared";
+import { OBJECTIVE_LEGEND, objectiveColor } from "./raceAnalysisShared";
 
 /**
  * Débrief visuel d'une course (planches « HYROX · refonte visuelle », validées
- * par Hugo le 15/11/2026) : la course segment par segment, ce qui a marché, ce
- * qui a coûté, où gagner du temps, et ce qui a bougé depuis la course
+ * par Hugo le 15/11/2026), contre l'objectif de la course : la course segment
+ * par segment, ce qui a marché, ce qui a coûté, où gagner du temps, et ce qui
+ * a bougé depuis la course
  * précédente du même format. Téléphone : sections empilées ; ordinateur :
  * trois colonnes. Toutes les phrases sont calculées (`raceDebrief`).
  */
 
 const dot = (color: string, square = false): CSSProperties => ({ width: 9, height: 9, borderRadius: square ? 2 : 999, background: color, flex: "none" });
 
-export function StandingLegend({ square = false, extra }: { square?: boolean; extra?: ReactNode }) {
+export function ObjectiveLegend({ square = false, extra }: { square?: boolean; extra?: ReactNode }) {
   return (
     <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 11.5, color: C.tx2 }}>
-      {STANDING_LEGEND.map((l) => (
-        <span key={l.s} style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={dot(standingColor(l.s), square)} />{l.label}</span>
+      {OBJECTIVE_LEGEND.map((l) => (
+        <span key={l.s} style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={dot(objectiveColor(l.s), square)} />{l.label}</span>
       ))}
       {extra}
     </div>
   );
 }
 
-/** Frise : un bloc par segment, largeur = temps passé, couleur = position. */
+/** Frise : un bloc par segment, largeur = temps passé, couleur = écart à l'objectif. */
 export function RaceStrip({ segments, tall = false }: { segments: StripSegment[]; tall?: boolean }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <div role="img" aria-label="Course segment par segment, couleur selon la position dans la catégorie"
+      <div role="img" aria-label="Course segment par segment, couleur selon l'écart à l'objectif"
         style={{ display: "flex", gap: tall ? 3 : 2, height: tall ? 60 : 40, borderRadius: 8, overflow: "hidden" }}>
         {segments.map((s) => {
-          const start = s.key === "run_1" || s.standing == null;
+          const start = s.state == null;
           return (
-            <div key={s.key} title={`${s.label} · ${fmtClock(s.timeS)}${s.pct != null ? ` · top ${s.pct} %` : ""}`}
+            <div key={s.key} title={`${s.label} · ${fmtClock(s.timeS)}${s.deltaS != null ? ` · ${s.deltaS > 0 ? "+" : s.deltaS < 0 ? "−" : "±"}${Math.abs(s.deltaS)} s vs objectif` : ""}`}
               style={{
                 flexGrow: s.timeS, flexBasis: 0, minWidth: 0, borderRadius: tall ? 4 : 0, boxSizing: "border-box",
-                background: start ? "transparent" : standingColor(s.standing), border: start ? `1px dashed ${C.tx3}` : "none",
+                background: start ? "transparent" : objectiveColor(s.state), border: start ? `1px dashed ${C.tx3}` : "none",
                 display: "flex", flexDirection: "column", justifyContent: tall ? "space-between" : "flex-end", alignItems: tall ? "flex-start" : "center",
                 padding: tall ? 6 : "0 0 3px", overflow: "hidden",
               }}>
@@ -49,7 +50,7 @@ export function RaceStrip({ segments, tall = false }: { segments: StripSegment[]
           );
         })}
       </div>
-      <StandingLegend square extra={<span style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={{ ...dot("transparent", true), border: `1px dashed ${C.tx3}` }} />Run 1 (départ)</span>} />
+      <ObjectiveLegend square />
     </div>
   );
 }
@@ -96,7 +97,7 @@ function Gains({ items, possibleS }: { items: GainItem[]; possibleS: number | nu
           <div style={{ height: 6, borderRadius: 999, background: C.s2 }}>
             <div style={{ height: 6, borderRadius: 999, width: `${(g.gainS / max) * 100}%`, background: C.ac }} />
           </div>
-          {g.key !== "runs" && <span style={{ ...MONO, fontSize: 10.5, color: C.tx3 }}>{fmtClock(g.athleteS)} · médiane du niveau {fmtClock(g.medianS)}</span>}
+          {g.key !== "runs" && <span style={{ ...MONO, fontSize: 10.5, color: C.tx3 }}>{fmtClock(g.athleteS)} · objectif {fmtClock(g.medianS)}</span>}
         </div>
       ))}
     </div>
@@ -135,11 +136,11 @@ export default function RaceDebriefView({ debrief, strip, gains, possibleS, layo
   const you = coach ? "Le plus de temps perdu" : "Ce qui t'a coûté";
   const good = debrief.good.length
     ? debrief.good.map((g) => <ItemRow key={g.key} item={g} color={C.g} compact={layout === "desktop"} />)
-    : empty("Aucune station dans le top 35 % de la catégorie sur cette course.");
+    : empty("Aucun segment en avance sur l'objectif sur cette course.");
   const bad = debrief.bad.length
     ? debrief.bad.map((b) => <ItemRow key={b.key} item={b} color={C.o} compact={layout === "desktop"} />)
-    : empty("Rien de notable : partout au niveau de ta catégorie ou devant.");
-  const gainsBlock = gains.length ? <Gains items={gains.slice(0, 4)} possibleS={possibleS} /> : empty("Partout au niveau de la médiane ou devant.");
+    : empty("Rien en retard : partout dans l'objectif ou devant.");
+  const gainsBlock = gains.length ? <Gains items={gains.slice(0, 4)} possibleS={possibleS} /> : empty("Partout dans l'objectif ou devant.");
   const noRepsLine = noReps ? <span style={{ ...MONO, fontSize: 12, color: C.tx2 }}>{noReps}</span> : null;
   const sinceTitle = previousName ? `Depuis ${previousName}` : "Depuis la dernière course";
 

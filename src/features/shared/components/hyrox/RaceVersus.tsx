@@ -10,7 +10,7 @@ import { ddmm } from "./raceAnalysisShared";
 
 /**
  * Deux courses côte à côte (demande d'Hugo du 15/11/2026), dans le style du
- * débrief : chrono et position, ce qui a progressé et reculé, puis runs,
+ * débrief : chrono, ce qui a progressé et reculé, puis runs,
  * stations et Roxzone ligne à ligne. Ce qui n'est pas comparable (run 1,
  * stations entre formats ou charges différentes) reste affiché, grisé.
  */
@@ -27,14 +27,16 @@ const delta = (r: CompareRow) => {
 };
 const tone = (r: CompareRow) => (r.better == null ? (r.judged ? C.tx2 : C.tx3) : r.better ? C.g : C.o);
 
-function RaceHead({ r, tag, pct, accent }: { r: HyroxResult; tag: string; pct: number | null; accent: boolean }) {
+function RaceHead({ r, tag, accent }: { r: HyroxResult; tag: string; accent: boolean }) {
   return (
     <div style={{ ...CARD, padding: 14, display: "flex", flexDirection: "column", gap: 6, minWidth: 0, borderColor: accent ? alpha(C.ac, 0.45) : C.brd }}>
       <span style={{ ...LABEL, color: accent ? C.ac : C.tx3 }}>{tag} · {ddmm(r.date)}</span>
       <span style={{ ...DISPLAY, fontSize: 15, letterSpacing: "0.05em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.event_name}</span>
       <span style={{ fontSize: 12, color: C.tx2 }}>{CATEGORY_LABEL[raceCategory(r)]}{r.is_official ? "" : " · simulation"}</span>
       <span style={{ ...MONO, fontSize: 26, lineHeight: 1.1 }}>{fmtClock(r.total_s)}</span>
-      <span style={{ ...MONO, fontSize: 12, color: C.tx2 }}>{pct != null ? `top ${pct} % de sa catégorie` : "—"}</span>
+      {r.rank_overall != null && r.participants_overall
+        ? <span style={{ ...MONO, fontSize: 12, color: C.tx2 }}>rang {r.rank_overall} / {r.participants_overall}</span>
+        : null}
     </div>
   );
 }
@@ -92,25 +94,19 @@ function MoveList({ title, color, rows, empty }: { title: string; color: string;
 
 export default function RaceVersus({ cmp, phone, currentId }: { cmp: RaceComparison; phone: boolean; currentId?: string }) {
   const chrono = cmp.rows.find((r) => r.key === "total")!;
-  const posD = cmp.positionBefore != null && cmp.positionAfter != null ? cmp.positionBefore - cmp.positionAfter : null;
   const groups = (["runs", "stations", "roxzone"] as const).map((g) => ({ g, rows: cmp.rows.filter((r) => r.group === g) }));
-  const head = (r: HyroxResult, tag: string, pct: number | null) => <RaceHead r={r} tag={tag} pct={pct} accent={currentId ? r.id === currentId : tag === "Après"} />;
+  const head = (r: HyroxResult, tag: string) => <RaceHead r={r} tag={tag} accent={currentId ? r.id === currentId : tag === "Après"} />;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: phone ? 16 : 14 }}>
       <div style={{ display: "grid", gridTemplateColumns: phone ? "1fr 1fr" : "1fr 1fr minmax(220px, 1fr)", gap: 10 }}>
-        {head(cmp.before, "Avant", cmp.positionBefore)}
-        {head(cmp.after, "Après", cmp.positionAfter)}
+        {head(cmp.before, "Avant")}
+        {head(cmp.after, "Après")}
         <div style={{ ...CARD, padding: 14, display: "flex", flexDirection: "column", gap: 8, gridColumn: phone ? "1 / -1" : undefined }}>
           <span style={{ ...KICKER, color: C.ac }}>Écart</span>
           {cmp.sameCategory
             ? <span style={{ ...MONO, fontSize: 30, lineHeight: 1.1, color: tone(chrono) }}>{delta(chrono)}</span>
             : <span style={{ fontSize: 12.5, color: C.tx2 }}>Catégories différentes : le chrono ne se compare pas directement.</span>}
-          {posD != null && (
-            <span style={{ fontSize: 13, color: posD > 0 ? C.g : posD < 0 ? C.o : C.tx2 }}>
-              Position : top {cmp.positionBefore} % → top {cmp.positionAfter} %{posD !== 0 ? ` (${posD > 0 ? "+" : "−"}${Math.abs(posD)} pts)` : ""}
-            </span>
-          )}
         </div>
       </div>
 

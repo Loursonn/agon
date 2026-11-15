@@ -32,6 +32,19 @@ export function stateOf(deltaS: number, tolS: number, key?: string): ObjectiveSt
   return "on";
 }
 
+/**
+ * Cible d'un segment (`run_1`…, stations, `roxzone_total`, `total`) : la même
+ * forme que l'ancienne médiane du niveau, pour les vues qui lisent une référence
+ * par segment (runs, montre, gains).
+ */
+export function objectiveLookup(objective: PlanSegments): (segment: string) => number | null {
+  return (seg) => {
+    if (seg === "total") return planTotal(objective);
+    const v = (objective as unknown as Record<string, number | undefined>)[seg];
+    return typeof v === "number" && v > 0 ? v : null;
+  };
+}
+
 export interface SegmentVsObjective {
   key: PlanSegment;
   targetS: number;

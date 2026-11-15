@@ -479,6 +479,11 @@ Pastille « indice montre » (existante). Données Garmin : jamais d'IA (aucun c
 
 Chaque lot : Nouveautés, `npm run check`, push sur `dev`.
 
+**Avancement**
+- Lot 1 (15/11/2026) : fait. Migration `20261116180000` en prod, grille obj@1 (60 lignes).
+- Lot 2 (15/11/2026) : fait pour l'analyse de course et Ma saison. `objective/forRace.ts` (plan, sinon run du jour) ; en-tête, frise, débrief, tableau des 17 segments, onglets Runs et Gains, montre, « Comparer à » (objectif / course précédente) lisent l'objectif. Supprimés : `RaceCategoryCard`, `categoryEquivalence.ts`, `profilePercentiles`, `stationProfile`, `ownTotalPct`, positions dans « Comparer », profil runner / hybride de l'en-tête.
+- Restent sur la médiane jusqu'à leur lot : leviers coach (`raceLevers`, lot 3, l'onglet Gains passe alors à `raceStrategy`) ; vues coach Stations, Radar, Évolution (`standing()`, `segmentPositions`, lot 5). `hyrox_reference_segments` n'est plus lue que par ces vues.
+
 ---
 
 ## 12. Questions à Hugo

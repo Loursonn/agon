@@ -82,23 +82,23 @@ describe("plan de course", () => {
 
 describe("comparer à", () => {
   const prev = lyon({ id: "paris", run_1_s: 285, total_s: 5057, roxzone_total_s: 429 });
-  const plan = planFromTarget(4770, "women", refs)!;
-  const median = (s: string) => P50[s] ?? null;
+  const objective = planFromTarget(4770, "women", refs)!;
 
-  it("course précédente, plan, médiane", () => {
-    expect(compareTarget("previous", { previous: prev, plan, median })("run_1")).toBe(285);
-    expect(compareTarget("previous", { previous: prev, plan, median })("total")).toBe(5057);
-    expect(compareTarget("plan", { previous: prev, plan, median })("total")).toBe(4770);
-    expect(compareTarget("plan", { previous: prev, plan, median })("wall_balls")).toBe(plan.wall_balls);
-    expect(compareTarget("median", { previous: prev, plan, median })("roxzone_total")).toBe(331);
+  it("objectif de la course ou course précédente", () => {
+    expect(compareTarget("previous", { previous: prev, objective })("run_1")).toBe(285);
+    expect(compareTarget("previous", { previous: prev, objective })("total")).toBe(5057);
+    expect(compareTarget("objective", { previous: prev, objective })("total")).toBe(4770);
+    expect(compareTarget("objective", { previous: prev, objective })("wall_balls")).toBe(objective.wall_balls);
   });
 
-  it("sans donnée : « — » et choix indisponible ; défaut = plan, sinon médiane", () => {
-    const src = { previous: null, plan: null, median };
+  it("sans donnée : « — » et choix indisponible ; défaut = objectif, sinon course précédente", () => {
+    const src = { previous: null, objective: null };
     expect(compareTarget("previous", src)("run_1")).toBeNull();
-    expect(compareAvailable("plan", src)).toBe(false);
-    expect(defaultCompare(src)).toBe("median");
-    expect(defaultCompare({ ...src, plan })).toBe("plan");
+    expect(compareTarget("objective", src)("total")).toBeNull();
+    expect(compareAvailable("objective", src)).toBe(false);
+    expect(defaultCompare(src)).toBe("objective");
+    expect(defaultCompare({ ...src, previous: prev })).toBe("previous");
+    expect(defaultCompare({ previous: prev, objective })).toBe("objective");
   });
 });
 

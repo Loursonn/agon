@@ -98,6 +98,12 @@ export interface HyroxRacePlan {
   predicted_high_s: number | null;
   predicted_from: Record<string, number> | null;
   notes: string | null;
+  /** Run moyen de l'objectif (s/km), si le plan a été construit depuis le run. */
+  run_avg_s?: number | null;
+  /** Version de la grille d'objectif utilisée (« obj@1 »). */
+  model_version?: string | null;
+  /** Chrono verrouillé à l'édition d'une cible (les autres s'ajustent). */
+  locked_total?: boolean;
   created_at: string;
   updated_at: string;
 }

@@ -3,13 +3,12 @@ import { C, alpha } from "@/lib/theme";
 import { CARD, KICKER, LABEL, MONO, buttonStyle } from "@/features/shared/components/seance/seanceUi";
 import { HyroxPicto } from "@/features/shared/components/HyroxPicto";
 import type { ActivityStream } from "@shared/activityFiles/stream";
-import type { HyroxReferenceSegment } from "@/features/shared/types/hyrox";
-import { percentile } from "@/lib/hyrox/calc";
+import type { ObjectiveState, RaceVsObjective } from "@/lib/hyrox/objective/vsObjective";
 import { runCostAfter, shareAboveHr, type RaceWatchAnalysis, type SegmentWatch } from "@/lib/hyrox/raceWatch";
 import { excessLevel, type RunLookup } from "@/lib/hyrox/runPacing";
 import type { StationKey } from "@/features/shared/types/hyrox";
 import { DASH, fmtClock } from "@/lib/seance";
-import { STATION_PICTO, fmtDelta, segColor } from "./raceAnalysisShared";
+import { STATION_PICTO, fmtDelta, objectiveColor, segColor } from "./raceAnalysisShared";
 
 const pct = (x: number | null) => (x == null ? DASH : `${Math.round(x * 100)} %`);
 const sign = (x: number) => `${x > 0 ? "+" : x < 0 ? "−" : ""}${Math.abs(x)}`;
@@ -40,47 +39,32 @@ const costColor = (excess: number | null) => {
   return l === "bad" ? C.r : l === "warn" ? C.o : C.tx;
 };
 
-/** Jauge de position (0 = meilleur, à gauche) et « top x % », rouge au-delà de 75. */
-function Position({ p }: { p: number | null }) {
-  if (p == null) return <>{DASH}</>;
-  const bad = p >= 75;
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-      <span aria-hidden style={{ position: "relative", width: 34, height: 4, borderRadius: 2, background: C.s2, display: "inline-block" }}>
-        <span style={{ position: "absolute", left: `${Math.min(100, Math.max(0, p))}%`, top: -3, width: 3, height: 10, marginLeft: -1.5, borderRadius: 1, background: bad ? C.r : C.tx2 }} />
-      </span>
-      <span style={{ color: bad ? C.r : C.tx }}>top {p} %</span>
-    </span>
-  );
-}
-
 /**
  * Tableau des 17 segments : 16 runs et stations, la Roxzone (15 passages) et
- * le total. Plan = objectif du plan de course ; Écart = vs la référence
- * « Comparer à » (médiane sans choix) ; Position = top % de toute la
- * catégorie ; % Z3 = part au-dessus de SV2 ; coût run suivant = allure du run
- * qui suit la station − croisière (médiane des runs 2 à 7), avec l'habituel
- * du niveau entre parenthèses.
+ * le total. Objectif = cible de la course ; Écart = vs l'objectif (vert en
+ * avance, gris dans l'objectif, orange en retard ou départ rapide), ou vs la
+ * course précédente si le coach la choisit ; % Z3 = part au-dessus de SV2 ;
+ * coût run suivant = allure du run qui suit la station − croisière (médiane
+ * des runs 2 à 7), avec l'écart prévu par l'objectif entre parenthèses.
  */
 export default function RaceSegmentsTable({
-  analysis, refOf, posOf, levelP50 = null, stream, sv2, offset, totalS, totalRef, title, defaultOpen = false,
+  analysis, objective, vs, levelP50 = null, stream, sv2, offset, totalS, title, defaultOpen = false,
   compare = null, timeSource = null, attribution = null,
 }: {
   analysis: RaceWatchAnalysis;
-  /** Médiane du niveau (colonne Médiane). */
-  refOf: (seg: string) => HyroxReferenceSegment | null;
-  /** Références de position : toute la catégorie. */
-  posOf: (seg: string) => HyroxReferenceSegment | null;
+  /** Cible de l'objectif par segment (colonne Objectif). */
+  objective: (seg: string) => number | null;
+  /** États contre l'objectif (couleur de l'écart). */
+  vs: RaceVsObjective | null;
   levelP50?: RunLookup | null;
   stream: ActivityStream | null;
   sv2: number | null;
   offset: number;
   totalS: number;
-  totalRef: HyroxReferenceSegment | null;
   title: string;
   defaultOpen?: boolean;
-  /** Référence de la colonne Écart et objectifs du plan (coach). */
-  compare?: { label: string; target: (seg: string) => number | null; plan: ((seg: string) => number | null) | null } | null;
+  /** Coach : autre référence de la colonne Écart (course précédente). */
+  compare?: { label: string; target: (seg: string) => number | null } | null;
   timeSource?: string | null;
   attribution?: string | null;
 }) {
@@ -92,20 +76,20 @@ export default function RaceSegmentsTable({
   const runs = analysis.segments.filter((s) => s.kind === "run");
   const cads = runs.map((r) => r.avgCadence).filter((x): x is number => x != null);
   const z3 = (keep: (s: SegmentWatch) => boolean) => shareAboveHr(analysis, stream, sv2, offset, keep);
-  const target = compare?.target ?? ((seg: string) => refOf(seg)?.p50_s ?? null);
-  const plan = compare?.plan ?? null;
+  const target = compare?.target ?? objective;
+  const stateOf = (key: string): ObjectiveState | null =>
+    key === "total" ? vs?.total.state ?? null : vs?.segments.find((x) => x.key === key)?.state ?? null;
   const th: CSSProperties = { ...LABEL, fontSize: 10, textAlign: "right", padding: "6px 8px", whiteSpace: "nowrap" };
   const group: CSSProperties = { ...th, fontSize: 9.5, color: C.tx3, textAlign: "center", borderBottom: `1px solid ${C.brd}` };
   const td: CSSProperties = { ...MONO, fontSize: 12.5, textAlign: "right", padding: "7px 8px", borderTop: `1px solid ${C.brd}`, whiteSpace: "nowrap" };
   const left: CSSProperties = { ...td, fontFamily: "inherit", textAlign: "left" };
-  const deltaCell = (d: number | null) => (
-    <td style={{ ...td, color: d == null || Math.round(d) === 0 ? C.tx3 : d > 0 ? C.r : C.g }}>{fmtDelta(d, fmtClock)}</td>
-  );
+  const deltaCell = (key: string, d: number | null) => {
+    const st = compare ? null : stateOf(key);
+    const color = d == null ? C.tx3 : st ? (st === "on" ? C.tx2 : objectiveColor(st)) : Math.round(d) === 0 ? C.tx3 : d > 0 ? C.r : C.g;
+    return <td style={{ ...td, color }} title={st === "fast_start" ? "Départ rapide" : undefined}>{fmtDelta(d, fmtClock)}</td>;
+  };
   const roxS = rox.reduce((n, s) => n + s.officialS, 0);
-  const roxRef = refOf("roxzone_total");
-  const roxPos = posOf("roxzone_total");
-  const totalMed = totalRef?.p50_s ?? null;
-  const vs = (v: number, t: number | null) => (t != null ? v - t : null);
+  const gap = (v: number, t: number | null) => (t != null ? v - t : null);
   const rowStyle = (key: string): CSSProperties => (hovered === key ? { background: alpha(C.ac, 0.07), boxShadow: `inset 3px 0 0 ${C.ac}` } : {});
   const watchName = attribution ? attribution.toUpperCase() : "MONTRE";
   return (
@@ -115,26 +99,23 @@ export default function RaceSegmentsTable({
       </button>
       {open && (
         <div style={{ overflowX: "auto", marginTop: 10 }}>
-          <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 980 }}>
+          <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 820 }}>
             <thead>
               <tr>
                 <th colSpan={2} />
                 <th colSpan={3} style={group}>Course · {timeSource ?? "temps"}</th>
-                <th colSpan={2} style={group}>Référence · calcul Agon</th>
                 <th colSpan={3} style={group}>Montre · {watchName}</th>
                 <th colSpan={2} style={group}>Calcul Agon</th>
               </tr>
               <tr>
-                <th style={th}>N°</th><th style={{ ...th, textAlign: "left" }}>Segment</th><th style={th}>Temps</th><th style={th}>Plan</th>
+                <th style={th}>N°</th><th style={{ ...th, textAlign: "left" }}>Segment</th><th style={th}>Temps</th><th style={th}>Objectif</th>
                 <th style={th}>Écart{compare ? ` · ${compare.label.toLowerCase()}` : ""}</th>
-                <th style={th}>Médiane</th><th style={th}>Position</th><th style={th}>FC moy.</th><th style={th}>FC max</th>
+                <th style={th}>FC moy.</th><th style={th}>FC max</th>
                 <th style={th}>% Z3</th><th style={th}>Cadence</th><th style={th}>Coût run suiv.</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((s, i) => {
-                const m = refOf(s.key)?.p50_s ?? null;
-                const pos = posOf(s.key);
                 const c = s.kind === "station" ? cost[s.key as StationKey] : undefined;
                 const after = afterLabel(analysis, s);
                 return (
@@ -147,10 +128,8 @@ export default function RaceSegmentsTable({
                       </span>
                     </td>
                     <td style={td}>{fmtClock(s.officialS)}</td>
-                    <td style={{ ...td, color: C.tx3 }}>{fmtClock(plan?.(s.key) ?? null)}</td>
-                    {deltaCell(vs(s.officialS, target(s.key)))}
-                    <td style={{ ...td, color: C.tx3 }}>{fmtClock(m)}</td>
-                    <td style={td}><Position p={pos ? percentile(s.officialS, pos) : null} /></td>
+                    <td style={{ ...td, color: C.tx3 }}>{fmtClock(objective(s.key))}</td>
+                    {deltaCell(s.key, gap(s.officialS, target(s.key)))}
                     <td style={td}>{s.avgHr ?? DASH}</td>
                     <td style={td}>{s.maxHr ?? DASH}</td>
                     <td style={td}>{pct(z3((x) => x.key === s.key))}</td>
@@ -170,10 +149,8 @@ export default function RaceSegmentsTable({
                   </span>
                 </td>
                 <td style={td}>{fmtClock(roxS)}</td>
-                <td style={{ ...td, color: C.tx3 }}>{fmtClock(plan?.("roxzone_total") ?? null)}</td>
-                {deltaCell(vs(roxS, target("roxzone_total")))}
-                <td style={{ ...td, color: C.tx3 }}>{fmtClock(roxRef?.p50_s ?? null)}</td>
-                <td style={td}><Position p={roxPos ? percentile(roxS, roxPos) : null} /></td>
+                <td style={{ ...td, color: C.tx3 }}>{fmtClock(objective("roxzone_total"))}</td>
+                {deltaCell("roxzone_total", gap(roxS, target("roxzone_total")))}
                 <td style={td}>{weightedHr(rox) ?? DASH}</td>
                 <td style={td}>{maxHr(rox) ?? DASH}</td>
                 <td style={td}>{pct(z3((x) => x.kind === "roxzone"))}</td>
@@ -184,10 +161,8 @@ export default function RaceSegmentsTable({
                 <td style={td} />
                 <td style={left}>Total</td>
                 <td style={td}>{fmtClock(totalS)}</td>
-                <td style={{ ...td, color: C.tx3 }}>{fmtClock(plan?.("total") ?? null)}</td>
-                {deltaCell(vs(totalS, target("total")))}
-                <td style={{ ...td, color: C.tx3 }}>{fmtClock(totalMed)}</td>
-                <td style={td}><Position p={totalRef ? percentile(totalS, totalRef) : null} /></td>
+                <td style={{ ...td, color: C.tx3 }}>{fmtClock(objective("total"))}</td>
+                {deltaCell("total", gap(totalS, target("total")))}
                 <td style={td}>{weightedHr(analysis.segments) ?? DASH}</td>
                 <td style={td}>{analysis.raceMaxHr ?? DASH}</td>
                 <td style={td}>{pct(z3(() => true))}</td>

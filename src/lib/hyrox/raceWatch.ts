@@ -384,7 +384,7 @@ export function compromisedRunning(a: RaceWatchAnalysis, levelP50: RunLookup | n
 
 // ───────────────────────────── Où gagner du temps ────────────────────────────
 
-/** Référence d'un segment : médiane (p50) du niveau, et au-delà si connue. */
+/** Référence d'un segment : cible de l'objectif de la course (autrefois médiane du niveau). */
 export type MedianLookup = (segment: string) => number | null;
 
 export interface GainItem {
@@ -508,7 +508,7 @@ export function athleteFindings(input: {
     out.push({
       value: `+${Math.round(rox.gainS)}`,
       unit: "s",
-      text: `Roxzone : ${fmtMs(rox.athleteS)}, soit ${Math.round(rox.gainS)} s de plus que la médiane de ton niveau.`,
+      text: `Roxzone : ${fmtMs(rox.athleteS)}, soit ${Math.round(rox.gainS)} s de plus que l'objectif.`,
     });
   }
   return out.slice(0, 3);

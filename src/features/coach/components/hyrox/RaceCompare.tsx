@@ -3,19 +3,14 @@ import { ArrowLeft } from "lucide-react";
 import { C } from "@/lib/theme";
 import { DISPLAY } from "@/features/shared/components/seance/seanceUi";
 import { useIsPhone } from "@/hooks/useIsPhone";
-import { useHyroxReferences } from "@/features/shared/hooks/hyrox/useHyroxReferences";
-import { pickRef } from "@/api/hyrox";
 import type { HyroxResult } from "@/features/shared/types/hyrox";
-import type { RefLookup } from "@/lib/hyrox/calc";
 import { compareRaces } from "@/lib/hyrox/raceComparison";
 import RaceVersus from "@/features/shared/components/hyrox/RaceVersus";
 
 /** Deux courses cochées dans la liste, côte à côte (coach et athlète). */
 export default function RaceCompare({ raceA, raceB, onBack }: { raceA: HyroxResult; raceB: HyroxResult; onBack: () => void }) {
   const phone = useIsPhone();
-  const { data: refs = [] } = useHyroxReferences();
-  const refLookup: RefLookup = useMemo(() => (d, s, b) => pickRef(refs, d, s, b) ?? undefined, [refs]);
-  const cmp = useMemo(() => compareRaces(raceA, raceB, refs.length ? refLookup : null), [raceA, raceB, refs.length, refLookup]);
+  const cmp = useMemo(() => compareRaces(raceA, raceB), [raceA, raceB]);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <button type="button" onClick={onBack}

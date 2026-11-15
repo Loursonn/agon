@@ -9,43 +9,42 @@ import { pickRef } from "@/api/hyrox";
 import { useHyroxResults } from "@/features/shared/hooks/hyrox/useHyroxResults";
 import { useAthleteCoaches } from "@/features/shared/hooks/useCoCoach";
 import { DIVISION_LABEL, type HyroxDivision, type HyroxResult } from "@/features/shared/types/hyrox";
-import { POSITION_BRACKET, alerts as raceAlerts, bracketOf, percentile, typology, type RefLookup } from "@/lib/hyrox/calc";
+import { alerts as raceAlerts, bracketOf, type RefLookup } from "@/lib/hyrox/calc";
 import { useHyroxRacePlans } from "@/features/shared/hooks/hyrox/useHyroxRacePlans";
-import { planForRace, planSegments } from "@/lib/hyrox/racePlan";
 import { compareAvailable, compareTarget, defaultCompare, type CompareKind, type CompareSources } from "@/lib/hyrox/raceCompare";
 import { raceLevers } from "@/lib/hyrox/raceLevers";
-import {
-  bracketLabel, previousRace, profilePercentiles, raceShortName, recordGap, runPaceEvolution,
-} from "@/lib/hyrox/raceEvolution";
+import { previousRace, raceShortName, recordGap, runPaceEvolution } from "@/lib/hyrox/raceEvolution";
 import {
   athleteFindings, compromisedFromTimes, crossRaceWithWatch, defaultRaceOffset, raceGains, roxzoneRecovery,
   stationsAtLevel, timeAboveHr,
 } from "@/lib/hyrox/raceWatch";
 import { fmtClock } from "@/lib/seance";
-import { PROFILE_LABEL, ddmm, fmtDuration, fmtGap, type RaceAudience } from "./raceAnalysisShared";
+import { ddmm, fmtGap, objectiveColor, objectiveText, type RaceAudience } from "./raceAnalysisShared";
 import { RaceComments, TalkToCoach } from "./RaceComments";
 import { Stat } from "./raceAnalysisUi";
 import RaceCourseTab from "./RaceCourseTab";
 import RaceGainsTab from "./RaceGainsTab";
 import RaceRunsTab from "./RaceRunsTab";
 import RaceShareTab from "./RaceShareTab";
-import { CATEGORY_LABEL, raceCategory, type ReferenceCategory } from "@/lib/hyrox/categories";
-import { equivalentTotal } from "@/lib/hyrox/categoryEquivalence";
-import RaceCategoryCard from "./RaceCategoryCard";
+import { CATEGORY_LABEL, raceCategory } from "@/lib/hyrox/categories";
 import RaceDebriefView from "./RaceDebriefView";
-import { previousComparable, raceDebrief, raceStrip } from "@/lib/hyrox/raceDebrief";
+import { fmtPace, previousComparable, raceDebrief, raceStrip } from "@/lib/hyrox/raceDebrief";
 import { compareCandidates, compareRaces } from "@/lib/hyrox/raceComparison";
 import RaceVersus from "./RaceVersus";
 import RaceWatchLink from "./RaceWatchLink";
 import { autoRaceOffset } from "@/lib/hyrox/watchAlign";
 import { fmtNoReps, wallBallNoReps } from "@/lib/hyrox/noReps";
+import { objectiveForRace } from "@/lib/hyrox/objective/forRace";
+import { STATE_LABEL, objectiveLookup } from "@/lib/hyrox/objective/vsObjective";
 
 /**
  * Analyse de course HYROX (planches HyroxAnaTel et HyroxAnaCoachOrdi) :
- * résultat officiel croisé avec la montre. Même écran pour l'athlète et le
- * coach ; côté coach, la frise ajoute allure et cadence, la montre passe en 02
- * et le tableau des 17 segments est déplié. Toutes les phrases sont des
- * règles calculées (aucune IA).
+ * résultat officiel contre l'objectif de la course (plan de course, sinon
+ * objectif construit sur le run du jour, docs/HYROX_OBJECTIF_CONCEPTION.md §4),
+ * croisé avec la montre. Même écran pour l'athlète et le coach ; côté coach,
+ * la frise ajoute allure et cadence, la montre passe en 02 et le tableau des
+ * 17 segments est déplié. Aucune position dans la catégorie : seul le rang
+ * officiel est affiché. Toutes les phrases sont des règles calculées (aucune IA).
  */
 
 const TABS = [
@@ -89,7 +88,6 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
   const { data: coaches } = useAthleteCoaches(race.athlete_id);
   const { data: plans = [] } = useHyroxRacePlans(race.athlete_id);
   const [compareChoice, setCompareChoice] = useState<CompareKind | null>(null);
-  const [categoryChoice, setCategoryChoice] = useState<ReferenceCategory | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [versusId, setVersusId] = useState<string | null>(null);
 
@@ -114,39 +112,35 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
 
   const analysis = useMemo(() => crossRaceWithWatch(race, stream, offset), [race, stream, offset]);
   const ownCategory = raceCategory(race);
-  // Catégorie de comparaison : la sienne par défaut ; une autre via le sélecteur.
-  const refDiv = categoryChoice ?? ownCategory;
-  const refLookup: RefLookup = useMemo(() => (d, s, b) => pickRef(refs, d, s, b) ?? undefined, [refs]);
-  // Niveau (tranche de chrono) : celui du chrono équivalent dans la catégorie choisie.
-  const levelTotal = refDiv === ownCategory ? race.total_s : equivalentTotal(race.total_s, ownCategory, refDiv, refLookup)?.timeS ?? race.total_s;
-  const bracket = bracketOf(levelTotal);
-  /** Médiane du niveau : gain possible, écarts, habituel des runs. */
-  const refOf = useMemo(() => (seg: string) => pickRef(refs, refDiv, seg, bracket), [refs, refDiv, bracket]);
-  /** Position (top x %) : toute la catégorie. */
-  const posOf = useMemo(() => (seg: string) => pickRef(refs, refDiv, seg, POSITION_BRACKET), [refs, refDiv]);
-  const median = useMemo(() => (seg: string) => refOf(seg)?.p50_s ?? null, [refOf]);
-  const gains = useMemo(() => (refs.length ? raceGains(race, median) : null), [race, median, refs.length]);
-  const atLevel = useMemo(() => (gains ? stationsAtLevel(race, median, gains) : []), [race, median, gains]);
+  // Objectif de la course : le plan s'il existe, sinon le run du jour.
+  const ov = useMemo(() => objectiveForRace(race, plans), [race, plans]);
+  const objSegs = ov?.objective.segments ?? null;
+  const vsObj = ov?.vs ?? null;
+  const objOf = useMemo(() => (objSegs ? objectiveLookup(objSegs) : () => null), [objSegs]);
+  const objLevel = objSegs ? objOf : null;
+  const objText = objectiveText(ov?.objective ?? null);
+  const gains = useMemo(() => (objSegs ? raceGains(race, objOf) : null), [race, objOf, objSegs]);
+  const atLevel = useMemo(() => (gains ? stationsAtLevel(race, objOf, gains) : []), [race, objOf, gains]);
   const evolution = useMemo(() => runPaceEvolution(allRaces), [allRaces]);
   const above = analysis ? timeAboveHr(analysis, stream, sv2, offset) : null;
-  const findings = analysis ? athleteFindings({ analysis, above, gains, sv2, levelP50: refs.length ? median : null }) : [];
+  const findings = analysis ? athleteFindings({ analysis, above, gains, sv2, levelP50: objLevel }) : [];
   const recov = analysis ? roxzoneRecovery(analysis, stream, offset) : null;
 
-  const totalRef = posOf("total");
-  const totalPct = totalRef ? percentile(race.total_s, totalRef) : null;
-  const pp = profilePercentiles(race, refLookup);
-  const profile = typology(pp.run, pp.stations);
   const best = allRaces
     .filter((r) => r.is_official && r.division === race.division && r.status === race.status)
     .reduce<number | null>((m, r) => (m == null || r.total_s < m ? r.total_s : m), null);
   const isRecord = race.is_official && best != null && race.total_s <= best;
   const gap = isRecord ? null : recordGap(race, allRaces);
   const prev = previousRace(race, allRaces);
-  const previous = prev ? { name: raceShortName(prev), compromised: compromisedFromTimes(prev, refs.length ? median : null) } : null;
-  const strip = useMemo(() => raceStrip(race, posOf), [race, posOf]);
+  const previous = useMemo(() => {
+    if (!prev) return null;
+    const po = objectiveForRace(prev, plans);
+    return { name: raceShortName(prev), compromised: compromisedFromTimes(prev, po ? objectiveLookup(po.objective.segments) : null) };
+  }, [prev, plans]);
+  const strip = useMemo(() => raceStrip(race, vsObj), [race, vsObj]);
   const debrief = useMemo(
-    () => raceDebrief({ race, races: allRaces, posOf, median: refs.length ? median : null, refs: refs.length ? refLookup : null, isRecord }),
-    [race, allRaces, posOf, median, refs.length, refLookup, isRecord],
+    () => raceDebrief({ race, races: allRaces, objective: objSegs, vs: vsObj, isRecord }),
+    [race, allRaces, objSegs, vsObj, isRecord],
   );
   const noReps = wallBallNoReps(race);
   const noRepsText = noReps ? `Wall balls ${race.wall_balls_s ? fmtClock(race.wall_balls_s) : "—"} · ${fmtNoReps(noReps)}` : null;
@@ -157,23 +151,26 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
   // « Comparer » : n'importe quelle autre course, par défaut la précédente du même format.
   const candidates = useMemo(() => compareCandidates(race, allRaces), [race, allRaces]);
   const versus = candidates.find((r) => r.id === versusId) ?? previousComparable(race, allRaces) ?? candidates[0] ?? null;
-  const comparison = useMemo(() => (versus ? compareRaces(versus, race, refs.length ? refLookup : null) : null), [versus, race, refs.length, refLookup]);
-  const plan = useMemo(() => planForRace(race, plans), [race, plans]);
-  const planSegs = useMemo(() => (plan ? planSegments(plan.targets) : null), [plan]);
-  const planTotalS = plan ? Object.values(planSegs ?? {}).reduce((n, x) => n + x, 0) || plan.target_total_s : null;
-  const vsPlan = planTotalS != null ? race.total_s - planTotalS : null;
-  const compareSrc: CompareSources = useMemo(() => ({ previous: prev, plan: planSegs, median }), [prev, planSegs, median]);
+  const comparison = useMemo(() => (versus ? compareRaces(versus, race) : null), [versus, race]);
+  const compareSrc: CompareSources = useMemo(() => ({ previous: prev, objective: objSegs }), [prev, objSegs]);
   const compareKind: CompareKind = compareChoice && compareAvailable(compareChoice, compareSrc) ? compareChoice : defaultCompare(compareSrc);
   const target = useMemo(() => compareTarget(compareKind, compareSrc), [compareKind, compareSrc]);
-  const planOf = useMemo(() => compareTarget("plan", compareSrc), [compareSrc]);
+
+  // Leviers coach : encore contre la médiane du niveau, remplacés par « meilleure stratégie » (lot 3).
+  const refLookup: RefLookup = useMemo(() => (d, s, b) => pickRef(refs, d, s, b) ?? undefined, [refs]);
+  const median = useMemo(() => (seg: string) => pickRef(refs, ownCategory, seg, bracketOf(race.total_s))?.p50_s ?? null, [refs, ownCategory, race.total_s]);
   const levers = useMemo(
     () => (coach && refs.length ? raceLevers({ race, refs: refLookup, analysis: stream ? analysis : null, roxzoneRecoveryBpm: recov?.avgDrop ?? null, levelP50: median }) : []),
     [coach, refs.length, race, refLookup, stream, analysis, recov?.avgDrop, median],
   );
-  const division = CATEGORY_LABEL[refDiv] ?? DIVISION_LABEL[race.division as HyroxDivision] ?? race.division;
-  const bracketText = bracketLabel(bracket);
+  const division = CATEGORY_LABEL[ownCategory] ?? DIVISION_LABEL[race.division as HyroxDivision] ?? race.division;
   const dateLabel = new Date(race.date + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
   const timeSource = race.is_official ? "résultat officiel" : "temps saisis";
+  const total = vsObj?.total ?? null;
+  const totalColor = total ? (total.state === "on" ? C.tx2 : objectiveColor(total.state)) : C.tx2;
+  const totalValue = total ? (total.deltaS === 0 ? "0" : `${total.deltaS > 0 ? "+" : "−"}${fmtGap(total.deltaS)}`) : null;
+  const objSub = ov ? `${fmtClock(ov.objective.totalS)}${ov.objective.runAvgS != null ? ` · run ${fmtPace(ov.objective.runAvgS)}` : ""}${ov.objective.source === "run_du_jour" ? " · run du jour" : ""}` : "";
+  const rank = race.rank_overall != null && race.participants_overall ? { r: race.rank_overall, n: race.participants_overall } : null;
 
   const crumb = (
     <nav aria-label="Fil d'Ariane" style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
@@ -192,10 +189,6 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
       </div>
     );
   }
-
-  const profileSub = coach
-    ? (pp.run != null && pp.stations != null ? `course top ${pp.run} % · stations top ${pp.stations} %` : undefined)
-    : profile === "hybrid" ? "course et stations au même niveau" : undefined;
 
   const PPILL = { ...PILL, fontSize: 10.5, padding: "3px 8px" };
   const phoneHead = (
@@ -219,39 +212,27 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12, marginTop: 2 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ ...MONO, fontSize: 50, lineHeight: 1, letterSpacing: "-0.02em", color: C.tx }}>{fmtClock(race.total_s)}</div>
-          {(isRecord || gap || vsPlan != null) && (
+          {(isRecord || gap || total) && (
             <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               {isRecord
                 ? <span style={{ ...PPILL, background: C.g, color: C.ink }}>Record</span>
-                : gap && vsPlan == null && <span style={{ fontSize: 12.5, color: C.tx2 }}>+{fmtGap(gap.gapS)} vs record ({raceShortName(gap.record)})</span>}
-              {vsPlan != null && (
-                <span style={{ fontSize: 12.5, color: vsPlan <= 0 ? C.g : C.o }}>
-                  {Math.round(vsPlan) === 0 ? "Pile sur ton objectif" : `${fmtDuration(vsPlan)} ${vsPlan < 0 ? "sous" : "au-dessus de"} ton objectif`}
+                : gap && !total && <span style={{ fontSize: 12.5, color: C.tx2 }}>+{fmtGap(gap.gapS)} vs record ({raceShortName(gap.record)})</span>}
+              {total && ov && (
+                <span style={{ fontSize: 12.5, color: totalColor }}>
+                  {total.state === "on" ? `Dans l'objectif (${fmtClock(total.targetS)})` : `${fmtGap(total.deltaS)} ${total.deltaS < 0 ? "sous" : "au-dessus de"} l'objectif (${fmtClock(total.targetS)})`}
                 </span>
               )}
             </div>
           )}
         </div>
-        {race.rank_overall != null && race.participants_overall ? (
+        {rank && (
           <div style={{ textAlign: "right", display: "flex", flexDirection: "column", gap: 3, paddingBottom: 2, flex: "none" }}>
             <span style={{ ...KICKER, fontSize: 11, color: C.tx3 }}>Rang</span>
-            <div style={{ ...MONO, fontSize: 18, color: C.tx }}>{race.rank_overall}<span style={{ color: C.tx3, fontSize: 13 }}> / {race.participants_overall}</span></div>
-            <div style={{ fontSize: 12, color: C.tx2 }}>Top {Math.max(1, Math.round((race.rank_overall / race.participants_overall) * 100))} %</div>
-          </div>
-        ) : totalPct != null && (
-          <div style={{ textAlign: "right", display: "flex", flexDirection: "column", gap: 3, paddingBottom: 2, flex: "none" }}>
-            <span style={{ ...KICKER, fontSize: 11, color: C.tx3 }}>Position</span>
-            <div style={{ ...MONO, fontSize: 18, color: C.tx }}>Top {totalPct} %</div>
-            <div style={{ fontSize: 12, color: C.tx2 }}>{division}</div>
+            <div style={{ ...MONO, fontSize: 18, color: C.tx }}>{rank.r}<span style={{ color: C.tx3, fontSize: 13 }}> / {rank.n}</span></div>
+            <div style={{ fontSize: 12, color: C.tx2 }}>Top {Math.max(1, Math.round((rank.r / rank.n) * 100))} %</div>
           </div>
         )}
       </div>
-      {profile && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: C.tx3, flexWrap: "wrap" }}>
-          <span style={{ ...PPILL, fontWeight: 400, color: C.ac, border: `1px solid ${alpha(C.ac, 0.45)}`, padding: "2px 7px" }}>Profil {PROFILE_LABEL[profile].toLowerCase()}</span>
-          {profileSub && <span>{profileSub}</span>}
-        </div>
-      )}
     </div>
   );
   const phoneTabs = (
@@ -307,18 +288,11 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
         </div>
         <Stat bare label="Chrono" value={fmtClock(race.total_s)}
           sub={isRecord ? "Record" : gap ? `+${fmtGap(gap.gapS)} vs record (${raceShortName(gap.record)})` : undefined} />
-        {race.rank_overall != null && race.participants_overall
-          ? <Stat bare label="Rang" value={String(race.rank_overall)} unit={`/ ${race.participants_overall}`} sub={`Top ${Math.max(1, Math.round((race.rank_overall / race.participants_overall) * 100))} %`} />
-          : totalPct != null && <Stat bare label="Position" value={`Top ${totalPct} %`} sub={division} />}
-        {vsPlan != null && planTotalS != null && (
-          <Stat bare label="Vs plan de course" value={Math.round(vsPlan) === 0 ? "0" : `${vsPlan > 0 ? "+" : "−"}${fmtGap(vsPlan)}`}
-            color={vsPlan > 0 ? C.o : C.g} sub={`plan ${fmtClock(planTotalS)}`} />
+        {total && (
+          <Stat bare label={`Vs objectif · ${STATE_LABEL[total.state]}`} value={totalValue ?? "—"} color={totalColor} sub={objSub} />
         )}
-        {profile && <Stat bare label="Profil" value={PROFILE_LABEL[profile]} sub={profileSub} />}
+        {rank && <Stat bare label="Rang" value={String(rank.r)} unit={`/ ${rank.n}`} sub={`Top ${Math.max(1, Math.round((rank.r / rank.n) * 100))} %`} />}
       </div>
-      {refs.length > 0 && (
-        <RaceCategoryCard totalS={race.total_s} own={ownCategory} value={refDiv} onChange={(c) => setCategoryChoice(c === ownCategory ? null : c)} refs={refLookup} />
-      )}
       {debriefView("desktop")}
       </>}
 
@@ -341,9 +315,6 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
       )}
 
       {tab === "debrief" && phone && debriefView("phone")}
-      {tab === "debrief" && phone && refs.length > 0 && (
-        <RaceCategoryCard totalS={race.total_s} own={ownCategory} value={refDiv} onChange={(c) => setCategoryChoice(c === ownCategory ? null : c)} refs={refLookup} />
-      )}
       {tab === "debrief" && phone && !coach && <TalkToCoach race={race} coachFirstName={coaches?.referent?.full_name?.split(" ")[0] ?? null} />}
       {tab === "course" && (
         <RaceWatchLink race={race} candidates={watch.candidates} activityId={watch.activityId} linked={watch.linked} stream={stream}
@@ -356,19 +327,20 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
       {(tab === "course" || (tab === "debrief" && !phone)) && (
         <RaceCourseTab audience={audience} analysis={analysis} stream={stream} watchLoading={watch.loading} offset={offset}
           sv1={sv1} sv2={sv2} attribution={attribution} findings={findings} above={above} recov={recov} previous={previous}
-          refOf={refOf} posOf={posOf} levelP50={refs.length ? median : null} totalS={race.total_s} totalRef={totalRef} timeSource={timeSource} division={division} bracketText={bracketText}
+          objective={objOf} vs={vsObj} levelP50={objLevel} totalS={race.total_s} timeSource={timeSource} objectiveText={objText}
+          leversRefText={`médiane ${division} · ${fmtClock(race.total_s)}`}
           compare={{
-            kind: compareKind, onChange: setCompareChoice, target, plan: planSegs ? planOf : null, alerts: raceAlerts(race),
-            options: ([["previous", prev ? `Course précédente · ${raceShortName(prev)}` : "Course précédente"], ["plan", "Plan de course"], ["median", `Médiane ${division} ${bracketText}`]] as const)
+            kind: compareKind, onChange: setCompareChoice, target, alerts: raceAlerts(race),
+            options: ([["objective", ov?.objective.source === "plan" ? "Objectif · plan de course" : "Objectif · run du jour"], ["previous", prev ? `Course précédente · ${raceShortName(prev)}` : "Course précédente"]] as const)
               .map(([key, label]) => ({ key, label, available: compareAvailable(key, compareSrc) })),
           }}
           levers={levers} athleteId={race.athlete_id} atLevel={atLevel.length} />
       )}
       {tab === "runs" && (
-        <RaceRunsTab analysis={analysis} median={median} levelP50={refs.length ? median : null} attribution={attribution} timeSource={timeSource} evolution={evolution} raceId={race.id} />
+        <RaceRunsTab analysis={analysis} objective={objOf} levelP50={objLevel} attribution={attribution} timeSource={timeSource} evolution={evolution} raceId={race.id} />
       )}
       {tab === "gains" && (
-        <RaceGainsTab gains={gains} atLevel={atLevel} division={division} bracketText={bracketText} timeSource={timeSource} startLabel={raceShortName(race)} />
+        <RaceGainsTab gains={gains} atLevel={atLevel} objectiveText={objText} timeSource={timeSource} startLabel={raceShortName(race)} />
       )}
       {tab === "gains" && !coach && <TalkToCoach race={race} coachFirstName={coaches?.referent?.full_name?.split(" ")[0] ?? null} />}
       {tab === "comparer" && (

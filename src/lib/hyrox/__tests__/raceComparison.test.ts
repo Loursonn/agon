@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { HyroxReferenceSegment, HyroxResult } from "@/features/shared/types/hyrox";
-import type { RefLookup } from "@/lib/hyrox/calc";
+import type { HyroxResult } from "@/features/shared/types/hyrox";
 import { compareCandidates, compareRaces } from "@/lib/hyrox/raceComparison";
 
 const race = (o: Partial<HyroxResult> = {}): HyroxResult => ({
@@ -15,23 +14,16 @@ const race = (o: Partial<HyroxResult> = {}): HyroxResult => ({
 });
 const paris = race({ id: "paris", date: "2026-05-17", event_name: "HYROX Paris", total_s: 4856, run_1_s: 250, sled_push_s: 236, wall_balls_s: 280, run_7_s: 300 });
 
-const total = (division: string, p: number[]): HyroxReferenceSegment => ({
-  id: division, division, bracket: "all", segment: "total", p1_s: p[0], p5_s: p[1], p10_s: p[2], p25_s: p[3], p50_s: p[4], p75_s: p[5], p90_s: p[6],
-  source: "test", is_estimate: false, sample_size: 1000,
-});
-const REFS = [total("women", [4400, 4550, 4650, 4800, 5000, 5300, 5600]), total("doubles_mixed", [3600, 3750, 3850, 4000, 4200, 4500, 4800])];
-const refs: RefLookup = (d, s, b) => REFS.find((r) => r.division === d && r.segment === s && r.bracket === b);
-
 describe("comparer deux courses", () => {
   it("la plus ancienne est « avant », quel que soit l'ordre donné", () => {
-    const c = compareRaces(race(), paris, refs);
+    const c = compareRaces(race(), paris);
     expect(c.before.id).toBe("paris");
     expect(c.rows.find((r) => r.key === "total")).toMatchObject({ deltaS: -134, better: true, judged: true });
-    expect(c.positionAfter!).toBeLessThan(c.positionBefore!);
+    expect(c).not.toHaveProperty("positionAfter");
   });
 
   it("run 1 affiché, jamais jugé ; progrès et reculs classés", () => {
-    const c = compareRaces(paris, race(), refs);
+    const c = compareRaces(paris, race());
     expect(c.rows.find((r) => r.key === "run_1")).toMatchObject({ deltaS: 21, better: null, judged: false });
     expect(c.improved[0]).toMatchObject({ key: "sled_push", deltaS: -22 });
     expect(c.regressed.map((r) => r.key)).toEqual(["run_7", "wall_balls"]);
@@ -40,7 +32,7 @@ describe("comparer deux courses", () => {
 
   it("solo contre duo : stations non jugées, avertissement clair", () => {
     const duo = race({ id: "nice", date: "2026-07-01", format: "doubles", division: "doubles_mixed", total_s: 4100, ski_s: 150 });
-    const c = compareRaces(paris, duo, refs);
+    const c = compareRaces(paris, duo);
     expect(c.sameFormat).toBe(false);
     expect(c.warnings[0]).toMatch(/^Solo contre duo : les stations ne se comparent pas/);
     expect(c.rows.filter((r) => r.group === "stations").every((r) => !r.judged && r.better == null)).toBe(true);
@@ -50,7 +42,7 @@ describe("comparer deux courses", () => {
 
   it("open contre pro : seules les stations sans charge différente sont jugées", () => {
     const pro = race({ id: "pro", date: "2026-10-01", division: "women_pro", sled_push_s: 260, ski_s: 250 });
-    const c = compareRaces(paris, pro, refs);
+    const c = compareRaces(paris, pro);
     expect(c.sameFormat).toBe(true);
     expect(c.warnings[0]).toMatch(/^Femmes open contre femmes pro/);
     expect(c.rows.find((r) => r.key === "sled_push")).toMatchObject({ judged: false, note: "Charge différente (102 kg contre 152 kg)." });
@@ -63,13 +55,13 @@ describe("comparer deux courses", () => {
   });
 
   it("no reps wall balls : moins = mieux, un d'écart compte, absente si jamais saisie", () => {
-    expect(compareRaces(paris, race(), refs).rows.some((r) => r.key === "wall_balls_no_reps")).toBe(false);
-    const c = compareRaces(race({ ...paris, wall_balls_no_rep_target: 5, wall_balls_no_rep_depth: 3 }), race({ wall_balls_no_rep_target: 4, wall_balls_no_rep_depth: 2 }), refs);
+    expect(compareRaces(paris, race()).rows.some((r) => r.key === "wall_balls_no_reps")).toBe(false);
+    const c = compareRaces(race({ ...paris, wall_balls_no_rep_target: 5, wall_balls_no_rep_depth: 3 }), race({ wall_balls_no_rep_target: 4, wall_balls_no_rep_depth: 2 }));
     expect(c.rows.find((r) => r.key === "wall_balls_no_reps")).toMatchObject({ before: 8, after: 6, deltaS: -2, better: true, judged: true, unit: "count" });
     expect(c.improved.some((r) => r.key === "wall_balls_no_reps")).toBe(true);
-    const one = compareRaces(paris, race({ wall_balls_no_rep_target: 4, wall_balls_no_rep_depth: 2 }), refs);
+    const one = compareRaces(paris, race({ wall_balls_no_rep_target: 4, wall_balls_no_rep_depth: 2 }));
     expect(one.rows.find((r) => r.key === "wall_balls_no_reps")).toMatchObject({ before: null, after: 6, deltaS: null, better: null });
-    const pro = compareRaces(paris, race({ division: "women_pro", wall_balls_no_rep_target: 1, wall_balls_no_rep_depth: 0 }), refs);
+    const pro = compareRaces(paris, race({ division: "women_pro", wall_balls_no_rep_target: 1, wall_balls_no_rep_depth: 0 }));
     expect(pro.rows.find((r) => r.key === "wall_balls_no_reps")?.judged).toBe(false);
   });
 });
