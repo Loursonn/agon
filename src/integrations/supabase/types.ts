@@ -2518,6 +2518,8 @@ export type Database = {
           total_s: number
           updated_at: string
           venue: string | null
+          wall_balls_no_rep_depth: number | null
+          wall_balls_no_rep_target: number | null
           wall_balls_s: number | null
           watch_activity_id: string | null
           watch_offset_s: number | null
@@ -2569,6 +2571,8 @@ export type Database = {
           total_s: number
           updated_at?: string
           venue?: string | null
+          wall_balls_no_rep_depth?: number | null
+          wall_balls_no_rep_target?: number | null
           wall_balls_s?: number | null
           watch_activity_id?: string | null
           watch_offset_s?: number | null
@@ -2620,6 +2624,8 @@ export type Database = {
           total_s?: number
           updated_at?: string
           venue?: string | null
+          wall_balls_no_rep_depth?: number | null
+          wall_balls_no_rep_target?: number | null
           wall_balls_s?: number | null
           watch_activity_id?: string | null
           watch_offset_s?: number | null
