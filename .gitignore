@@ -2,6 +2,9 @@
 .env
 .env.local
 .env.production
+# Base de test (agon-test) et toute autre variante locale
+.env.*
+!.env.example
 
 # Logs
 logs

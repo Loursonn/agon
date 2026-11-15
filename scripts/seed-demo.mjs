@@ -30,6 +30,8 @@
  * et ce qu'un relecteur a saisi entre-temps disparaît.
  *
  * Écrit dans la base de production : ne jamais le lancer sans l'accord d'Hugo.
+ * Sauf avec `--env staging` : base de TEST agon-test (.env.staging), libre d'usage, à préférer
+ * pour toute vérification à l'écran (voir docs/BASE_DE_TEST.md).
  *
  * Lit VITE_SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY dans .env (jamais commité).
  * Les données santé (wellness, poids, palier, objectif) passent par les RPC avec la session de l'athlète démo ;
@@ -38,15 +40,30 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import { seedWatchDemo } from "./seed-demo-montre.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+// `--env staging` (ou AGON_ENV=staging) : base de TEST agon-test, fichier .env.staging.
+// Cherché à la racine du dossier, puis à celle du dépôt principal (les worktrees n'en ont pas).
+const envName = (() => { const i = process.argv.indexOf("--env"); return i >= 0 ? process.argv[i + 1] : process.env.AGON_ENV || ""; })();
+const envFile = envName ? `.env.${envName}` : ".env";
+const envPath = [root, mainCheckoutRoot()].map((d) => d && path.join(d, envFile)).find((p) => p && fs.existsSync(p));
+if (!envPath) { console.error(`${envFile} introuvable`); process.exit(1); }
 const env = Object.fromEntries(
-  fs.readFileSync(path.join(root, ".env"), "utf8").split("\n").filter((l) => l.includes("=") && !l.startsWith("#"))
+  fs.readFileSync(envPath, "utf8").split("\n").filter((l) => l.includes("=") && !l.startsWith("#"))
     .map((l) => [l.slice(0, l.indexOf("=")).trim(), l.slice(l.indexOf("=") + 1).trim()]),
 );
+console.error(`Base visée : ${envName === "staging" ? "TEST (agon-test)" : "PRODUCTION"} (${envFile})`);
+
+function mainCheckoutRoot() {
+  try {
+    const common = execSync("git rev-parse --path-format=absolute --git-common-dir", { cwd: root, stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
+    return path.dirname(common);
+  } catch { return null; }
+}
 const URL_ = env.VITE_SUPABASE_URL, KEY = env.SUPABASE_SERVICE_ROLE_KEY;
 const ANON = env.VITE_SUPABASE_PUBLISHABLE_KEY || env.VITE_SUPABASE_ANON_KEY;
 if (!URL_ || !KEY || !ANON) { console.error("VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY / SUPABASE_SERVICE_ROLE_KEY manquants dans .env"); process.exit(1); }
