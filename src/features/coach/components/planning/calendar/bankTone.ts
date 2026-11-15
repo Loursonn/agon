@@ -37,11 +37,12 @@ export const ENERGY_KIND_TEXT: Record<string, string> = {
 };
 
 /** Catégorie de tests repliable : texte, et liseré 31 % + aplat 6 % une fois ouverte. */
-export const TEST_CAT_TONE: Record<TestCategory | "autres", { text: string; open: string }> = {
+export const TEST_CAT_TONE: Record<TestCategory | "hyrox" | "autres", { text: string; open: string }> = {
   bilan_articulaire: { text: "text-agon-info",   open: "border-agon-info/[0.314] bg-agon-info/[0.063]" },
   endurance:         { text: "text-agon-succes", open: "border-agon-succes/[0.314] bg-agon-succes/[0.063]" },
   force:             { text: "text-agon-erreur", open: "border-agon-erreur/[0.314] bg-agon-erreur/[0.063]" },
   explosivite:       { text: "text-agon-alerte", open: "border-agon-alerte/[0.314] bg-agon-alerte/[0.063]" },
   vitesse:           { text: "text-agon-accent", open: "border-agon-accent/[0.314] bg-agon-accent/[0.063]" },
+  hyrox:             { text: "text-agon-type-hyrox", open: "border-agon-type-hyrox/[0.314] bg-agon-type-hyrox/[0.063]" },
   autres:            { text: "text-agon-tx3",    open: "border-agon-tx3/[0.314] bg-agon-tx3/[0.063]" },
 };

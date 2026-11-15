@@ -38,6 +38,46 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-15-seance-hebdo-concrete-cycle",
+    date: "2026-11-15",
+    kind: "fix",
+    title: "Planning : une séance hebdomadaire est posée sur tout le cycle",
+    summary: "Une séance créée ou modifiée avec un jour (ex. lundi) n'apparaît plus en « prévu » : elle est posée chaque semaine du cycle.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Dans Programmation, quand vous créez ou modifiez une séance récurrente avec son jour, elle est posée tout de suite chaque semaine du cycle, à partir d'aujourd'hui. Votre athlète la voit dans son planning.",
+          "Changer le jour déplace les séances à venir. Les séances faites, commencées ou déplacées par votre athlète restent où elles sont, et rien n'est supprimé.",
+          "Une séance ajoutée en cours de cycle ne s'affiche plus « manquée » sur les semaines déjà passées.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-15-programmer-test-vue-semaine",
+    date: "2026-11-15",
+    kind: "fix",
+    title: "Planning : trouver un test plus vite dans la vue Semaine",
+    summary: "Les tests ne sont plus alignés sur une seule ligne : ils sont rangés par dominante, avec une recherche.",
+    sections: [
+      {
+        title: "Vue Semaine",
+        points: [
+          "Onglet Tests du bandeau « Programmer » : les tests sont rangés par dominante (bilan articulaire, endurance, explosivité, vitesse, HYROX…). Une pastille par dominante pour n'afficher qu'elle.",
+          "La recherche ignore les accents et trouve aussi une dominante : « explosivite » ou « hyrox » suffit.",
+          "Les tests HYROX apparaissent aussi dans la colonne de la vue Mois.",
+        ],
+      },
+      {
+        title: "Sur téléphone",
+        points: [
+          "« Ajouter » sur un jour libre du planning propose maintenant Séance ou Test : même recherche et même rangement par dominante.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-16-hyrox-no-reps-wall-balls",
     date: "2026-11-16",
     kind: "feature",
