@@ -3,7 +3,7 @@ import { ArrowLeft, ChevronLeft, Pencil, Share2, Trash2 } from "lucide-react";
 import { useIsPhone } from "@/hooks/useIsPhone";
 import { C, alpha } from "@/lib/theme";
 import { DISPLAY, KICKER, MONO, buttonStyle } from "@/features/shared/components/seance/seanceUi";
-import { useRaceWatch } from "@/features/shared/hooks/hyrox/useRaceWatch";
+import { useLinkRaceWatch, useRaceWatch } from "@/features/shared/hooks/hyrox/useRaceWatch";
 import { useHyroxReferences } from "@/features/shared/hooks/hyrox/useHyroxReferences";
 import { pickRef } from "@/api/hyrox";
 import { useHyroxResults } from "@/features/shared/hooks/hyrox/useHyroxResults";
@@ -36,6 +36,8 @@ import RaceDebriefView from "./RaceDebriefView";
 import { previousComparable, raceDebrief, raceStrip } from "@/lib/hyrox/raceDebrief";
 import { compareCandidates, compareRaces } from "@/lib/hyrox/raceComparison";
 import RaceVersus from "./RaceVersus";
+import RaceWatchLink from "./RaceWatchLink";
+import { autoRaceOffset } from "@/lib/hyrox/watchAlign";
 
 /**
  * Analyse de course HYROX (planches HyroxAnaTel et HyroxAnaCoachOrdi) :
@@ -76,7 +78,11 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
   const phone = useIsPhone();
   // Téléphone : le débrief d'abord ; ordinateur : le débrief est au-dessus des onglets.
   const [tab, setTab] = useState<TabKey>(phone ? "debrief" : "course");
-  const watch = useRaceWatch(race);
+  // Montre : activité choisie et décalage réglés à la main, pas encore enregistrés.
+  const [chosenActivity, setChosenActivity] = useState<string | null>(null);
+  const [draftOffset, setDraftOffset] = useState<number | null>(null);
+  const watch = useRaceWatch(race, chosenActivity);
+  const linkWatch = useLinkRaceWatch(race);
   const { data: refs = [] } = useHyroxReferences();
   const { data: allRaces = [] } = useHyroxResults(race.athlete_id);
   const { data: coaches } = useAthleteCoaches(race.athlete_id);
@@ -88,7 +94,18 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
 
   const detail = watch.detail;
   const stream = detail?.stream ?? null;
-  const offset = useMemo(() => defaultRaceOffset(stream, race.total_s), [stream, race.total_s]);
+  const autoOffset = useMemo(() => autoRaceOffset(stream, race), [stream, race]);
+  // Décalage enregistré : seulement pour l'activité à laquelle il a été réglé.
+  const savedOffset = race.watch_activity_id != null && watch.activityId === race.watch_activity_id ? race.watch_offset_s ?? null : null;
+  const baseOffset = savedOffset ?? autoOffset?.offsetS ?? defaultRaceOffset(stream, race.total_s);
+  const offset = draftOffset ?? baseOffset;
+  const activityChanged = chosenActivity != null && chosenActivity !== race.watch_activity_id;
+  const offsetEdited = draftOffset != null && draftOffset !== baseOffset;
+  const saveWatch = () => {
+    if (!watch.activityId || !stream) return;
+    linkWatch.mutate({ activityId: watch.activityId, offsetS: offset }, { onSuccess: () => { setChosenActivity(null); setDraftOffset(null); } });
+  };
+  const unlinkWatch = () => linkWatch.mutate({ activityId: null, offsetS: null }, { onSuccess: () => { setChosenActivity(null); setDraftOffset(null); } });
   const sv = detail?.bounds?.kind === "three" ? detail.bounds.bounds : null;
   const sv1 = sv?.[0] ?? null;
   const sv2 = sv?.[1] ?? null;
@@ -325,6 +342,14 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
         <RaceCategoryCard totalS={race.total_s} own={ownCategory} value={refDiv} onChange={(c) => setCategoryChoice(c === ownCategory ? null : c)} refs={refLookup} />
       )}
       {tab === "debrief" && phone && !coach && <TalkToCoach race={race} coachFirstName={coaches?.referent?.full_name?.split(" ")[0] ?? null} />}
+      {tab === "course" && (
+        <RaceWatchLink race={race} candidates={watch.candidates} activityId={watch.activityId} linked={watch.linked} stream={stream}
+          loading={watch.loading} auto={autoOffset} offset={offset} edited={offsetEdited || activityChanged}
+          canSave={!!stream && (!watch.linked || offsetEdited || activityChanged)}
+          onOffset={(s) => setDraftOffset(Math.round(s))}
+          onPickActivity={(id) => { setChosenActivity(id === race.watch_activity_id ? null : id); setDraftOffset(null); }}
+          onSave={saveWatch} onUnlink={unlinkWatch} saving={linkWatch.isPending} phone={phone} />
+      )}
       {(tab === "course" || (tab === "debrief" && !phone)) && (
         <RaceCourseTab audience={audience} analysis={analysis} stream={stream} watchLoading={watch.loading} offset={offset}
           sv1={sv1} sv2={sv2} attribution={attribution} findings={findings} above={above} recov={recov} previous={previous}

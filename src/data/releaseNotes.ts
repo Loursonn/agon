@@ -38,6 +38,36 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-16-hyrox-fc-montre-recalee",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "HYROX : la FC de la montre recalée sur la course",
+    summary: "Liez une course à l'activité de la montre et calez la FC sur les temps officiels, station par station.",
+    sections: [
+      {
+        title: "Lier la montre à la course",
+        points: [
+          "Dans l'analyse d'une course, onglet Course : l'activité de montre du même jour est proposée d'office ; vous pouvez en choisir une autre.",
+          "Votre athlète peut faire la même chose depuis son téléphone.",
+        ],
+      },
+      {
+        title: "Recaler à la seconde",
+        points: [
+          "La montre et le chrono officiel ne démarrent jamais en même temps : l'app propose le décalage (cadence des runs ou montée de FC au départ).",
+          "Ajustez avec le curseur ou les boutons ±1 s / ±10 s, la frise se met à jour en direct, puis enregistrez.",
+        ],
+      },
+      {
+        title: "Lire la FC par segment",
+        points: [
+          "FC moyenne et maximale de chaque run, station et Roxzone, et ce que fait la FC du début à la fin de chaque station.",
+          "En Roxzone : la FC redescend-elle avant le run suivant ?",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-15-energie-noter-seance",
     date: "2026-11-15",
     kind: "feature",

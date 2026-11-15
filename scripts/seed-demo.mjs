@@ -163,6 +163,53 @@ async function link(role) {
 }
 
 /* =========================================================== */
+/**
+ * Montre fictive de Léa le jour de HYROX Paris (lier / recaler la FC) :
+ * échauffement de 10:40 avant le départ, course découpée comme les splits
+ * officiels, 1:30 de retour au calme. Données inventées, jamais réelles.
+ */
+async function seedRaceWatch(race) {
+  const WARMUP = 640, COOL = 90;
+  const ORDER = ["run_1", "ski", "run_2", "sled_push", "run_3", "sled_pull", "run_4", "bbj", "run_5", "row", "run_6", "farmers", "run_7", "lunges", "run_8", "wall_balls"];
+  const ST_HR = { ski: 174, sled_push: 183, sled_pull: 181, bbj: 179, row: 173, farmers: 171, lunges: 179, wall_balls: 185 };
+  const ST_CAD = { ski: 52, sled_push: 64, sled_pull: 38, bbj: 46, row: 28, farmers: 96, lunges: 58, wall_balls: 34 };
+  const rox = race.roxzone_total_s / 15;
+  const segs = []; // [kind, durée, FC visée, cadence, vitesse m/s]
+  ORDER.forEach((k, i) => {
+    const d = race[k + "_s"];
+    if (k.startsWith("run_")) { const n = Number(k.slice(4)); segs.push(["run", d, 166 + n, 170 - (n > 6 ? 3 : 0), 1000 / d]); return; }
+    segs.push(["rox", rox, 162, 112, 1.6]);
+    segs.push(["station", d, ST_HR[k], ST_CAD[k], k === "farmers" || k === "lunges" ? 1.1 : 0.2]);
+    if (i < ORDER.length - 1) segs.push(["rox", rox, 160, 112, 1.6]);
+  });
+  const total = WARMUP + race.total_s + COOL;
+  const t = [], hr = [], cadence = [], speed = [], dist = [];
+  let h = 98, x = 0;
+  const kindAt = (s) => {
+    if (s < WARMUP) return s % 160 > 130 ? ["warm", 0, 150, 162, 3.6] : ["warm", 0, 136, 158, 2.9];
+    let at = WARMUP;
+    for (const g of segs) { if (s < at + g[1]) return g; at += g[1]; }
+    return ["cool", 0, 128, 0, 0.3];
+  };
+  for (let s = 0; s < total; s++) {
+    const [, , target, cad, v] = kindAt(s);
+    h += (target - h) / 22 + rnd(-0.8, 0.8);
+    const sp = Math.max(0, v + rnd(-0.08, 0.08));
+    x += sp;
+    t.push(s); hr.push(Math.round(h)); cadence.push(cad ? Math.round(cad + rnd(-3, 3)) : 0); speed.push(round(sp, 0.01)); dist.push(Math.round(x));
+  }
+  const startedAt = new Date(`${race.date}T09:20:00Z`).toISOString();
+  const act = await must(sb.from("provider_activities").insert({
+    athlete_id: race.athlete_id, source: "coros", external_id: "demo-hyrox-paris", started_at: startedAt, local_date: race.date,
+    sport: "hyrox", duration_s: total, distance_m: Math.round(x), avg_hr: Math.round(hr.reduce((a, b) => a + b, 0) / hr.length), max_hr: Math.max(...hr),
+    device_name: "COROS PACE 3", title: "HYROX Paris", origin_quality: "fit", sources: ["coros"], ai_allowed: false,
+  }).select("id").single(), "montre HYROX");
+  await must(sb.from("activity_streams").insert({
+    activity_id: act.id, athlete_id: race.athlete_id, source: "coros", normalized_from: "fit", started_at: startedAt, utc_offset_s: 3600,
+    sport: "hyrox", sample_count: t.length, t, hr, cadence, speed, dist, ai_allowed: false,
+  }), "série montre HYROX");
+}
+
 async function seed() {
   if (!PASSWORD) { console.error("DEMO_PASSWORD manquant (gestionnaire de mots de passe d'Hugo)."); process.exit(1); }
   // Vérifié avant tout effacement : un mauvais mot de passe ne doit pas laisser un jeu à moitié recréé.
@@ -364,7 +411,9 @@ async function seed() {
 
   /* --- médical, HYROX, mensurations --- */
   await must(sb.from("medical_entries").insert({ athlete_id: ATH, kind: "blessure", title: "Entorse cheville gauche", zone: "Cheville gauche", date: ymd(addDays(today, -120)), status: "gueri", injury_type: "traumatique", training_impact: "adapte", days_off: 10, declared_by: "athlete", created_by: ATH }), "medical");
-  await must(sb.from("hyrox_results").insert({ athlete_id: ATH, date: ymd(addDays(today, -60)), format: "solo", division: "women", status: "finished", source: "manual", event_name: "HYROX Paris", venue: "Paris", total_s: 4658, run_1_s: 268, run_2_s: 292, run_3_s: 300, run_4_s: 298, run_5_s: 305, run_6_s: 310, run_7_s: 312, run_8_s: 305, ski_s: 262, sled_push_s: 215, sled_pull_s: 262, bbj_s: 300, row_s: 270, farmers_s: 138, lunges_s: 250, wall_balls_s: 355, roxzone_total_s: 216, penalties_s: 0, created_by: ATH }), "hyrox");
+  const paris = { athlete_id: ATH, date: ymd(addDays(today, -60)), format: "solo", division: "women", status: "finished", source: "manual", event_name: "HYROX Paris", venue: "Paris", total_s: 4658, run_1_s: 268, run_2_s: 292, run_3_s: 300, run_4_s: 298, run_5_s: 305, run_6_s: 310, run_7_s: 312, run_8_s: 305, ski_s: 262, sled_push_s: 215, sled_pull_s: 262, bbj_s: 300, row_s: 270, farmers_s: 138, lunges_s: 250, wall_balls_s: 355, roxzone_total_s: 216, penalties_s: 0, created_by: ATH };
+  await must(sb.from("hyrox_results").insert(paris), "hyrox");
+  await seedRaceWatch(paris);
   await must(sb.from("measurement_logs").insert({ athlete_id: ATH, date: ymd(addDays(today, -2)), weight_kg: 78.4, bras_g: 31, bras_d: 31.5, epaules: 108, poitrine: 94, taille: 74, hanche: 98, cuisse_g: 58, cuisse_d: 58.5, mollet_g: 37, mollet_d: 37, photos: {} }), "measurements");
 
 

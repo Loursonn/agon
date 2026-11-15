@@ -130,6 +130,10 @@ export interface RaceActivityCandidate {
   id: string;
   durationS: number | null;
   source: string;
+  startedAt: string | null;
+  deviceName: string | null;
+  sport: string | null;
+  title: string | null;
 }
 
 /**
@@ -139,12 +143,28 @@ export interface RaceActivityCandidate {
 export async function listRaceActivityCandidates(athleteId: string, date: string): Promise<RaceActivityCandidate[]> {
   const rows = unwrapRows(
     await db().from("provider_activities")
-      .select("id, duration_s, source")
+      .select("id, duration_s, source, started_at, device_name, sport, title")
       .eq("athlete_id", athleteId)
-      .eq("local_date", date),
+      .eq("local_date", date)
+      .order("started_at", { ascending: true }),
     "Activités du jour de course non chargées",
-  ) as Array<{ id: string; duration_s: number | null; source: string }>;
-  return rows.map((r) => ({ id: r.id, durationS: r.duration_s == null ? null : Number(r.duration_s), source: r.source }));
+  ) as Array<{ id: string; duration_s: number | null; source: string; started_at: string | null; device_name: string | null; sport: string | null; title: string | null }>;
+  return rows.map((r) => ({
+    id: r.id, durationS: r.duration_s == null ? null : Number(r.duration_s), source: r.source,
+    startedAt: r.started_at, deviceName: r.device_name, sport: r.sport, title: r.title,
+  }));
+}
+
+/**
+ * Lier une course à une activité de montre et enregistrer le recalage
+ * (`offsetS` null = automatique). `activityId` null = revenir à la
+ * proposition d'office.
+ */
+export async function linkRaceWatch(raceId: string, activityId: string | null, offsetS: number | null): Promise<void> {
+  check(
+    await untyped().from("hyrox_results").update({ watch_activity_id: activityId, watch_offset_s: offsetS }).eq("id", raceId),
+    "Lien avec la montre non enregistré",
+  );
 }
 
 /** Une course ; `null` si elle n'existe pas (ou n'est pas visible). */
