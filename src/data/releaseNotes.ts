@@ -38,6 +38,25 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-15-energie-noter-seance",
+    date: "2026-11-15",
+    kind: "feature",
+    title: "Séances d'énergie : « Noter ma séance » refait côté athlète",
+    summary:
+      "L'écran où l'athlète note sa séance d'énergie est plus clair et ne bloque plus : il s'ouvre en bas de l'écran du téléphone, avec le nom de la séance et ce qui était prévu.",
+    sections: [
+      {
+        title: "Ce qui change pour vos athlètes",
+        points: [
+          "Chaque bloc est nommé par son contenu (« 20 min à Z1 », « 6 min à 4:08–4:17/km ») au lieu de « Bloc 1 », « Bloc 2 ».",
+          "Tous les blocs sont comptés faits : l'athlète décoche seulement ce qu'il n'a pas fait. Le bouton « Valider la séance » n'est plus grisé.",
+          "La note par bloc reste possible, repliée derrière « + note ». La durée réelle est préremplie (prévu ou temps du minuteur) et se règle par 5 minutes.",
+          "Vous recevez les mêmes informations qu'avant : blocs faits ou non, notes, durée, activité et distance.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-15-weekly-review-douleur-de-la-semaine",
     date: "2026-11-15",
     kind: "fix",

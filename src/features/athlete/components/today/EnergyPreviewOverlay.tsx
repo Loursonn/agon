@@ -1,9 +1,7 @@
 import type { BlockLogs } from "@/types/energy";
 import { C } from "@/lib/theme";
-import { Check } from "lucide-react";
-import { type EnergyDraft, fmtIv, getWorkIntervals, rpeBg, rpeColor } from "@/features/athlete/components/today/todayEnergyUtils";
+import { type EnergyDraft, getWorkIntervals, rpeBg, rpeColor } from "@/features/athlete/components/today/todayEnergyUtils";
 import { FOSTER_LABELS } from "@/features/athlete/components/today/todayConstants";
-import { RunDistanceInput } from "@/features/shared/components/RunDistanceInput";
 import { type RunDistanceValue, initialRunDistance, runDistancePayload } from "@/features/shared/components/runDistance";
 import { SessionPreviewModal } from "@/features/coach/components/energy/SessionPreviewModal";
 import type { UnifiedCalendarEvent } from "@/features/shared/hooks/useUnifiedCalendar";
@@ -21,6 +19,7 @@ import { EnergyReadView } from "@/features/athlete/components/energy/EnergyReadV
 import { EnergyRunScreen } from "@/features/athlete/components/energy/EnergyRunScreen";
 import { WatchPushButton } from "@/features/athlete/components/today/WatchPushButton";
 import { EnergyDoneView } from "@/features/athlete/components/energy/EnergyDoneView";
+import { EnergyLogView } from "@/features/athlete/components/energy/EnergyLogView";
 import { usePlannedVsDone } from "@/features/shared/hooks/usePlannedVsDone";
 import { useNavigate } from "react-router-dom";
 import type { IsoDay } from "@shared/domain/dates";
@@ -47,6 +46,8 @@ export function EnergyPreviewOverlay({
   const [actualDuration, setActualDuration] = useState<string>("");
   const [runDist, setRunDist]           = useState<RunDistanceValue>(initialRunDistance());
   const [rpeSelected, setRpeSelected]   = useState<number | null>(null);
+  // Minutes mesurées par le minuteur (null : durée préremplie avec le prévu).
+  const [timerMin, setTimerMin]         = useState<number | null>(null);
 
   const { data: session, isLoading, isError } = useEnergySession(sessionId);
   const { data: refs } = useAthleteReferences(athleteId);
@@ -72,7 +73,8 @@ export function EnergyPreviewOverlay({
     if (workBlocks.length > 0) {
       const existing = (event.raw?.block_logs ?? {}) as BlockLogs;
       const init: BlockLogs = {};
-      for (const b of workBlocks) init[b.id] = existing[b.id] ?? { done: false, note: "" };
+      // Faits d'office : l'athlète décoche ce qu'il n'a pas fait.
+      for (const b of workBlocks) init[b.id] = existing[b.id] ?? { done: true, note: "" };
       setLocalBlocks(init);
     }
     if (session.total_duration_s != null)
@@ -221,125 +223,27 @@ export function EnergyPreviewOverlay({
     );
   }
 
-  // ── Phase LOG ──────────────────────────────────────────────────────────────
+  // ── Phase LOG (planche EnergieTel : feuille du bas) ────────────────────────
   if (phase === "log") {
-    const allBlocksDone = workBlocks.length === 0 || workBlocks.every(b => localBlocks[b.id]?.done);
+    const plannedMin = session.total_duration_s != null ? Math.round(session.total_duration_s / 60) : null;
     return (
-      <>
-        <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(0,0,0,0.65)" }} />
-        <div style={{
-          position: "fixed", top: "50%", left: "50%", zIndex: 61,
-          transform: "translate(-50%, -50%)",
-          width: 480, maxWidth: "96vw", maxHeight: "88vh",
-          background: C.s1, borderRadius: 6, border: "1px solid " + C.brd,
-          display: "flex", flexDirection: "column", overflow: "hidden",
-        }}>
-          {/* Header */}
-          <div style={{ padding: "14px 18px", borderBottom: "1px solid " + C.brd, display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-            <button onClick={() => setPhase("preview")} style={{ padding: "4px 10px", borderRadius: 7, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>← Retour</button>
-            <div style={{ flex: 1, fontSize: 14, fontWeight: 700, color: C.tx }}>{session.name}</div>
-          </div>
-          {/* Body */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "16px 18px", scrollbarWidth: "none" }}>
-            {isComplex && (
-              <>
-                <div style={{ fontSize: 11, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 10 }}>
-                  Blocs d'effort
-                </div>
-                {workBlocks.map((b, i) => {
-                  const done = localBlocks[b.id]?.done ?? false;
-                  return (
-                    <div key={b.id} style={{
-                      display: "flex", alignItems: "flex-start", gap: 10,
-                      padding: "10px 0", borderBottom: i < workBlocks.length - 1 ? "1px solid " + C.brdL : "none",
-                    }}>
-                      <button
-                        onClick={() => setLocalBlocks(prev => ({ ...prev, [b.id]: { ...prev[b.id], done: !done } }))}
-                        style={{
-                          width: 26, height: 26, borderRadius: 7, flexShrink: 0,
-                          border: "1.5px solid " + (done ? C.g : C.brdL),
-                          background: done ? C.g + "20" : "transparent",
-                          cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                        }}
-                      >
-                        {done && <Check size={13} color={C.g} />}
-                      </button>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: done ? C.tx3 : C.tx, marginBottom: 4 }}>
-                          Bloc {i + 1} — {fmtIv(b)}
-                        </div>
-                        <input
-                          placeholder="Note (optionnel)"
-                          value={localBlocks[b.id]?.note ?? ""}
-                          onChange={e => setLocalBlocks(prev => ({ ...prev, [b.id]: { ...prev[b.id], note: e.target.value } }))}
-                          style={{
-                            width: "100%", padding: "6px 10px", borderRadius: 4,
-                            border: "1px solid " + C.brdL, background: C.s2,
-                            color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none",
-                            boxSizing: "border-box",
-                          }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </>
-            )}
-            {/* Durée réelle */}
-            <div style={{ marginTop: isComplex ? 16 : 0 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6 }}>
-                Durée réelle (min)
-              </div>
-              <input
-                type="number" min={1} max={300}
-                value={actualDuration}
-                onChange={e => setActualDuration(e.target.value)}
-                placeholder="Durée en minutes"
-                style={{
-                  width: "100%", padding: "8px 10px", borderRadius: 4,
-                  border: "1px solid " + C.brdL, background: C.s2,
-                  color: C.tx, fontSize: 13, fontFamily: "inherit", outline: "none",
-                  boxSizing: "border-box",
-                }}
-              />
-            </div>
-            {/* Activité + km (volume de course) */}
-            <div style={{ marginTop: 16 }}>
-              <RunDistanceInput value={runDist} onChange={setRunDist} />
-            </div>
-            {/* Note globale */}
-            <textarea
-              placeholder="Note sur la séance…"
-              value={globalNote}
-              onChange={e => setGlobalNote(e.target.value)}
-              rows={2}
-              style={{
-                width: "100%", marginTop: 12, padding: "8px 10px", borderRadius: 4,
-                border: "1px solid " + C.brdL, background: C.s2,
-                color: C.tx, fontSize: 12, fontFamily: "inherit", outline: "none",
-                resize: "none", boxSizing: "border-box",
-              }}
-            />
-          </div>
-          {/* Footer */}
-          <div style={{ padding: "12px 18px", borderTop: "1px solid " + C.brd, flexShrink: 0 }}>
-            <button
-              onClick={handleValidate}
-              disabled={complete.isPending || (isComplex && !allBlocksDone)}
-              style={{
-                width: "100%", padding: "11px 0", borderRadius: 4, border: "none",
-                background: (isComplex && !allBlocksDone) ? C.s2 : C.g,
-                color: (isComplex && !allBlocksDone) ? C.tx3 : C.tx,
-                fontSize: 13, fontWeight: 700,
-                cursor: complete.isPending || (isComplex && !allBlocksDone) ? "default" : "pointer",
-                fontFamily: "inherit", opacity: complete.isPending ? 0.7 : 1,
-              }}
-            >
-              {complete.isPending ? "Validation…" : "Valider la séance ✓"}
-            </button>
-          </div>
-        </div>
-      </>
+      <EnergyLogView
+        session={session}
+        refs={refs}
+        blocks={localBlocks}
+        onBlocks={setLocalBlocks}
+        duration={actualDuration}
+        onDuration={setActualDuration}
+        durationHint={timerMin != null ? `Mesurée par le minuteur${plannedMin ? ` · prévu ${plannedMin} min` : ""}` : plannedMin ? `Prévu ${plannedMin} min` : "Durée en minutes"}
+        runDist={runDist}
+        onRunDist={setRunDist}
+        note={globalNote}
+        onNote={setGlobalNote}
+        pending={complete.isPending}
+        onBack={() => setPhase("preview")}
+        onClose={onClose}
+        onValidate={handleValidate}
+      />
     );
   }
 
@@ -351,7 +255,10 @@ export function EnergyPreviewOverlay({
         refs={refs}
         title={session.name}
         onExit={(elapsedS, finished) => {
-          if (elapsedS >= 60) setActualDuration(String(Math.round(elapsedS / 60)));
+          if (elapsedS >= 60) {
+            setActualDuration(String(Math.round(elapsedS / 60)));
+            setTimerMin(Math.round(elapsedS / 60));
+          }
           // Séance allée au bout : tous les blocs d'effort sont cochés d'office.
           if (finished) setLocalBlocks((prev) => Object.fromEntries(Object.entries(prev).map(([k, v]) => [k, { ...v, done: true }])));
           setPhase("log");
