@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useRecentMeasurements } from "@/features/shared/hooks/useReferences";
+import { athleteIdsExceptSelf } from "@/lib/coachRoster";
 
 export interface RecentRecord {
   id:             string;
@@ -15,14 +16,15 @@ export interface RecentRecord {
 
 /**
  * Dernières mesures de performance des athlètes du coach (accueil « Records
- * & tests »), la plus récente d'abord — sans les bornes de zones FC, qui
+ * & tests »), la plus récente d'abord — sans celles du coach lui-même quand
+ * il est son propre athlète (coach_athlete) — sans les bornes de zones FC, qui
  * s'affichaient comme des records. Clé `referenceKeys.recent` : invalidée par
  * toute écriture de référence (`invalidateReferences`), et elle dépend de la
  * liste des athlètes.
  */
 export function useRecentRecords(limit = 8) {
-  const { athletes } = useAuth();
-  const athleteIds = useMemo(() => athletes.map((a) => a.id), [athletes]);
+  const { athletes, user } = useAuth();
+  const athleteIds = useMemo(() => athleteIdsExceptSelf(athletes, user?.id), [athletes, user?.id]);
   const query = useRecentMeasurements(athleteIds, limit);
 
   const records = useMemo<RecentRecord[]>(() => {
