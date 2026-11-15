@@ -4,13 +4,13 @@
  * ne stocke que « tel coach a vu telle nouveauté, à telle date ».
  * Adaptateurs de `src/api/appContent.ts`.
  */
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   appContentKeys, invalidateAppUpdates, listAppUpdateReads, listAppUpdateStats, markAppUpdatesSeen,
   type AppUpdateRead,
 } from "@/api/appContent";
-import { RELEASE_NOTES } from "@/data/releaseNotes";
 import type { ReleaseNote } from "@/data/releaseNotes";
 
 export type { AppUpdateRead } from "@/api/appContent";
@@ -25,11 +25,34 @@ export function useAppUpdateReads(userId: string | undefined) {
   });
 }
 
+// Le texte des nouveautés (~190 kB, ~57 kB compressés) n'est pas dans le
+// démarrage coach : il arrive en différé (badge, carte et page Nouveautés).
+let loadedNotes: ReleaseNote[] | null = null;
+let notesPromise: Promise<ReleaseNote[]> | null = null;
+function loadReleaseNotes(): Promise<ReleaseNote[]> {
+  notesPromise ??= import("@/data/releaseNotes").then((m) => (loadedNotes = m.RELEASE_NOTES));
+  return notesPromise;
+}
+
+/** Liste des nouveautés (null tant que le fichier n'est pas chargé). */
+export function useReleaseNotes(): ReleaseNote[] | null {
+  const [notes, setNotes] = useState(loadedNotes);
+  useEffect(() => {
+    if (notes) return;
+    let alive = true;
+    loadReleaseNotes().then((n) => { if (alive) setNotes(n); }, (e) => console.error("[useReleaseNotes]", e));
+    return () => { alive = false; };
+  }, [notes]);
+  return notes;
+}
+
 /** Nouveautés non vues (plus récente en tête) + historique. */
 export function useAppUpdates(userId: string | undefined) {
   const { data: reads, isLoading, isError } = useAppUpdateReads(userId);
-  const unseen: ReleaseNote[] = reads ? RELEASE_NOTES.filter(n => !reads[n.id]) : [];
-  return { notes: RELEASE_NOTES, reads: reads ?? {}, unseen, isLoading, isError };
+  const notes = useReleaseNotes();
+  const all = notes ?? [];
+  const unseen: ReleaseNote[] = reads ? all.filter(n => !reads[n.id]) : [];
+  return { notes: all, reads: reads ?? {}, unseen, isLoading: isLoading || !notes, isError };
 }
 
 export function useMarkAppUpdateSeen() {

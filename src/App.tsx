@@ -1,24 +1,28 @@
-import { Fragment, lazy, Suspense, type ReactNode } from "react";
+import { Fragment, lazy, Suspense, useEffect, type ComponentType, type ReactNode } from "react";
 import { MutationCache, onlineManager, QueryClient } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster as Sonner, toast as sonnerToast } from "sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "@/hooks/useAuth";
+import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import ProtectedRoute, { RoleRedirect } from "@/components/ProtectedRoute";
 import { OfflineQueryProvider } from "@/features/shared/components/OfflineQueryProvider";
 import UpdatePrompt from "@/features/shared/components/UpdatePrompt";
 import ClientBuildReporter from "@/features/shared/components/ClientBuildReporter";
-import { OFFLINE_CACHE_MAX_AGE_MS } from "@/lib/offline/offlineCache";
+import { OFFLINE_CACHE_MAX_AGE_MS, readOfflineProfile, readStoredAuthUser } from "@/lib/offline/offlineCache";
+import { arrivalChunks, type ArrivalChunk } from "@/lib/arrivalChunks";
+import { PHONE_QUERY } from "@/hooks/useIsPhone";
 import { startOfflinePersistence } from "@/lib/offline/offlinePersistence";
 import { pendingWrites, startWriteQueue } from "@/lib/offline/writes";
 
-// Pages publiques (chargées immédiatement — nécessaires au démarrage)
+// Connexion : chargée immédiatement (premier écran sans session).
 import Login from "./pages/Login.tsx";
-import ResetPassword from "./pages/ResetPassword.tsx";
-import StaffInviteAccept from "./features/staff/pages/StaffInviteAccept.tsx";
-import ClaimAthlete from "./pages/ClaimAthlete.tsx";
 import NotFound from "./pages/NotFound.tsx";
+// Liens reçus par e-mail (mot de passe, invitation staff, compte pré-créé) :
+// rares, hors du démarrage.
+const ResetPassword     = lazy(() => import("./pages/ResetPassword.tsx"));
+const StaffInviteAccept = lazy(() => import("./features/staff/pages/StaffInviteAccept.tsx"));
+const ClaimAthlete      = lazy(() => import("./pages/ClaimAthlete.tsx"));
 import PhoneOr from "./features/coach/phone/PhoneOr.tsx";
 
 // Pages légales publiques (lazy — rarement ouvertes, mais doivent rester
@@ -30,16 +34,60 @@ const Terms         = lazy(() => import("./pages/legal/Terms.tsx"));
 const LegalNotice   = lazy(() => import("./pages/legal/LegalNotice.tsx"));
 const AccountDeletion = lazy(() => import("./pages/legal/AccountDeletion.tsx"));
 
+// Morceaux de l'écran d'arrivée : partagés entre `lazy()` et le préchargement
+// du démarrage (src/lib/arrivalChunks.ts), même fonction d'import.
+const CHUNKS: Record<ArrivalChunk, () => Promise<{ default: ComponentType }>> = {
+  AthleteApp: () => import("./pages/athlete/AthleteApp.tsx"),
+  TodayPage: () => import("./features/athlete/pages/TodayPage.tsx"),
+  CoachShell: () => import("./features/coach/CoachShell.tsx"),
+  CoachHomePage: () => import("./features/coach/pages/CoachHomePage.tsx"),
+  CoachPhoneHome: () => import("./features/coach/phone/CoachPhoneHome.tsx"),
+  AthletesListPage: () => import("./features/coach/pages/AthletesListPage.tsx"),
+  CoachPhoneAthletes: () => import("./features/coach/phone/CoachPhoneAthletes.tsx"),
+  CoachAthleteArea: () => import("./pages/coach/CoachAthleteArea.tsx"),
+  PlanningPage: () => import("./features/coach/pages/PlanningPage.tsx"),
+  CoachPhonePlanning: () => import("./features/coach/phone/CoachPhonePlanning.tsx"),
+};
+
+// Ouverture avec une session : on télécharge tout de suite le layout et la
+// page d'arrivée, pendant que useAuth lit la session et le profil (avant :
+// l'un après l'autre). Sans session (page de connexion) : rien.
+function preloadChunks(role: string | null) {
+  const isPhone = !!window.matchMedia?.(PHONE_QUERY).matches;
+  for (const c of arrivalChunks(window.location.pathname, role, isPhone)) {
+    CHUNKS[c]().catch(() => { /* réessayé par lazy() à l'affichage */ });
+  }
+}
+function preloadArrival() {
+  try {
+    const user = readStoredAuthUser(localStorage, import.meta.env.VITE_SUPABASE_URL);
+    if (!user) return;
+    preloadChunks(readOfflineProfile<{ role?: string }>(localStorage, user.id)?.role ?? null);
+  } catch { /* stockage indisponible : chargement normal */ }
+}
+if (typeof window !== "undefined") preloadArrival();
+
+/**
+ * Première ouverture sur l'appareil (aucune fiche gardée) : le rôle n'est
+ * connu qu'à l'arrivée du profil ; on précharge à ce moment-là, sans attendre
+ * que la redirection et le layout soient affichés.
+ */
+function ArrivalPreloader() {
+  const role = useAuth().profile?.role ?? null;
+  useEffect(() => { if (role) preloadChunks(role); }, [role]);
+  return null;
+}
+
 // Layouts (lazy — chargés après auth)
-const AthleteApp       = lazy(() => import("./pages/athlete/AthleteApp.tsx"));
-const CoachShell       = lazy(() => import("./features/coach/CoachShell.tsx"));
-const CoachAthleteArea = lazy(() => import("./pages/coach/CoachAthleteArea.tsx"));
+const AthleteApp       = lazy(CHUNKS.AthleteApp);
+const CoachShell       = lazy(CHUNKS.CoachShell);
+const CoachAthleteArea = lazy(CHUNKS.CoachAthleteArea);
 const StaffApp         = lazy(() => import("./features/staff/StaffApp.tsx"));
 const StaffHomePage    = lazy(() => import("./features/staff/pages/StaffHomePage.tsx"));
 const StaffAthleteArea = lazy(() => import("./features/staff/pages/StaffAthleteArea.tsx"));
 
 // Pages athlète (lazy)
-const TodayPage          = lazy(() => import("./features/athlete/pages/TodayPage.tsx"));
+const TodayPage          = lazy(CHUNKS.TodayPage);
 const ProgramPage        = lazy(() => import("./features/athlete/pages/ProgramPage.tsx"));
 const WorkoutDetailPage  = lazy(() => import("./features/athlete/pages/WorkoutDetailPage.tsx"));
 const ProfilPage         = lazy(() => import("./features/athlete/pages/ProfilPage.tsx"));
@@ -56,8 +104,8 @@ const AthleteHyroxPage = lazy(() => import("./features/athlete/pages/HyroxPage.t
 const SpecificExecutionPage = lazy(() => import("./features/athlete/pages/SpecificExecutionPage.tsx"));
 
 // Pages coach globales (lazy)
-const CoachHomePage      = lazy(() => import("./features/coach/pages/CoachHomePage.tsx"));
-const AthletesListPage   = lazy(() => import("./features/coach/pages/AthletesListPage.tsx"));
+const CoachHomePage      = lazy(CHUNKS.CoachHomePage);
+const AthletesListPage   = lazy(CHUNKS.AthletesListPage);
 const LibraryPage        = lazy(() => import("./features/coach/pages/LibraryPage.tsx"));
 const CoachTestsBankPage = lazy(() => import("./features/coach/pages/CoachTestsBankPage.tsx"));
 const CoachesListPage    = lazy(() => import("./features/coach/pages/CoachesListPage.tsx"));
@@ -66,7 +114,7 @@ const RoadmapPage        = lazy(() => import("./features/coach/pages/RoadmapPage
 const AthleteFeedbackPage = lazy(() => import("./features/coach/pages/AthleteFeedbackPage.tsx"));
 
 // Pages coach par athlète (lazy)
-const PlanningPage      = lazy(() => import("./features/coach/pages/PlanningPage.tsx"));
+const PlanningPage      = lazy(CHUNKS.PlanningPage);
 const ProgrammationPage = lazy(() => import("./features/coach/pages/ProgrammationPage.tsx"));
 const DonneesPage       = lazy(() => import("./features/coach/pages/DonneesPage.tsx"));
 const RetoursPage       = lazy(() => import("./features/coach/pages/RetoursPage.tsx"));
@@ -83,10 +131,10 @@ const AthleteFichesPage         = lazy(() => import("./features/coach/pages/Athl
 const CoachStaffPage            = lazy(() => import("./features/staff/pages/CoachStaffPage.tsx"));
 const CoachSeancePage           = lazy(() => import("./features/coach/pages/SeancePage.tsx"));
 // Coach sur téléphone (planches « Coach tél. ») : écrans à part, même route
-const CoachPhoneHome     = lazy(() => import("./features/coach/phone/CoachPhoneHome.tsx"));
-const CoachPhoneAthletes = lazy(() => import("./features/coach/phone/CoachPhoneAthletes.tsx"));
+const CoachPhoneHome     = lazy(CHUNKS.CoachPhoneHome);
+const CoachPhoneAthletes = lazy(CHUNKS.CoachPhoneAthletes);
 const CoachPhonePlus     = lazy(() => import("./features/coach/phone/CoachPhonePlus.tsx"));
-const CoachPhonePlanning = lazy(() => import("./features/coach/phone/CoachPhonePlanning.tsx"));
+const CoachPhonePlanning = lazy(CHUNKS.CoachPhonePlanning);
 const CoachPhoneRetours  = lazy(() => import("./features/coach/phone/CoachPhoneRetours.tsx"));
 const CoachPhoneWellness = lazy(() => import("./features/coach/phone/CoachPhoneWellness.tsx"));
 const CoachPhoneSante    = lazy(() => import("./features/coach/phone/CoachPhoneSante.tsx"));
@@ -303,6 +351,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <ClientBuildReporter />
+          <ArrivalPreloader />
           <Suspense fallback={<PageLoader />}>
             <AppRoutes />
           </Suspense>

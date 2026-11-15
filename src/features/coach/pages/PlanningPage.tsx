@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useAuth } from "@/hooks/useAuth";
@@ -6,10 +6,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CompetitionFormModal } from "@/features/coach/components/planning/CompetitionFormModal";
 
 // Views
-import { TimelineView } from "@/features/coach/components/planning/TimelineView";
 import { CalendarMonthView } from "@/features/coach/components/planning/CalendarMonthView";
-import { SummaryView } from "@/features/coach/components/planning/SummaryView";
-import { CompetitionsView } from "@/features/coach/components/planning/CompetitionsView";
+// Vues secondaires (frise, synthèse, compétitions) : chargées à l'ouverture.
+// La frise et la synthèse tirent Recharts (~100 kB compressés), inutiles pour
+// la vue semaine / mois affichée par défaut.
+const TimelineView = lazy(() => import("@/features/coach/components/planning/TimelineView").then((m) => ({ default: m.TimelineView })));
+const SummaryView = lazy(() => import("@/features/coach/components/planning/SummaryView").then((m) => ({ default: m.SummaryView })));
+const CompetitionsView = lazy(() => import("@/features/coach/components/planning/CompetitionsView").then((m) => ({ default: m.CompetitionsView })));
 import { WeekLoadPanel } from "@/features/coach/components/load/WeekLoadPanel";
 import { mondayOf } from "@/lib/trainingLoadWeek";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
@@ -43,6 +46,7 @@ export default function PlanningPage() {
   return (
     <>
       <div className="px-4 pb-[60px] pt-4 md:px-6">
+        <Suspense fallback={<Skeleton className="h-[300px] rounded-[6px] bg-agon-s1" />}>
         {view === "timeline" && (
           <TimelineView athleteId={athleteId} />
         )}
@@ -77,6 +81,7 @@ export default function PlanningPage() {
         {view === "competitions" && (
           <CompetitionsView athleteId={athleteId} coachId={user?.id ?? ""} />
         )}
+        </Suspense>
       </div>
 
       {showCompForm && (

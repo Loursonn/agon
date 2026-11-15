@@ -38,6 +38,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-16-chargement-plus-rapide",
+    date: "2026-11-16",
+    kind: "fix",
+    title: "L'app se charge plus vite",
+    summary:
+      "Sur un réseau mobile moyen, la fiche d'un athlète s'ouvre en 8 s au lieu de 13 s, et en moins de 3 s quand vous revenez dessus. Côté athlète, l'écran Aujourd'hui gagne 2 à 3 secondes à l'ouverture.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "L'app télécharge en même temps ce qu'elle téléchargeait l'un après l'autre (votre profil, vos accords, l'écran d'arrivée).",
+          "Les graphiques et les fenêtres rarement ouvertes (bilan de bloc, frise, synthèse) ne sont chargés qu'au moment où vous les ouvrez.",
+          "Rien ne change dans ce qui est affiché.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-16-fiches-categorie-test",
     date: "2026-11-16",
     kind: "feature",

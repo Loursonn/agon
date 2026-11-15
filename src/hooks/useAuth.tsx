@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { getSession, isAuthNetworkError, onAuthChange, signIn, type User } from "@/api/auth";
 import {
+  accountKeys, getConsents,
   createPendingAthlete as apiCreatePendingAthlete, ensureCoachCode, getCoachRoster,
   linkToCoachByCode, normalizeCoachCode, registerAthleteWithCode as apiRegisterAthleteWithCode,
   registerCoach as apiRegisterCoach, registerStaff as apiRegisterStaff,
@@ -81,6 +83,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const athletes = useMemo(() => allAthletes.filter((a) => !a.coach_hidden), [allAthletes]);
   const hiddenAthletes = useMemo(() => allAthletes.filter((a) => a.coach_hidden), [allAthletes]);
   const [activeAthleteId, setActiveAthleteId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  /**
+   * Accords RGPD lus en même temps que la fiche : ConsentGate (ProtectedRoute)
+   * en a besoin avant d'afficher quoi que ce soit, et ne les demandait qu'une
+   * fois la fiche (et la liste d'athlètes d'un coach) arrivées. Même clé et
+   * même fraîcheur que `useConsents`.
+   */
+  function prefetchConsents(userId: string) {
+    void queryClient.prefetchQuery({
+      queryKey: accountKeys.consents(userId),
+      queryFn: () => getConsents(userId),
+      staleTime: 30 * 1000,
+    });
+  }
 
   /**
    * Charge la fiche (et le roster d'un coach). Une lecture qui échoue garde la
@@ -88,6 +105,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * profil le temps d'un rafraîchissement de jeton raté).
    */
   async function fetchProfile(userId: string) {
+    // Coach déjà connu sur cet appareil : sa liste d'athlètes part en même
+    // temps que la fiche au lieu d'attendre sa réponse (un aller-retour de moins).
+    const cachedRole = readOfflineProfile<Profile>(safeStorage(), userId)?.role;
+    const earlyRoster = cachedRole === "coach" || cachedRole === "coach_athlete" ? getCoachRoster(userId) : null;
+    earlyRoster?.catch(() => { /* lu (et signalé) plus bas, ou ignoré si le rôle a changé */ });
     let p: Profile | null;
     try {
       p = await getProfile(userId);
@@ -103,14 +125,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(p);
     if (p) saveOfflineProfile(safeStorage(), userId, p);
     if (p && (p.role === "coach" || p.role === "coach_athlete")) {
-      await fetchAthletes(userId);
+      await fetchAthletes(userId, earlyRoster);
     }
   }
 
   /** Roster du coach ; une lecture qui échoue garde la liste affichée. */
-  async function fetchAthletes(coachId: string) {
+  async function fetchAthletes(coachId: string, pending?: Promise<Profile[]> | null) {
     try {
-      setAllAthletes(await getCoachRoster(coachId));
+      setAllAthletes(await (pending ?? getCoachRoster(coachId)));
     } catch (e) {
       console.error("[useAuth] athlètes", e);
     }
@@ -168,6 +190,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .then((session) => {
         if (session?.user) {
           networkDown = false;
+          prefetchConsents(session.user.id);
           setUser(session.user);
           if (session.user.id !== early?.id) fetchProfile(session.user.id).finally(() => setLoading(false));
           else setLoading(false);
@@ -181,6 +204,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
     return onAuthChange((event, session) => {
+      // Session de départ : déjà traitée par getSession() ci-dessus (sinon la
+      // fiche et la liste d'athlètes étaient lues deux fois à chaque ouverture).
+      if (event === "INITIAL_SESSION") return;
       // Jeton expiré sans réseau : session vide SANS déconnexion. On garde
       // l'utilisateur affiché ; un refus réel du serveur (en ligne) passe.
       if (!session?.user && event !== "SIGNED_OUT" && (networkDown || isOffline()) && storedUser()) return;

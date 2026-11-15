@@ -37,5 +37,8 @@ export function currentSwEnvironment(): SwEnvironment {
   };
 }
 
+/** Délai avant l'enregistrement du SW : laisse passer le premier écran (voir UpdatePrompt). */
+export const SW_REGISTER_DELAY_MS = 8_000;
+
 /** Vérification d'une nouvelle version : l'app reste souvent ouverte des jours. */
 export const SW_UPDATE_CHECK_MS = 60 * 60 * 1000;

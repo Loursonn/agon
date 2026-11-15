@@ -2644,3 +2644,36 @@ et son README.
   celui écrit par l'athlète dans les anciennes saisies l'est.
 - Envoi bloqué tant que les douleurs de la semaine ne sont pas chargées (sinon la question pourrait manquer).
 - Le feu reste enregistré avec la review envoyée et affiché au coach à côté de la douleur.
+
+## 2026-11-15 — Temps de chargement (coach et athlète)
+
+- **Mesure** (`scripts/perf/mesure-chargement.mjs`, build de prod sur agon-test, comptes démo, servi en HTTP/2 par
+  `scripts/perf/serveur-h2.mjs`, réseau « Fast 3G » DevTools, médiane de 3) : temps jusqu'aux données affichées.
+  « Froid » = rien en cache ; « chaud » = 2ᵉ ouverture (cache HTTP + cache React Query persisté). Service worker
+  bloqué pendant la mesure (ses requêtes échappent au ralenti de Chrome).
+
+  | Écran | Froid avant → après | Chaud avant → après |
+  |---|---|---|
+  | Athlète : ouverture → Aujourd'hui (390 px, CPU ×4) | 9,9 s → 7,4 s | 2,2 s → 1,7 s |
+  | Coach : liste athlètes (1440 px) | 7,0 s → 4,8 s | 3,1 s → 1,9 s |
+  | Coach : fiche Léa, planning (1440 px) | 12,8 s → 8,0 s | 5,1 s → 2,8 s |
+
+  JS (gzip) avant l'écran : athlète 663 → 492 kB, liste coach 335 → 279 kB, planning 738 → 511 kB.
+- **Causes corrigées** (sans changement d'affichage) :
+  1. Cascade de démarrage : profil → accords RGPD → layout → page → données, un aller-retour chacun. Maintenant la
+     page d'arrivée est préchargée dès le démarrage (`src/lib/arrivalChunks.ts`, rôle gardé sur l'appareil, sinon
+     dès l'arrivée du profil), les accords sont lus avec le profil, le roster coach part avec le profil quand le rôle
+     est connu, et ses deux dernières lectures sont parallèles.
+  2. Profil et roster lus deux fois à chaque ouverture (`getSession` + évènement `INITIAL_SESSION`) : l'évènement est ignoré.
+  3. Recharts (~100 kB gzip) tiré au démarrage athlète par des fenêtres rarement ouvertes (bilan de bloc, tiroir
+     profil…) et au planning coach par la frise / la synthèse : chargés à l'ouverture (`lazy`). Le wellness est
+     préchargé 4 s après l'arrivée.
+  4. Texte des Nouveautés (~57 kB gzip) dans le démarrage coach pour un simple compteur : chargé à part (`useReleaseNotes`).
+  5. État athlète (`useAthletePersistedState`) : cycle ouvert et drapeau de migration lus en même temps que le reste
+     (deux allers-retours en série de moins avant le planning).
+  Aussi : service worker enregistré 8 s après le démarrage (son précache de ~6 Mo ne concurrence plus le premier
+  écran à la première visite ou après une mise en ligne ; non mesurable par le banc ci-dessus).
+- **Restes** : ~80 requêtes Supabase avant l'écran Aujourd'hui (une par clé `app_data`, plus les préflights CORS
+  qu'un vrai téléphone paie et que le banc ne ralentit pas) ; quelques lectures en double entre hooks
+  (`asp:prog`, `asp:freesess`, compétitions, événements de vie). Pistes : regrouper les clés `app_data` en une
+  lecture, ou servir l'API Supabase sous le domaine de l'app (plus de préflights).
