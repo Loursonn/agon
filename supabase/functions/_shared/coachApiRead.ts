@@ -13,11 +13,15 @@
  * glisser — un diagnostic, un traitement, un cycle — et l'athlète a consenti
  * à l'analyse de ses données d'entraînement, pas de ses confidences.
  *
+ * Douleur et maladie du matin, zones et bilan hebdomadaire : bloc
+ * `details_sante` (`coachApiHealthDetails.ts`), sous le texte IA du 15/11/2026.
+ *
  * Module pur, testé par vitest.
  */
 import { exportableInjuries } from "./domain/injuries.ts";
 import { wellnessEntries, wellnessScore } from "./domain/wellness.ts";
 import type { SummaryHealth } from "./coachApiHealth.ts";
+import { buildHealthDetails, type HealthDetailsInput } from "./coachApiHealthDetails.ts";
 import { cleanText, type ExerciceParamsShape, isWeekRecord, type ProgSessionShape } from "./coachApiOps.ts";
 
 type Obj = Record<string, unknown>;
@@ -151,6 +155,11 @@ export interface SummaryInput {
   appData: Record<string, unknown>;
   /** Wellness, pesées et objectif de poids : tables santé (`readSummaryHealth`). */
   health: SummaryHealth;
+  /**
+   * Détails santé (`readHealthDetails`), seulement si l'athlète a accepté le
+   * texte IA qui les nomme ; absent sinon, et le bloc `details_sante` aussi.
+   */
+  healthDetails?: HealthDetailsInput | null;
   prog: unknown;
   workoutLogs: Array<{
     scheduled_date: string;
@@ -384,6 +393,7 @@ export function buildSummary(input: SummaryInput) {
           source: label(d.source, 20),
         })),
     },
+    ...(input.healthDetails ? { details_sante: buildHealthDetails(wellness, input.healthDetails, from, to) } : {}),
   };
 }
 

@@ -233,7 +233,7 @@ export default function PrivacyPolicy() {
             ],
             [
               "Produire par intelligence artificielle des analyses, des synthèses et des visualisations de vos données d'entraînement, et proposer à votre coach des axes de travail — via l'API Claude (Anthropic) utilisée par Agon, ou via l'assistant Claude de votre coach",
-              "Historique d'entraînement, moyennes de bien-être (récupération, sommeil, stress, énergie), poids, objectifs, blessures déclarées ; pour l'assistant Claude, également vos compétitions, tests et les titres des événements de votre calendrier. Jamais les données Garmin ou COROS (voir 4.3)",
+              "Historique d'entraînement, moyennes de bien-être (récupération, sommeil, stress, énergie), poids, objectifs, blessures déclarées ; pour l'assistant Claude, également vos compétitions, tests, les titres des événements de votre calendrier, la douleur et la maladie déclarées le matin, les courbatures et douleurs par zone, la douleur notée pour une blessure et votre bilan hebdomadaire (notes, choix et feu, jamais vos phrases). Jamais les données Garmin ou COROS (voir 4.3)",
               "Consentement explicite (art. 9.2.a), proposé seulement à partir de 18 ans",
             ],
             [
@@ -295,9 +295,13 @@ export default function PrivacyPolicy() {
           d'intelligence artificielle personnel, <strong>Claude, édité par Anthropic</strong>, au
           moyen d'une clé qu'il génère dans Agon. Cet assistant reçoit votre prénom, vos séances et
           charges réalisées, votre bien-être, votre poids, vos blessures déclarées (zones et dates),
-          vos compétitions et tests, les données de montre autorisées, ainsi que les dates et titres
-          des événements que vous ajoutez à votre calendrier (examens, voyages…) — jamais vos
-          commentaires libres sur vos séances, votre ressenti ou vos blessures. Il aide votre coach à
+          vos compétitions et tests, les données de montre autorisées, les dates et titres
+          des événements que vous ajoutez à votre calendrier (examens, voyages…), ainsi que, depuis
+          le texte du 15 novembre 2026, la douleur et la maladie déclarées le matin, vos courbatures
+          et douleurs par zone, la douleur notée pour une blessure et votre bilan hebdomadaire (vos
+          notes de 1 à 5, vos engagements tenus ou non, la cause d'un blocage, la douleur de la
+          semaine, le feu du matin) — jamais vos commentaires libres sur vos séances, votre
+          ressenti ou vos blessures, ni les phrases de votre bilan. Il aide votre coach à
           planifier et à périodiser votre entraînement, et peut l'inscrire dans Agon (séances,
           cycles, compétitions, tests, fiches, habitudes) — uniquement à la demande de votre coach,
           qui décide. Il ne supprime jamais ce que vous avez déjà réalisé ou renseigné.
@@ -377,8 +381,11 @@ export default function PrivacyPolicy() {
         <P>
           <strong>Ne sont jamais transmis à une intelligence artificielle</strong>, ni à l'API Claude
           d'Agon ni à l'assistant de votre coach : les données de vos montres Garmin et COROS et leur copie
-          intégrale, vos photos du corps, la douleur et la maladie déclarées le matin, votre bilan
-          hebdomadaire, le feu du matin et la charge calculée.
+          intégrale, vos photos du corps, la charge calculée et les phrases de votre bilan
+          hebdomadaire. La douleur et la maladie déclarées le matin, votre bilan hebdomadaire et le
+          feu du matin ne sont jamais transmis à l'API Claude d'Agon ; seul l'assistant de votre
+          coach les reçoit, dans les limites décrites plus haut et si vous avez accepté le texte du
+          15 novembre 2026.
         </P>
 
         <h3 style={{ fontSize: 14, fontWeight: 700, color: C.tx, margin: "16px 0 8px" }}>

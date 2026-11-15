@@ -2755,3 +2755,23 @@ Demande d'Hugo (15/11) : « lorsqu'un athlète a une compétition, il faut la me
 - Un seul mécanisme de lien : le rapprochement planning. L'analyse HYROX garde son propre lien (`hyrox_results.watch_activity_id` + recalage) mais prend d'office l'activité liée à la compétition.
 - Charge : la course liée à une compétition compte comme une activité (FC), pas comme une séance prévue ; l'échauffement aussi.
 - Prévu / réalisé : un lien vers une séance absente de la lecture (compétition annulée…) laisse l'activité libre, visible, au lieu de la faire disparaître.
+
+## 2026-11-15 — L'assistant Claude du coach lit douleur, maladie et bilan hebdo (accord IA du 15/11)
+
+- **Demande d'Hugo** : une analyse de la semaine complète par Claude, douleurs et ressenti compris. Le 13/11, ces données
+  étaient promises « jamais transmises à une IA » (accord IA inchangé ce jour-là).
+- **Choix d'Hugo** : élargir l'accord IA unique (pas de case séparée). `LEGAL_VERSION` et `AI_CONSENT_SINCE` passent au
+  2026-11-15 : la question IA est reposée à tous les athlètes majeurs. Accord socle inchangé (`CORE_CONSENT_SINCE`).
+- **Ce qui part** (bloc `details_sante` de `GET /summary`, `_shared/coachApiHealthDetails.ts`) : douleur 0-10, zones de
+  douleur et de courbatures (identifiants de la carte), malade, envie ; douleur de suivi d'une blessure (`injury_followups`,
+  zone de la blessure, après séance ou non) ; bilans hebdo envoyés : 5 notes, statut des engagements, cause du blocage,
+  douleur (zone 40 car., type, niveau), feu à l'envoi, retour du coach oui/non et réaction de l'athlète.
+- **Choix d'Hugo** : chiffres et choix seulement. Restent exclus : note de blessure du matin, note de suivi, phrases du bilan
+  (engagements, « ce qui a marché / bloqué / à changer », mot au coach), commentaire de retour du coach.
+- **Paliers, pas de coupure** : un accord ≥ `AI_ASSISTANT_SINCE` (30/10) reste valable pour ce qu'il nommait. Le serveur
+  sert l'ancien résumé, octet pour octet (golden), et ajoute `details_sante` seulement si `doc_version ≥
+  AI_HEALTH_DETAILS_SINCE`. Aucun athlète ne disparaît de l'API en attendant sa réponse ; le serveur peut être déployé
+  avant le client (personne n'atteint la nouvelle version tant que `main` ne porte pas le nouveau texte).
+- **API Claude d'Agon** (`athlete-insights`, `ai-program`) : rien de nouveau, ces données ne lui sont toujours pas envoyées.
+- Politique (§ finalités, § assistant, liste « jamais transmis »), texte de l'accord, écran de mise à jour,
+  `docs/stores/DONNEES_COLLECTEES.md` et `docs/API_COACH.md` mis à jour.

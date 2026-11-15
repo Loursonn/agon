@@ -66,6 +66,47 @@ export const RELEASE_NOTES: ReleaseNote[] = [
     ],
   },
   {
+    id: "2026-11-15-assistant-douleurs-bilan-hebdo",
+    date: "2026-11-15",
+    kind: "feature",
+    title: "Ton assistant Claude lit les douleurs et le bilan de la semaine",
+    summary:
+      "Pour un bilan de semaine complet : ton assistant IA voit maintenant la douleur et la maladie du matin, les zones douloureuses et les bilans hebdo de tes athlètes, s'ils l'acceptent.",
+    sections: [
+      {
+        title: "Ce qu'il voit en plus",
+        points: [
+          "Chaque matin : douleur sur 10, zones de douleur et de courbatures, malade ou non, envie de s'entraîner.",
+          "La douleur notée en fin de séance pour une blessure déclarée, avec sa zone.",
+          "Le bilan de la semaine : les 5 notes, les engagements tenus ou non, ce qui a bloqué (moi, programme, vie), la douleur de la semaine et le feu du matin.",
+          "Jamais les phrases écrites par l'athlète : ses commentaires restent dans Agon.",
+        ],
+      },
+      {
+        title: "L'accord de tes athlètes",
+        points: [
+          "La question sur l'IA est reposée à tes athlètes majeurs à leur prochaine ouverture d'Agon.",
+          "Tant qu'un athlète n'a pas répondu, ton assistant continue de voir ce qu'il voyait avant, sans ces nouveautés.",
+        ],
+      },
+      {
+        title: "Le bilan de semaine",
+        points: [
+          "Demande « fais-moi le bilan de la semaine de Léa » : il compare la semaine aux 4 précédentes (charge, sommeil, fatigue, douleurs zone par zone, bilan de l'athlète) et te propose 3 ajustements au plus.",
+          "Télécharge le nouveau mode d'emploi ci-dessous et redonne-le à ton assistant.",
+        ],
+      },
+    ],
+    resources: [
+      {
+        label: "Mode d'emploi pour ton assistant IA",
+        description: "À donner à Claude Code sur ton ordinateur, avec ta clé. Claude dans le navigateur (claude.ai) ne peut pas appeler l'API.",
+        text: COACH_API_PROMPT,
+        filename: COACH_API_PROMPT_FILENAME,
+      },
+    ],
+  },
+  {
     id: "2026-11-15-volume-course-semaine",
     date: "2026-11-15",
     kind: "feature",

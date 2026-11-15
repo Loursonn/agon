@@ -48,7 +48,7 @@ function oneOf<T extends string>(v: unknown, allowed: readonly string[]): T | nu
 }
 
 /** Zone saisie à la main : une ligne, sans caractère de balisage, 40 caractères. */
-function zoneLabel(v: unknown): string | null {
+export function zoneLabel(v: unknown): string | null {
   if (typeof v !== "string") return null;
   const s = v.replace(/[\r\n`$<>{}]/g, " ").replace(/\s+/g, " ").trim().slice(0, 40);
   return s || null;

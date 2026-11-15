@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { AI_CONSENT_SINCE, CORE_CONSENT_SINCE, LEGAL_VERSION } from "@/lib/legal";
-import { AI_ASSISTANT_SINCE } from "@shared/coachApiOps.ts";
+import { AI_ASSISTANT_SINCE, AI_HEALTH_DETAILS_SINCE } from "@shared/coachApiOps.ts";
 import { hasDecidedSince, type ConsentState } from "@/features/shared/hooks/useConsent";
 
 // Pas de réseau : l'auth et la lecture des accords sont remplacées par des
@@ -152,7 +152,10 @@ describe("ConsentGate · accord IA", () => {
 
 describe("version minimale de l'accord IA", () => {
   it("est la même côté app et côté API coach, et le texte en vigueur l'atteint", () => {
-    expect(AI_CONSENT_SINCE).toBe(AI_ASSISTANT_SINCE);
+    // L'app repose la question depuis le texte qui nomme les détails santé ;
+    // l'API sert l'ancien résumé aux accords plus anciens, sans ces détails.
+    expect(AI_CONSENT_SINCE).toBe(AI_HEALTH_DETAILS_SINCE);
+    expect(AI_ASSISTANT_SINCE <= AI_CONSENT_SINCE).toBe(true);
     // Sinon une réponse enregistrée aujourd'hui serait déjà trop ancienne et
     // l'écran reviendrait à chaque connexion.
     expect(LEGAL_VERSION >= AI_CONSENT_SINCE).toBe(true);
@@ -161,7 +164,8 @@ describe("version minimale de l'accord IA", () => {
   it("hasDecidedSince ignore les réponses antérieures", () => {
     const list = [decision("ai_programming", true, "2026-10-27")];
     expect(hasDecidedSince(list, "ai_programming", AI_CONSENT_SINCE)).toBe(false);
-    expect(hasDecidedSince([decision("ai_programming", false, "2026-10-30")], "ai_programming", AI_CONSENT_SINCE)).toBe(true);
+    expect(hasDecidedSince([decision("ai_programming", false, "2026-10-30")], "ai_programming", AI_CONSENT_SINCE)).toBe(false);
+    expect(hasDecidedSince([decision("ai_programming", false, "2026-11-15")], "ai_programming", AI_CONSENT_SINCE)).toBe(true);
     expect(hasDecidedSince(undefined, "ai_programming", AI_CONSENT_SINCE)).toBe(false);
   });
 });

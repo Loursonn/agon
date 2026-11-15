@@ -54,6 +54,27 @@ seul le titre de ses événements de calendrier passe, et le texte de
 consentement le lui dit.
 Les données Garmin ne sont jamais transmises à une IA.
 
+**Détails santé** (bloc `details_sante` de `/summary`) : seulement pour un
+athlète qui a accepté le texte IA du 15 novembre 2026. Sans cet accord, le bloc
+est absent et le reste du résumé est inchangé ; l'athlète peut le donner dans
+son profil, section Confidentialité.
+
+| Champ | Contenu |
+|---|---|
+| `matin[]` | `date`, `envie` (1-5), `douleur` (0-10, la zone la plus forte), `douleur_zones` (zone → 1-10), `courbatures_zones` (zone → 1 légère, 2 marquée, 3 intense), `malade` (oui/non). Jours sans aucune de ces réponses omis. |
+| `suivi_blessures[]` | Douleur notée pour une blessure déclarée : `date`, `zone` de la blessure, `douleur` (0-10), `apres_seance` (notée en fin de séance). |
+| `bilans_hebdo[]` | Bilans envoyés dont la semaine touche la période : `semaine_du`, `envoye_le`, `feu` (vert/orange/rouge à l'envoi), `notes` (`semaine`, `energie`, `motivation`, `charge_de_vie` — 5 = légère —, `nutrition`, de 1 à 5), `engagements` (tenu / en_partie / pas_tenu, sans leur texte), `blocage` (moi / programme / vie), `douleur` (`zone`, `type`, `niveau`), `retour_coach` (tu as répondu), `reaction_au_retour`. |
+
+Zones de courbatures : `epaules`, `pectoraux`, `abdos`, `biceps`,
+`avant_bras`, `quadriceps`, `tibias`, `trapezes`, `epaules_arr`, `dorsaux`,
+`lombaires`, `triceps`, `avant_bras_arr`, `fessiers`, `ischios`, `mollets`.
+Zones de douleur : `cou`, `nuque`, `epaule`, `coude`, `poignet_main`, `thorax`,
+`haut_dos`, `abdomen`, `lombaires`, `hanche`, `fessier`, `cuisse`, `ischios`,
+`genou`, `tibia`, `mollet`, `achille`, `cheville_pied`.
+Jamais transmis : la note de blessure du matin, la note de suivi, les phrases du
+bilan (engagements, « ce qui a marché », « ce qui a bloqué », mot au coach) et
+ton commentaire de retour.
+
 Chaque lecture est journalisée.
 
 ## Routes
