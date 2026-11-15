@@ -38,6 +38,26 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-16-saisie-allures",
+    date: "2026-11-16",
+    kind: "fix",
+    title: "Séances d'énergie : les allures se modifient de nouveau",
+    summary:
+      "Dans l'éditeur de séance d'énergie, une allure tapée autrement que « 4'15 » (4.15, 4'15'', 415…) était refusée sans prévenir : le champ revenait à l'ancienne valeur. Toutes ces écritures sont maintenant acceptées.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Allure : 4'15, 4:15, 4.15, 4,15, 4'15'', 415 ou 4 min 15 donnent tous 4'15 /km.",
+          "Si vous tapez les deux bornes à l'envers (4'25 à 4'15), elles sont remises dans l'ordre.",
+          "Une saisie que l'app ne sait pas lire passe en rouge au lieu de disparaître ; Échap revient à la valeur d'avant.",
+          "Éditeur détaillé : le champ d'allure ne se réécrit plus pendant que vous tapez, et une vitesse en km/h est bien enregistrée.",
+          "Répétitions : vider le champ pour retaper un nombre ne remet plus 1 fois.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-16-douleur-de-seance",
     date: "2026-11-16",
     kind: "feature",

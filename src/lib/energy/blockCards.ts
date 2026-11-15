@@ -194,13 +194,52 @@ export function defaultTarget(kind: CardTarget, role: IntervalRole): EnergyTarge
   }
 }
 
-/** « 4'15 » → 255 ; « 4:15 », « 4 » acceptés. Null si illisible. */
+// ── Saisie des champs (cartes et éditeur détaillé) ──────────────────────────
+// Un coach tape comme il écrit sur papier : 4'15, 4.15, 4'15'', 415, 4 min 15…
+// Une saisie refusée laissait le champ revenir sans prévenir à l'ancienne
+// valeur (« le champ ne se modifie pas ») : on accepte toutes ces formes.
+
+/** Apostrophes, primes et guillemets typographiques ramenés à ' et ". */
+function normalizeMarks(s: string): string {
+  return s
+    .trim()
+    .toLowerCase()
+    .replace(/[\u2019\u2018\u2032\u00b4`]/g, "'")
+    .replace(/[\u201d\u201c\u2033]|''/g, '"')
+    .replace(/[\u00a0\u202f]/g, " ");
+}
+
+/** Allure plausible en secondes par km : de 1'00 à 30'00. */
+const PACE_MIN_S = 60;
+const PACE_MAX_S = 1800;
+
+/**
+ * Allure → secondes par km. « 4'15 », « 4:15 », « 4.15 », « 4,15 », « 4'15'' »,
+ * « 4'15" », « 4 15 », « 4 min 15 », « 415 », « 4'15/km », « 4 » (minutes).
+ * Null si illisible ou hors de 1'00-30'00.
+ */
 export function parsePace(s: string): number | null {
-  const m = s.trim().match(/^(\d{1,2})(?:\s*['’:]\s*(\d{1,2}))?$/);
-  if (!m) return null;
-  const sec = m[2] ? Number(m[2]) : 0;
-  if (sec >= 60) return null;
-  return Number(m[1]) * 60 + sec;
+  const t = normalizeMarks(s).replace(/\s*(?:min\s*)?\/\s*km$/, "").trim();
+  let m = t.match(/^(\d{1,2})\s*(?:'|:|\.|,|min|mn|m|\s)\s*(\d{1,2})\s*(?:"|s|sec)?$/);
+  let sec: number | null = null;
+  if (m) {
+    const ss = Number(m[2]);
+    if (ss < 60) sec = Number(m[1]) * 60 + ss;
+  } else if ((m = t.match(/^(\d{1,2})\s*(?:'|min|mn)?$/))) {
+    sec = Number(m[1]) * 60;
+  } else if ((m = t.match(/^(\d{1,2})(\d{2})$/))) {
+    const ss = Number(m[2]);
+    if (ss < 60) sec = Number(m[1]) * 60 + ss;
+  }
+  return sec != null && sec >= PACE_MIN_S && sec <= PACE_MAX_S ? sec : null;
+}
+
+/** Vitesse « 15 », « 15,5 », « 15.5 km/h » → secondes par km. Null si illisible ou hors de 2-60 km/h. */
+export function parseSpeedKmh(s: string): number | null {
+  const t = normalizeMarks(s).replace(/\s*km\s*\/?\s*h$/, "").replace(",", ".").trim();
+  if (!/^\d+(?:\.\d+)?$/.test(t)) return null;
+  const v = Number(t);
+  return v >= 2 && v <= 60 ? Math.round(3600 / v) : null;
 }
 
 export function fmtPace(sPerKm: number): string {
@@ -208,26 +247,49 @@ export function fmtPace(sPerKm: number): string {
   return `${Math.floor(r / 60)}'${String(r % 60).padStart(2, "0")}`;
 }
 
-/** « 8 min 00 s », « 8:00 », « 8 » (minutes), « 90 s » → secondes. */
+/**
+ * Durée → secondes. « 8 min 00 s », « 8 min », « 8:00 », « 1:05:00 », « 8 »
+ * (minutes), « 90 s », « 45" », « 2'30 », « 2'30'' », « 2m30 », « 1h », « 1h30 »,
+ * « 1 h 05 min ». Null si illisible ou nul.
+ */
 export function parseClock(s: string): number | null {
-  const t = s.trim().toLowerCase();
-  let m = t.match(/^(\d+)\s*(?:min|')\s*(?:(\d{1,2})\s*(?:s|")?)?$/);
-  if (m) return Number(m[1]) * 60 + (m[2] ? Number(m[2]) : 0);
+  const t = normalizeMarks(s);
+  let m = t.match(/^(\d+)\s*h\s*(?:(\d{1,2})\s*(?:min|mn|m|')?)?$/);
+  if (m) return pos(Number(m[1]) * 3600 + (m[2] ? Number(m[2]) * 60 : 0));
+  m = t.match(/^(\d+)\s*(?:min|mn|m|')\s*(?:(\d{1,2})\s*(?:s|sec|")?)?$/);
+  if (m) return m[2] && Number(m[2]) >= 60 ? null : pos(Number(m[1]) * 60 + (m[2] ? Number(m[2]) : 0));
+  m = t.match(/^(\d+):(\d{1,2}):(\d{1,2})$/);
+  if (m) return Number(m[2]) < 60 && Number(m[3]) < 60 ? pos(Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3])) : null;
   m = t.match(/^(\d+):(\d{1,2})$/);
-  if (m) return Number(m[1]) * 60 + Number(m[2]);
-  m = t.match(/^(\d+)\s*s$/);
-  if (m) return Number(m[1]);
+  if (m) return Number(m[2]) < 60 ? pos(Number(m[1]) * 60 + Number(m[2])) : null;
+  m = t.match(/^(\d+)\s*(?:s|sec|")$/);
+  if (m) return pos(Number(m[1]));
   m = t.match(/^(\d+)$/);
-  if (m) return Number(m[1]) * 60;
+  if (m) return pos(Number(m[1]) * 60);
   return null;
 }
 
-/** « 200 m », « 1,5 km », « 400 » (mètres) → mètres. */
+function pos(n: number): number | null {
+  return n > 0 ? n : null;
+}
+
+/** « 200 m », « 1,5 km », « 1 000 m », « 5k », « 400 » (mètres) → mètres. Null si illisible ou nul. */
 export function parseDistance(s: string): number | null {
-  const t = s.trim().toLowerCase().replace(",", ".");
-  let m = t.match(/^(\d+(?:\.\d+)?)\s*km$/);
-  if (m) return Math.round(Number(m[1]) * 1000);
+  const t = normalizeMarks(s).replace(/(\d)\s+(?=\d{3}\b)/g, "$1").replace(",", ".");
+  let m = t.match(/^(\d+(?:\.\d+)?)\s*(?:km|k)$/);
+  if (m) return pos(Math.round(Number(m[1]) * 1000));
   m = t.match(/^(\d+(?:\.\d+)?)\s*m?$/);
-  if (m) return Math.round(Number(m[1]));
+  if (m) return pos(Math.round(Number(m[1])));
   return null;
+}
+
+/** Nombre entier tapé avec ou sans unité (« 165 », « 165 bpm », « 250W ») ; null si illisible. */
+export function parseWhole(s: string): number | null {
+  const m = normalizeMarks(s).replace(",", ".").match(/^(\d+(?:\.\d+)?)\s*[a-z%]*$/);
+  return m ? Math.round(Number(m[1])) : null;
+}
+
+/** Fourchette remise dans l'ordre : le coach peut taper les bornes dans n'importe quel sens. */
+export function orderedRange(a: number, b: number): [number, number] {
+  return a > 0 && b > 0 && a > b ? [b, a] : [a, b];
 }

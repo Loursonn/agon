@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { EnergyGroup, EnergyInterval, EnergyStep } from "@/types/energy";
 import {
-  blockCardKind, blockSummary, blockZone, newBlock, parseClock, parseDistance, parsePace, patchMain, setRepeat, setRest,
+  blockCardKind, blockSummary, blockZone, newBlock, orderedRange, parseClock, parseDistance, parsePace, parseSpeedKmh, parseWhole,
+  patchMain, setRepeat, setRest,
 } from "../blockCards";
 import { computeTotals, expandIntervals } from "../index";
 import { makeRootGroup } from "../treeUtils";
@@ -78,5 +79,56 @@ describe("saisie", () => {
     expect(parseDistance("200 m")).toBe(200);
     expect(parseDistance("1,5 km")).toBe(1500);
     expect(parseDistance("abc")).toBeNull();
+  });
+});
+
+describe("saisie telle qu'un coach l'écrit (retour d'Hugo du 2026-11-15)", () => {
+  it("allure : toutes les écritures courantes de 4'05", () => {
+    for (const s of ["4'05", "4’05", "4:05", "4.05", "4,05", "4'05''", "4'05\"", "4’05”", "4 05", "4min05", "4 min 05", "405", "4'05/km", "4'05 /km", "4′05", "4'5"]) {
+      expect(parsePace(s), s).toBe(245);
+    }
+    expect(parsePace("4")).toBe(240);
+    expect(parsePace("4 min")).toBe(240);
+    expect(parsePace("12'30")).toBe(750);
+  });
+
+  it("allure : illisible ou absurde → null (le champ passe en rouge)", () => {
+    for (const s of ["", "abc", "4'60", "460", "0", "0'30", "45'00", "4-05"]) expect(parsePace(s), s).toBeNull();
+  });
+
+  it("vitesse en km/h stockée en secondes par km", () => {
+    expect(parseSpeedKmh("15")).toBe(240);
+    expect(parseSpeedKmh("15,5")).toBe(232);
+    expect(parseSpeedKmh("15.5 km/h")).toBe(232);
+    expect(parseSpeedKmh("0")).toBeNull();
+    expect(parseSpeedKmh("255")).toBeNull();
+  });
+
+  it("durées", () => {
+    expect(parseClock("2'30''")).toBe(150);
+    expect(parseClock("2m30")).toBe(150);
+    expect(parseClock("45\"")).toBe(45);
+    expect(parseClock("1h")).toBe(3600);
+    expect(parseClock("1h30")).toBe(5400);
+    expect(parseClock("1 h 05 min")).toBe(3900);
+    expect(parseClock("1:05:00")).toBe(3900);
+    expect(parseClock("2:75")).toBeNull();
+    expect(parseClock("0")).toBeNull();
+  });
+
+  it("distances et nombres", () => {
+    expect(parseDistance("1 000 m")).toBe(1000);
+    expect(parseDistance("5k")).toBe(5000);
+    expect(parseDistance("0")).toBeNull();
+    expect(parseWhole("165")).toBe(165);
+    expect(parseWhole("165 bpm")).toBe(165);
+    expect(parseWhole("250W")).toBe(250);
+    expect(parseWhole("abc")).toBeNull();
+  });
+
+  it("bornes remises dans l'ordre", () => {
+    expect(orderedRange(265, 255)).toEqual([255, 265]);
+    expect(orderedRange(255, 265)).toEqual([255, 265]);
+    expect(orderedRange(255, 0)).toEqual([255, 0]);
   });
 });
