@@ -38,6 +38,15 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-15-planification-plus-rapide",
+    date: "2026-11-15",
+    kind: "fix",
+    title: "La planification s'ouvre plus vite",
+    summary:
+      "Le serveur vérifiait de façon coûteuse qui a le droit de voir chaque semaine d'un cycle. Les règles et la confidentialité restent exactement les mêmes, mais le calcul est bien plus léger : la planification et le programme de vos athlètes se chargent plus vite.",
+    sections: [],
+  },
+  {
     id: "2026-11-15-hyrox-calculs-justes",
     date: "2026-11-15",
     kind: "fix",

@@ -5936,7 +5936,9 @@ export type Database = {
       }
       current_user_is_admin: { Args: never; Returns: boolean }
       cycle_athlete_id: { Args: { p_cycle_id: string }; Returns: string }
+      cycle_athlete_id_fast: { Args: { p_cycle_id: string }; Returns: string }
       cycle_coach_id: { Args: { p_cycle_id: string }; Returns: string }
+      cycle_is_mixed: { Args: { p_cycle_id: string }; Returns: boolean }
       decide_hr_zone_model: {
         Args: { p_accept: boolean; p_id: string }
         Returns: undefined
@@ -6140,6 +6142,10 @@ export type Database = {
         Returns: Json
       }
       mesocycle_athlete_id: {
+        Args: { p_mesocycle_id: string }
+        Returns: string
+      }
+      mesocycle_athlete_id_fast: {
         Args: { p_mesocycle_id: string }
         Returns: string
       }
@@ -6435,6 +6441,7 @@ export type Database = {
         Args: { p_approve: boolean; p_log: string; p_notification: string }
         Returns: undefined
       }
+      rls_linked_to: { Args: { p_athlete: string }; Returns: boolean }
       run_workout_status_maintenance: {
         Args: never
         Returns: {

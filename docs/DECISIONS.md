@@ -2610,3 +2610,19 @@ et son README.
 - **Affichage** : la phrase du feu dit pourquoi la couleur (« Douleur 5/10 depuis 2 jours : le signal se répète, à
   prendre au sérieux », « … : signal isolé, à surveiller (rouge s'il se répète demain) », « Rien à signaler ce matin »).
   Sans montre, le feu peut passer au rouge par la douleur, l'envie ou la fatigue répétées.
+
+## 2026-11-15 — RLS des microcycles et des cycles accélérée, mêmes droits
+
+- Constat : `microcycles_*` appelaient `cycle_athlete_id` (invoker) à chaque ligne, qui relisait cycles, mésocycles
+  et macrocycles sous la RLS de l'appelant, en cascade (environ 89 ms pour un athlète sur 148 microcycles).
+- Décision (migration `20261115220000_rls_microcycles_fast`, appliquée avec le oui d'Hugo) : dans les policies
+  seulement, `cycle_athlete_id_fast` et `mesocycle_athlete_id_fast` (SECURITY DEFINER, gardées par
+  `rls_linked_to` : l'athlète, son coach ou co-coach, un pro au lien actif). Le cycle « mixte » (mésocycle d'un
+  athlète, `athlete_id` d'un autre ; 0 ligne en prod) repasse par l'ancienne fonction (`cycle_is_mixed`).
+  `cycle_athlete_id` et `mesocycle_athlete_id` restent inchangées pour les RPC.
+- Preuve d'équivalence : banc local PGlite `supabase/tests/rls_microcycles_pglite.mjs` (fonctions et policies exactes
+  de `schema.sql`, 23 jeux aléatoires : 0 écart sur la lecture, la modification et l'insertion ; trois mutations
+  volontaires détectées), et test `supabase/tests/rls_microcycles_equivalence.sql` (ancienne contre nouvelle
+  expression lue dans `pg_policies`, cycles fictifs de chaque forme). Pas de test massif en prod : la panne du
+  15/11 venait du budget Disk IO du plan gratuit. Gain non mesuré en prod pour la même raison.
+- Retour arrière : `supabase/rollback/20261115220000_rls_microcycles_fast.sql`.

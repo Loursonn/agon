@@ -63,6 +63,10 @@ jobs:
         if: always()
         run: node supabase/tests/hyrox_tests_pglite.mjs supabase/migrations 32 24
 
+      - name: RLS microcycles, équivalence (PGlite)
+        if: always()
+        run: node supabase/tests/rls_microcycles_pglite.mjs 1 8
+
       - name: Journal Postgres (si échec)
         if: failure()
         run: |
