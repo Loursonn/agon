@@ -175,6 +175,29 @@ $$;
 ALTER FUNCTION "public"."_energy_assignment_for_write"("p_assignment" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."_new_coach_code"() RETURNS "text"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  chars constant text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  v text;
+BEGIN
+  LOOP
+    v := '';
+    FOR i IN 1..6 LOOP
+      v := v || substr(chars, 1 + floor(random() * length(chars))::int, 1);
+    END LOOP;
+    EXIT WHEN NOT EXISTS (SELECT 1 FROM public.profiles WHERE coach_code = v);
+  END LOOP;
+  RETURN v;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."_new_coach_code"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."_session_pain_clean"("p_levels" "jsonb", "p_note" "text", OUT "levels" "jsonb", OUT "note" "text") RETURNS "record"
     LANGUAGE "plpgsql" IMMUTABLE
     SET "search_path" TO 'public'
@@ -213,6 +236,45 @@ $$;
 
 
 ALTER FUNCTION "public"."_session_pain_clean"("p_levels" "jsonb", "p_note" "text", OUT "levels" "jsonb", OUT "note" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."_signup_guard"() RETURNS "uuid"
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_me uuid := auth.uid();
+BEGIN
+  IF v_me IS NULL THEN
+    RAISE EXCEPTION 'Connexion requise' USING ERRCODE = '42501';
+  END IF;
+  IF EXISTS (SELECT 1 FROM public.profiles WHERE id = v_me) THEN
+    RAISE EXCEPTION 'Ce compte a déjà un profil' USING ERRCODE = '23505';
+  END IF;
+  RETURN v_me;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."_signup_guard"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."_signup_name"("p_full_name" "text") RETURNS "text"
+    LANGUAGE "plpgsql" IMMUTABLE
+    SET "search_path" TO ''
+    AS $$
+DECLARE
+  v text := btrim(regexp_replace(coalesce(p_full_name, ''), '\s+', ' ', 'g'));
+BEGIN
+  IF length(v) < 2 OR length(v) > 80 THEN
+    RAISE EXCEPTION 'Indique ton nom (2 à 80 caractères)' USING ERRCODE = '22023';
+  END IF;
+  RETURN v;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."_signup_name"("p_full_name" "text") OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."workout_logs" (
@@ -1375,6 +1437,47 @@ COMMENT ON FUNCTION "public"."consume_oauth_state"("p_state" "text") IS 'Lit et 
 
 
 
+CREATE OR REPLACE FUNCTION "public"."create_coach_invitation"("p_email" "text") RETURNS TABLE("id" "uuid", "token" "text", "email" "text", "expires_at" timestamp with time zone)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $_$
+#variable_conflict use_column
+DECLARE
+  v_me    uuid := auth.uid();
+  v_email text := lower(btrim(coalesce(p_email, '')));
+  v_ok    boolean;
+BEGIN
+  IF v_me IS NULL THEN
+    RAISE EXCEPTION 'Connexion requise' USING ERRCODE = '42501';
+  END IF;
+  SELECT public.current_user_is_admin()
+      OR (p.is_certified_coach AND p.role IN ('coach', 'coach_athlete'))
+    INTO v_ok FROM public.profiles p WHERE p.id = v_me;
+  IF NOT coalesce(v_ok, false) THEN
+    RAISE EXCEPTION 'Réservé à l''admin et aux coachs certifiés' USING ERRCODE = '42501';
+  END IF;
+  IF length(v_email) > 254 OR v_email !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' THEN
+    RAISE EXCEPTION 'Adresse e-mail invalide' USING ERRCODE = '22023';
+  END IF;
+  IF EXISTS (SELECT 1 FROM auth.users u JOIN public.profiles p ON p.id = u.id WHERE lower(u.email) = v_email) THEN
+    RAISE EXCEPTION 'Un compte existe déjà avec cet e-mail' USING ERRCODE = '23505';
+  END IF;
+  IF (SELECT count(*) FROM public.coach_invitations c
+       WHERE c.invited_by = v_me AND c.used_at IS NULL AND c.revoked_at IS NULL AND c.expires_at > now()) >= 20 THEN
+    RAISE EXCEPTION 'Trop d''invitations en cours (20) : révoque celles qui ne servent plus' USING ERRCODE = '54000';
+  END IF;
+
+  RETURN QUERY
+    INSERT INTO public.coach_invitations AS c (email, invited_by)
+    VALUES (v_email, v_me)
+    RETURNING c.id, c.token, c.email, c.expires_at;
+END;
+$_$;
+
+
+ALTER FUNCTION "public"."create_coach_invitation"("p_email" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."create_cycle"("p_athlete" "uuid", "p_name" "text", "p_start" "date", "p_end" "date", "p_mesocycle" "uuid" DEFAULT NULL::"uuid", "p_deload_week" integer DEFAULT NULL::integer, "p_sessions" "jsonb" DEFAULT '[]'::"jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -1750,6 +1853,25 @@ $$;
 
 
 ALTER FUNCTION "public"."get_claim_info"("p_token" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_coach_invitation"("p_token" "text") RETURNS TABLE("email" "text", "inviter_name" "text", "status" "text")
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  SELECT c.email,
+         p.full_name,
+         CASE WHEN c.used_at IS NOT NULL THEN 'utilisee'
+              WHEN c.revoked_at IS NOT NULL THEN 'revoquee'
+              WHEN c.expires_at <= now() THEN 'expiree'
+              ELSE 'valide' END
+    FROM public.coach_invitations c
+    LEFT JOIN public.profiles p ON p.id = c.invited_by
+   WHERE c.token = p_token AND length(coalesce(p_token, '')) >= 32;
+$$;
+
+
+ALTER FUNCTION "public"."get_coach_invitation"("p_token" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."get_coach_overview"("coach_uuid" "uuid") RETURNS "jsonb"
@@ -4321,6 +4443,104 @@ $$;
 ALTER FUNCTION "public"."refresh_athlete_zone_summaries"("p_athlete" "uuid", "p_from" "date") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."register_athlete"("p_coach_code" "text", "p_full_name" "text", "p_birth_date" "date") RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_me    uuid := public._signup_guard();
+  v_name  text := public._signup_name(p_full_name);
+  v_coach uuid;
+BEGIN
+  SELECT id INTO v_coach FROM public.profiles
+   WHERE coach_code = upper(btrim(coalesce(p_coach_code, ''))) AND role IN ('coach', 'coach_athlete');
+  IF v_coach IS NULL THEN
+    RAISE EXCEPTION 'Code coach invalide — vérifie auprès de ton coach' USING ERRCODE = 'P0002';
+  END IF;
+
+  PERFORM set_config('agon.signup', 'on', true);
+  PERFORM set_config('agon.coach_link', 'on', true);
+  INSERT INTO public.profiles (id, role, full_name, birth_date, coach_id)
+  VALUES (v_me, 'athlete', v_name, p_birth_date, v_coach);
+  PERFORM set_config('agon.coach_link', 'off', true);
+  PERFORM set_config('agon.signup', 'off', true);
+  RETURN v_coach;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."register_athlete"("p_coach_code" "text", "p_full_name" "text", "p_birth_date" "date") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."register_coach"("p_token" "text", "p_full_name" "text", "p_birth_date" "date", "p_coach_athlete" boolean DEFAULT false) RETURNS "text"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_me    uuid := public._signup_guard();
+  v_name  text := public._signup_name(p_full_name);
+  v_inv   public.coach_invitations%ROWTYPE;
+  v_email text;
+  v_code  text := public._new_coach_code();
+BEGIN
+  SELECT * INTO v_inv FROM public.coach_invitations WHERE token = p_token FOR UPDATE;
+  IF NOT FOUND OR length(coalesce(p_token, '')) < 32 THEN
+    RAISE EXCEPTION 'L''inscription coach se fait sur invitation' USING ERRCODE = '42501';
+  END IF;
+  IF v_inv.used_at IS NOT NULL THEN
+    RAISE EXCEPTION 'Cette invitation a déjà été utilisée' USING ERRCODE = '22023';
+  END IF;
+  IF v_inv.revoked_at IS NOT NULL THEN
+    RAISE EXCEPTION 'Cette invitation a été révoquée' USING ERRCODE = '22023';
+  END IF;
+  IF v_inv.expires_at <= now() THEN
+    RAISE EXCEPTION 'Cette invitation a expiré : demande-en une nouvelle' USING ERRCODE = '22023';
+  END IF;
+  SELECT lower(email) INTO v_email FROM auth.users WHERE id = v_me;
+  IF v_email IS DISTINCT FROM v_inv.email THEN
+    RAISE EXCEPTION 'Cette invitation est liée à une autre adresse e-mail' USING ERRCODE = '42501';
+  END IF;
+
+  PERFORM set_config('agon.signup', 'on', true);
+  INSERT INTO public.profiles (id, role, full_name, birth_date, coach_code, coach_id)
+  VALUES (v_me, CASE WHEN p_coach_athlete THEN 'coach_athlete' ELSE 'coach' END, v_name, p_birth_date, v_code,
+          CASE WHEN p_coach_athlete THEN v_me END);
+  PERFORM set_config('agon.signup', 'off', true);
+
+  UPDATE public.coach_invitations SET used_at = now(), used_by = v_me WHERE id = v_inv.id;
+  RETURN v_code;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."register_coach"("p_token" "text", "p_full_name" "text", "p_birth_date" "date", "p_coach_athlete" boolean) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."register_staff"("p_token" "text", "p_full_name" "text", "p_birth_date" "date", "p_profession" "text") RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_me   uuid := public._signup_guard();
+  v_name text := public._signup_name(p_full_name);
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM public.staff_invitations
+                  WHERE token = p_token AND used_at IS NULL AND expires_at > now()) THEN
+    RAISE EXCEPTION 'Invitation staff introuvable ou expirée' USING ERRCODE = '42501';
+  END IF;
+
+  PERFORM set_config('agon.signup', 'on', true);
+  INSERT INTO public.profiles (id, role, full_name, birth_date, profession)
+  VALUES (v_me, 'staff', v_name, p_birth_date, p_profession);
+  PERFORM set_config('agon.signup', 'off', true);
+  RETURN v_me;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."register_staff"("p_token" "text", "p_full_name" "text", "p_birth_date" "date", "p_profession" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."remove_co_coach"("p_athlete" "uuid") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -4642,6 +4862,29 @@ $$;
 
 
 ALTER FUNCTION "public"."review_performance_notification"("p_notification" "uuid", "p_log" "uuid", "p_approve" boolean) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."revoke_coach_invitation"("p_id" "uuid") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_me uuid := auth.uid();
+BEGIN
+  IF v_me IS NULL THEN
+    RAISE EXCEPTION 'Connexion requise' USING ERRCODE = '42501';
+  END IF;
+  UPDATE public.coach_invitations c SET revoked_at = now()
+   WHERE c.id = p_id AND c.used_at IS NULL AND c.revoked_at IS NULL
+     AND (c.invited_by = v_me OR public.current_user_is_admin());
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Invitation introuvable ou déjà utilisée' USING ERRCODE = 'P0002';
+  END IF;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."revoke_coach_invitation"("p_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."rls_linked_to"("p_athlete" "uuid") RETURNS boolean
@@ -7696,6 +7939,27 @@ CREATE TABLE IF NOT EXISTS "public"."coach_api_rate" (
 ALTER TABLE "public"."coach_api_rate" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."coach_invitations" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "token" "text" DEFAULT ("replace"(("gen_random_uuid"())::"text", '-'::"text", ''::"text") || "replace"(("gen_random_uuid"())::"text", '-'::"text", ''::"text")) NOT NULL,
+    "email" "text" NOT NULL,
+    "invited_by" "uuid",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "expires_at" timestamp with time zone DEFAULT ("now"() + '7 days'::interval) NOT NULL,
+    "used_at" timestamp with time zone,
+    "used_by" "uuid",
+    "revoked_at" timestamp with time zone,
+    CONSTRAINT "coach_invitations_email_check" CHECK ((("email" = "lower"("btrim"("email"))) AND (("length"("email") >= 3) AND ("length"("email") <= 254))))
+);
+
+
+ALTER TABLE "public"."coach_invitations" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."coach_invitations" IS 'Invitations à s''inscrire comme coach (15/11/2026) : lien lié à un e-mail, 7 jours, usage unique, révocable. Écriture par RPC seulement.';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."competitions" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "coach_id" "uuid" NOT NULL,
@@ -9425,6 +9689,16 @@ ALTER TABLE ONLY "public"."coach_api_rate"
 
 
 
+ALTER TABLE ONLY "public"."coach_invitations"
+    ADD CONSTRAINT "coach_invitations_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."coach_invitations"
+    ADD CONSTRAINT "coach_invitations_token_key" UNIQUE ("token");
+
+
+
 ALTER TABLE ONLY "public"."competitions"
     ADD CONSTRAINT "competitions_pkey" PRIMARY KEY ("id");
 
@@ -9988,6 +10262,18 @@ CREATE INDEX "coach_api_drafts_pending_idx" ON "public"."coach_api_drafts" USING
 
 
 CREATE INDEX "coach_api_keys_coach_idx" ON "public"."coach_api_keys" USING "btree" ("coach_id");
+
+
+
+CREATE INDEX "coach_invitations_email_idx" ON "public"."coach_invitations" USING "btree" ("email");
+
+
+
+CREATE INDEX "coach_invitations_invited_by_idx" ON "public"."coach_invitations" USING "btree" ("invited_by", "created_at" DESC);
+
+
+
+CREATE INDEX "coach_invitations_used_by_idx" ON "public"."coach_invitations" USING "btree" ("used_by") WHERE ("used_by" IS NOT NULL);
 
 
 
@@ -11162,6 +11448,16 @@ ALTER TABLE ONLY "public"."coach_api_rate"
 
 
 
+ALTER TABLE ONLY "public"."coach_invitations"
+    ADD CONSTRAINT "coach_invitations_invited_by_fkey" FOREIGN KEY ("invited_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."coach_invitations"
+    ADD CONSTRAINT "coach_invitations_used_by_fkey" FOREIGN KEY ("used_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
 ALTER TABLE ONLY "public"."competitions"
     ADD CONSTRAINT "competitions_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
@@ -12187,6 +12483,13 @@ CREATE POLICY "coach_delete_athlete_prs" ON "public"."exercise_pr_logs" FOR DELE
 
 
 CREATE POLICY "coach_insert_athlete_prs" ON "public"."exercise_pr_logs" FOR INSERT WITH CHECK ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")));
+
+
+
+ALTER TABLE "public"."coach_invitations" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "coach_invitations_read" ON "public"."coach_invitations" FOR SELECT TO "authenticated" USING ((("invited_by" = ( SELECT "auth"."uid"() AS "uid")) OR ( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin")));
 
 
 
@@ -14835,6 +15138,11 @@ GRANT ALL ON FUNCTION "public"."_missing"(character, "name", "name"[]) TO "servi
 
 
 
+REVOKE ALL ON FUNCTION "public"."_new_coach_code"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."_new_coach_code"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."_nosuch"("name", "name", "name"[]) TO "postgres";
 GRANT ALL ON FUNCTION "public"."_nosuch"("name", "name", "name"[]) TO "anon";
 GRANT ALL ON FUNCTION "public"."_nosuch"("name", "name", "name"[]) TO "authenticated";
@@ -15110,6 +15418,16 @@ GRANT ALL ON FUNCTION "public"."_set"("text", integer, "text") TO "postgres";
 GRANT ALL ON FUNCTION "public"."_set"("text", integer, "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."_set"("text", integer, "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."_set"("text", integer, "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."_signup_guard"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."_signup_guard"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."_signup_name"("p_full_name" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."_signup_name"("p_full_name" "text") TO "service_role";
 
 
 
@@ -16251,6 +16569,12 @@ GRANT ALL ON FUNCTION "public"."consume_oauth_state"("p_state" "text") TO "servi
 
 
 
+REVOKE ALL ON FUNCTION "public"."create_coach_invitation"("p_email" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."create_coach_invitation"("p_email" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."create_coach_invitation"("p_email" "text") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."create_cycle"("p_athlete" "uuid", "p_name" "text", "p_start" "date", "p_end" "date", "p_mesocycle" "uuid", "p_deload_week" integer, "p_sessions" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."create_cycle"("p_athlete" "uuid", "p_name" "text", "p_start" "date", "p_end" "date", "p_mesocycle" "uuid", "p_deload_week" integer, "p_sessions" "jsonb") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."create_cycle"("p_athlete" "uuid", "p_name" "text", "p_start" "date", "p_end" "date", "p_mesocycle" "uuid", "p_deload_week" integer, "p_sessions" "jsonb") TO "service_role";
@@ -17034,6 +17358,13 @@ GRANT ALL ON FUNCTION "public"."get_app_update_reads"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."get_claim_info"("p_token" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_claim_info"("p_token" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_claim_info"("p_token" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."get_coach_invitation"("p_token" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."get_coach_invitation"("p_token" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_coach_invitation"("p_token" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_coach_invitation"("p_token" "text") TO "service_role";
 
 
 
@@ -21049,6 +21380,24 @@ GRANT ALL ON FUNCTION "public"."refresh_athlete_zone_summaries"("p_athlete" "uui
 
 
 
+REVOKE ALL ON FUNCTION "public"."register_athlete"("p_coach_code" "text", "p_full_name" "text", "p_birth_date" "date") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."register_athlete"("p_coach_code" "text", "p_full_name" "text", "p_birth_date" "date") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."register_athlete"("p_coach_code" "text", "p_full_name" "text", "p_birth_date" "date") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."register_coach"("p_token" "text", "p_full_name" "text", "p_birth_date" "date", "p_coach_athlete" boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."register_coach"("p_token" "text", "p_full_name" "text", "p_birth_date" "date", "p_coach_athlete" boolean) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."register_coach"("p_token" "text", "p_full_name" "text", "p_birth_date" "date", "p_coach_athlete" boolean) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."register_staff"("p_token" "text", "p_full_name" "text", "p_birth_date" "date", "p_profession" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."register_staff"("p_token" "text", "p_full_name" "text", "p_birth_date" "date", "p_profession" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."register_staff"("p_token" "text", "p_full_name" "text", "p_birth_date" "date", "p_profession" "text") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."relation_owner_is"("name", "name") TO "postgres";
 GRANT ALL ON FUNCTION "public"."relation_owner_is"("name", "name") TO "anon";
 GRANT ALL ON FUNCTION "public"."relation_owner_is"("name", "name") TO "authenticated";
@@ -21296,6 +21645,12 @@ GRANT ALL ON FUNCTION "public"."results_ne"("text", "text", "text") TO "service_
 REVOKE ALL ON FUNCTION "public"."review_performance_notification"("p_notification" "uuid", "p_log" "uuid", "p_approve" boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."review_performance_notification"("p_notification" "uuid", "p_log" "uuid", "p_approve" boolean) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."review_performance_notification"("p_notification" "uuid", "p_log" "uuid", "p_approve" boolean) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."revoke_coach_invitation"("p_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."revoke_coach_invitation"("p_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."revoke_coach_invitation"("p_id" "uuid") TO "service_role";
 
 
 
@@ -22844,6 +23199,11 @@ GRANT UPDATE("revoked_at") ON TABLE "public"."coach_api_keys" TO "authenticated"
 
 
 GRANT ALL ON TABLE "public"."coach_api_rate" TO "service_role";
+
+
+
+GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."coach_invitations" TO "authenticated";
+GRANT ALL ON TABLE "public"."coach_invitations" TO "service_role";
 
 
 

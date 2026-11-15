@@ -10,6 +10,7 @@ import { EmptyState } from '@/features/shared/components/EmptyState';
 import { ListSkeleton } from '@/features/shared/components/skeletons';
 import { useCoachesList, useToggleCertifiedCoach } from '@/features/shared/hooks/useCoachesList';
 import type { CoachRow } from '@/features/shared/hooks/useCoachesList';
+import { CoachInvitationsPanel } from '@/features/coach/components/CoachInvitationsPanel';
 
 // ── Badges ────────────────────────────────────────────────────────────────────
 
@@ -158,6 +159,8 @@ export default function CoachesListPage() {
           {certified.length} certifié{certified.length > 1 ? 's' : ''}
         </div>
       </div>
+
+      <CoachInvitationsPanel />
 
       {isLoading ? (
         <ListSkeleton rows={4} />

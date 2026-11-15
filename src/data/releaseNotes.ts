@@ -38,6 +38,31 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-16-inscription-sur-invitation",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "Inscription des coachs sur invitation",
+    summary:
+      "On ne peut plus s'inscrire comme coach sans y être invité. Si vous êtes certifié, vous pouvez inviter un confrère depuis la page Coachs.",
+    sections: [
+      {
+        title: "Inviter un coach",
+        points: [
+          "Page Coachs › Inviter un coach : entrez son e-mail, le lien est copié, envoyez-le-lui.",
+          "Le lien ne marche qu'avec cet e-mail, une seule fois, pendant 7 jours. Vous pouvez l'annuler tant qu'il n'a pas servi.",
+          "La liste montre où en est chaque invitation : en attente, inscrit, expirée ou annulée.",
+        ],
+      },
+      {
+        title: "Vos athlètes et votre staff",
+        points: [
+          "Rien ne change pour eux : un athlète s'inscrit toujours avec votre code coach, un professionnel du staff avec le lien d'invitation que vous lui envoyez.",
+          "Ces codes et ces liens sont maintenant vérifiés par le serveur au moment de l’inscription.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-16-echelle-douleur",
     date: "2026-11-16",
     kind: "fix",

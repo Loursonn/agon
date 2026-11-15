@@ -2730,3 +2730,11 @@ Demande d'Hugo : changer le statut d'une blessure active et suivre son degré de
 - `status` reste la source des badges « blessure active », de `report_session_pain` et de l'IA : un déclencheur le tient d'accord (Guéri ⇔ `gueri`, sinon `en_cours`). Un client qui n'écrit que `status` reste juste.
 - L'assistant IA lit l'étape (liste blanche `@shared/domain/injuries`, champ `etape`).
 - Migration additive `20261116160000_injury_recovery_stage`, appliquée en prod le 15/11 ; coach-api redéployée.
+
+## 2026-11-15 — Inscription fermée : coachs sur invitation
+
+Demande d'Hugo : empêcher n'importe qui de s'inscrire sur Agon. Choix d'Hugo :
+- coach sur invitation seulement : lien lié à l'e-mail du coach, valable 7 jours, à usage unique, révocable (`coach_invitations`) ;
+- invitation créée par l'admin ou par un coach certifié (page Coachs) ;
+- athlètes et staff verrouillés côté serveur aussi : profil créé par RPC (`register_athlete` avec un code coach valide, rattachement dans la même transaction ; `register_staff` avec une invitation staff valide).
+Deux temps (règle « durcissement côté serveur ») : migration `20261116170000_signup_invitations` additive (table, RPC `register_*`), puis, une fois en prod le client qui les appelle, une migration séparée fait refuser par `guard_profile_privileged_fields` toute création de profil hors de ces RPC (drapeau `agon.signup`). Les coachs existants gardent leur accès. Les comptes créés par le serveur (athlètes en attente, `service_role`) ne sont pas concernés.

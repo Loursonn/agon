@@ -1248,6 +1248,57 @@ export type Database = {
           },
         ]
       }
+      coach_invitations: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string | null
+          revoked_at: string | null
+          token: string
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          revoked_at?: string | null
+          token?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          revoked_at?: string | null
+          token?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_invitations_used_by_fkey"
+            columns: ["used_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       competitions: {
         Row: {
           athlete_comment: string | null
@@ -5853,6 +5904,7 @@ export type Database = {
       _get_latest: { Args: { "": string }; Returns: number[] }
       _get_note: { Args: { "": string }; Returns: string }
       _is_verbose: { Args: never; Returns: boolean }
+      _new_coach_code: { Args: never; Returns: string }
       _prokind: { Args: { p_oid: unknown }; Returns: unknown }
       _query: { Args: { "": string }; Returns: string }
       _refine_vol: { Args: { "": string }; Returns: string }
@@ -5861,6 +5913,8 @@ export type Database = {
         Args: { p_levels: Json; p_note: string }
         Returns: Record<string, unknown>
       }
+      _signup_guard: { Args: never; Returns: string }
+      _signup_name: { Args: { p_full_name: string }; Returns: string }
       _table_privs: { Args: never; Returns: unknown[] }
       _temptypes: { Args: { "": string }; Returns: string }
       _todo: { Args: never; Returns: string }
@@ -6082,6 +6136,15 @@ export type Database = {
           redirect_uri: string
         }[]
       }
+      create_coach_invitation: {
+        Args: { p_email: string }
+        Returns: {
+          email: string
+          expires_at: string
+          id: string
+          token: string
+        }[]
+      }
       create_cycle: {
         Args: {
           p_athlete: string
@@ -6149,6 +6212,14 @@ export type Database = {
           coach_name: string
           first_name: string
           last_name: string
+        }[]
+      }
+      get_coach_invitation: {
+        Args: { p_token: string }
+        Returns: {
+          email: string
+          inviter_name: string
+          status: string
         }[]
       }
       get_coach_overview: { Args: { coach_uuid: string }; Returns: Json }
@@ -6531,6 +6602,32 @@ export type Database = {
         Args: { p_athlete: string; p_from: string }
         Returns: number
       }
+      register_athlete: {
+        Args: {
+          p_birth_date: string
+          p_coach_code: string
+          p_full_name: string
+        }
+        Returns: string
+      }
+      register_coach: {
+        Args: {
+          p_birth_date: string
+          p_coach_athlete?: boolean
+          p_full_name: string
+          p_token: string
+        }
+        Returns: string
+      }
+      register_staff: {
+        Args: {
+          p_birth_date: string
+          p_full_name: string
+          p_profession: string
+          p_token: string
+        }
+        Returns: string
+      }
       remove_co_coach: { Args: { p_athlete: string }; Returns: undefined }
       remove_provider_activity: { Args: { p_activity: string }; Returns: Json }
       reopen_energy_assignment: {
@@ -6610,6 +6707,7 @@ export type Database = {
         Args: { p_approve: boolean; p_log: string; p_notification: string }
         Returns: undefined
       }
+      revoke_coach_invitation: { Args: { p_id: string }; Returns: undefined }
       rls_linked_to: { Args: { p_athlete: string }; Returns: boolean }
       run_workout_status_maintenance: {
         Args: never

@@ -209,7 +209,7 @@ export default function StaffInviteAccept() {
         return;
       }
       run(async () => {
-        await registerStaff(email, password, fullName, birthDate, pickedProfession);
+        await registerStaff(email, password, fullName, birthDate, pickedProfession, token);
         await accept();
       });
     } else {
