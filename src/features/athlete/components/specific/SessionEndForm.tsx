@@ -1,12 +1,22 @@
 /**
  * SessionEndForm — post-session feedback form.
- * RPE (1-10), respected (oui/adaptée), free text comment.
+ * RPE (1-10), respected (oui/adaptée), free text comment, douleur de séance
+ * (Non par défaut, jamais bloquante).
  */
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { SessionPainQuestion } from "@/features/athlete/components/session/SessionPainQuestion";
+import { EMPTY_SESSION_PAIN, type SessionPainAnswer } from "@/lib/sessionPain";
+
+export interface SessionEndData {
+  rpe: number;
+  respected: boolean;
+  comment: string;
+  pain: SessionPainAnswer;
+}
 
 interface Props {
-  onSubmit: (data: { rpe: number; respected: boolean; comment: string }) => void;
+  onSubmit: (data: SessionEndData) => void;
   isPending?: boolean;
 }
 
@@ -18,12 +28,14 @@ export default function SessionEndForm({ onSubmit, isPending }: Props) {
   const [rpe, setRpe] = useState<number | null>(null);
   const [respected, setRespected] = useState<boolean | null>(null);
   const [comment, setComment] = useState("");
+  const [pain, setPain] = useState<SessionPainAnswer>(EMPTY_SESSION_PAIN);
 
   function handleSubmit() {
     onSubmit({
       rpe: rpe ?? 5,
       respected: respected ?? true,
       comment: comment.trim(),
+      pain,
     });
   }
 
@@ -77,6 +89,10 @@ export default function SessionEndForm({ onSubmit, isPending }: Props) {
           placeholder="Dernier tour dur, cardio ok…"
           className="box-border w-full resize-y rounded-[4px] border border-agon-brd bg-agon-s2 px-3 py-2.5 text-[14px] text-agon-tx [outline:none]"
         />
+      </div>
+
+      <div className="mb-4">
+        <SessionPainQuestion value={pain} onChange={setPain} />
       </div>
 
       {/* Submit */}

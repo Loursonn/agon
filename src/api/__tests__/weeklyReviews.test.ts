@@ -64,7 +64,7 @@ describe("api/weeklyReviews", () => {
     expect(s.hardest).toEqual({ date: WEEK, label: "Force A", rpe: 8, comment: "Dur" });
   });
 
-  it("douleurs de la semaine : wellness et blessures de l'athlète, rien d'un autre", async () => {
+  it("douleurs de la semaine : wellness, suivis de fin de séance et blessures de l'athlète, rien d'un autre ni hors semaine", async () => {
     const { db } = fakeDb({
       app_data: [],
       wellness_entries: [
@@ -76,10 +76,17 @@ describe("api/weeklyReviews", () => {
         { id: "m1", athlete_id: "ath", title: "Entorse", zone: "Cheville gauche", date: "2026-11-27", status: "en_cours", pain_level: 6, notes: "Tordue en courant", created_at: "2026-11-27T09:00:00Z" },
         { id: "m2", athlete_id: "autre", title: "Dos", zone: null, date: "2026-11-27", status: "en_cours", pain_level: 6, notes: null, created_at: "2026-11-27T09:00:00Z" },
       ],
+      injury_followups: [
+        { id: "f1", entry_id: "m0", athlete_id: "ath", day: "2026-11-25", pain_level: 6, note: "Au squat", workout_log_id: "w1", energy_assignment_id: null, created_at: "2026-11-25T18:00:00Z" },
+        { id: "f2", entry_id: "m3", athlete_id: "ath", day: "2026-11-30", pain_level: 3, note: null, workout_log_id: "w3", energy_assignment_id: null, created_at: "2026-11-30T18:00:00Z" },
+        { id: "f3", entry_id: "m2", athlete_id: "autre", day: "2026-11-25", pain_level: 3, note: null, workout_log_id: "w4", energy_assignment_id: null, created_at: "2026-11-25T18:00:00Z" },
+      ],
     });
     setDbForTests(db);
     expect(await getWeekPainReports("ath", WEEK)).toEqual([
       { day: "2026-11-24", source: "wellness", text: "Douleur : genou 5/10", comment: null },
+      // Base simulée sans jointure : zone et nom par défaut (en base : zone de la blessure, nom de la séance).
+      { day: "2026-11-25", source: "seance", sessionName: "Séance", text: "Douleur 6/10", comment: "Au squat" },
       { day: "2026-11-27", source: "blessure", text: "Entorse · Cheville gauche · 6/10", comment: "Tordue en courant" },
     ]);
   });

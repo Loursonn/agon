@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { fakeDb, type Row } from "@shared/__tests__/fakeDb";
 import { setDbForTests } from "@/api/client";
 import {
-  deleteEntry, invalidateMedical, listEntries, medicalKeys, saveEntry,
+  deleteEntry, invalidateMedical, listEntries, listInjuryFollowups, medicalKeys, reportSessionPain, saveEntry,
 } from "@/api/injuries";
 import type { MedicalEntryInput } from "@/features/shared/types/medical";
 
@@ -75,7 +75,36 @@ describe("api/injuries", () => {
   it("invalidateMedical : blessures, préfixe ['medical', athlète]", async () => {
     const qc = { invalidateQueries: vi.fn().mockResolvedValue(undefined) };
     await invalidateMedical(qc as never, "a");
-    expect(qc.invalidateQueries.mock.calls.map((c) => c[0].queryKey)).toEqual([medicalKeys.entries("a")]);
+    expect(qc.invalidateQueries.mock.calls.map((c) => c[0].queryKey)).toEqual([medicalKeys.all("a")]);
     expect(medicalKeys.entries("a").slice(0, 2)).toEqual(medicalKeys.all("a"));
+  });
+
+  it("douleur de séance : une seule RPC, séance muscu ou énergie, libellés de zone", async () => {
+    const calls: Record<string, unknown>[] = [];
+    const { db } = fakeDb({}, undefined, {
+      report_session_pain: (args) => (calls.push(args), [{ zone: "Genou", entry_id: "m1", created: true }]),
+    });
+    setDbForTests(db);
+    expect(await reportSessionPain({ workoutLogId: "L1" }, { Genou: 6 }, "au squat")).toEqual([{ zone: "Genou", entry_id: "m1", created: true }]);
+    await reportSessionPain({ energyAssignmentId: "E1" }, { Mollet: 4 }, null);
+    expect(calls).toEqual([
+      { p_workout_log: "L1", p_energy_assignment: undefined, p_levels: { Genou: 6 }, p_note: "au squat" },
+      { p_workout_log: undefined, p_energy_assignment: "E1", p_levels: { Mollet: 4 }, p_note: undefined },
+    ]);
+  });
+
+  it("suivis de blessure : athlète, jours et séances demandés seulement", async () => {
+    setup({
+      injury_followups: [
+        { id: "f1", entry_id: "m1", athlete_id: "a", day: "2026-11-12", pain_level: 6, note: "x", workout_log_id: "L1", energy_assignment_id: null, created_at: "2026-11-12T18:00:00Z" },
+        { id: "f2", entry_id: "m1", athlete_id: "a", day: "2026-11-20", pain_level: 4, note: null, workout_log_id: "L2", energy_assignment_id: null, created_at: "2026-11-20T18:00:00Z" },
+        { id: "f3", entry_id: "m9", athlete_id: "b", day: "2026-11-12", pain_level: 2, note: null, workout_log_id: "L9", energy_assignment_id: null, created_at: "2026-11-12T18:00:00Z" },
+      ],
+    });
+    expect((await listInjuryFollowups("a", { from: "2026-11-10", to: "2026-11-16" })).map((f) => f.id)).toEqual(["f1"]);
+    expect((await listInjuryFollowups("a", { workoutLogIds: ["L2", "L9"] })).map((f) => f.id)).toEqual(["f2"]);
+    expect(await listInjuryFollowups("a", { workoutLogIds: [] })).toEqual([]);
+    // Base simulée sans jointure : pas de zone ni de nom de séance.
+    expect((await listInjuryFollowups("a", { from: "2026-11-12", to: "2026-11-12" }))[0]).toMatchObject({ zone: null, session_name: null, pain_level: 6 });
   });
 });

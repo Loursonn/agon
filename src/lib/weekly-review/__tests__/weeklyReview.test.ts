@@ -15,6 +15,7 @@ import {
   summarizeWeek,
   weekPainReports,
   type InjuryLike,
+  type SessionPainLike,
   type ReviewAnswers,
 } from "..";
 
@@ -265,5 +266,52 @@ describe("douleurs de la semaine (retour d'Hugo du 15/11)", () => {
       injuries: [injury({ date: "2026-11-26", pain_level: 4 })],
     });
     expect(r.map((x) => x.source)).toEqual(["wellness", "blessure"]);
+  });
+
+  const fu = (p: Partial<SessionPainLike>): SessionPainLike => ({
+    entryId: "m1", sessionId: "w1", day: "2026-11-25", name: "Force bas du corps", zone: "Genou", level: 6, note: null, ...p,
+  });
+
+  it("douleur de séance (suivis de blessure) : une ligne par séance, nom, zones, commentaire ; hors semaine ignorée", () => {
+    const r = weekPainReports({
+      weekStart: WEEK,
+      wellness: [],
+      sessions: [
+        fu({ note: "  Au squat  " }),
+        fu({ entryId: "m2", zone: "Lombaires", level: 3, note: "Au squat" }),
+        fu({ entryId: "m3", sessionId: "w9", day: "2026-11-30", name: "Lundi suivant", zone: "Cou", level: 2 }),
+      ],
+    });
+    expect(r).toEqual([
+      { day: "2026-11-25", source: "seance", sessionName: "Force bas du corps", text: "Genou 6/10, lombaires 3/10", comment: "Au squat" },
+    ]);
+    expect(painRequired(r)).toBe(true);
+  });
+
+  it("blessure née d'une séance : pas répétée ; blessure ancienne suivie : la séance la rappelle", () => {
+    const r = weekPainReports({
+      weekStart: WEEK,
+      wellness: [],
+      sessions: [fu({ entryId: "new", day: "2026-11-26", zone: "Mollet", level: 4 }), fu({ entryId: "old", sessionId: "e1", name: null })],
+      injuries: [
+        injury({ id: "new", title: "Douleur en séance", zone: "Mollet", date: "2026-11-26", pain_level: 4 }),
+        injury({ id: "old", title: "Tendinite", zone: "Genou", date: "2026-11-01", pain_level: 6 }),
+      ],
+    });
+    expect(r).toEqual([
+      { day: "2026-11-25", source: "seance", sessionName: "Séance", text: "Genou 6/10", comment: null },
+      { day: "2026-11-26", source: "seance", sessionName: "Force bas du corps", text: "Mollet 4/10", comment: null },
+    ]);
+  });
+
+  it("même jour : wellness, puis séance, puis blessure", () => {
+    const r = weekPainReports({
+      weekStart: WEEK,
+      wellness: [well("2026-11-26", { pain: 2 })],
+      sessions: [fu({ day: "2026-11-26", name: "", zone: "Mollet", level: 4 })],
+      injuries: [injury({ id: "autre", date: "2026-11-26", pain_level: 4 })],
+    });
+    expect(r.map((x) => x.source)).toEqual(["wellness", "seance", "blessure"]);
+    expect(r[1].sessionName).toBe("Séance");
   });
 });

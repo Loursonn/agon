@@ -9,6 +9,7 @@
  *                occurrence qui a ses propres valeurs. « Édition avancée »
  *                ouvre l'éditeur complet (SessionBlocEditor).
  */
+import { SessionPainDetail } from "@/features/shared/components/SessionPain";
 import { useState, useEffect, useMemo } from "react"
 import { blocColor } from "@/lib/peps";
 import { toast } from "sonner"
@@ -492,6 +493,9 @@ export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, o
               }
             />
             <div className="flex-1 overflow-y-auto px-3 pb-8 pt-1">
+              {currentLog?.status === "completed" && Object.keys(currentLog.painLevels ?? {}).length > 0 && (
+                <div className="mt-2"><SessionPainDetail levels={currentLog.painLevels} note={currentLog.painNote} /></div>
+              )}
               {(atMods?.sessionForme != null || atMods?.sessionComment) && (
                 <div className="mt-2 flex flex-wrap items-baseline gap-2 rounded-[4px] border border-agon-brd-l bg-agon-s2 px-2.5 py-1.5 text-[11px] text-agon-tx">
                   {atMods?.sessionForme != null && (

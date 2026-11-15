@@ -1,10 +1,10 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { addDays, type IsoDay } from "@shared/domain/dates";
 import type { Light } from "@shared/domain/wellnessLight";
-import { summarizeWeek, weekPainReports, type PainReport, type ReviewAnswers, type WeekSummary, type WorkoutExtra } from "@/lib/weekly-review";
+import { summarizeWeek, weekPainReports, type PainReport, type ReviewAnswers, type SessionPainLike, type WeekSummary, type WorkoutExtra } from "@/lib/weekly-review";
 import type { Json } from "@/integrations/supabase/types";
 import { db, unwrap, unwrapRows } from "./client";
-import { listEntries } from "./injuries";
+import { listEntries, listInjuryFollowups } from "./injuries";
 import { getPlannedVsDone } from "./plannedVsDone";
 import { getWellnessHistory } from "./wellness";
 import { listWorkoutLogs } from "./workouts";
@@ -145,14 +145,26 @@ export async function getWeekSummary(athleteId: string, weekStart: IsoDay): Prom
 }
 
 /**
- * Douleurs saisies dans la semaine (wellness du matin, blessures déclarées) :
- * déclenchent les questions douleur de la review et y sont rappelées.
+ * Douleurs saisies dans la semaine (wellness du matin, fins de séance,
+ * blessures déclarées) : déclenchent les questions douleur de la review et y
+ * sont rappelées.
  */
 export async function getWeekPainReports(athleteId: string, weekStart: IsoDay): Promise<PainReport[]> {
-  const [wellness, injuries] = await Promise.all([
-    getWellnessHistory(athleteId, { from: weekStart, to: addDays(weekStart, 6), includeArchived: false }),
+  const to = addDays(weekStart, 6);
+  const [wellness, injuries, followups] = await Promise.all([
+    getWellnessHistory(athleteId, { from: weekStart, to, includeArchived: false }),
     listEntries(athleteId),
+    listInjuryFollowups(athleteId, { from: weekStart, to }),
   ]);
-  return weekPainReports({ weekStart, wellness: Object.values(wellness), injuries });
+  const sessions: SessionPainLike[] = followups.map((f) => ({
+    entryId: f.entry_id,
+    sessionId: f.workout_log_id ?? f.energy_assignment_id,
+    day: f.day,
+    name: f.session_name,
+    zone: f.zone,
+    level: f.pain_level,
+    note: f.note,
+  }));
+  return weekPainReports({ weekStart, wellness: Object.values(wellness), injuries, sessions });
 }
 

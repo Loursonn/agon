@@ -175,6 +175,46 @@ $$;
 ALTER FUNCTION "public"."_energy_assignment_for_write"("p_assignment" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."_session_pain_clean"("p_levels" "jsonb", "p_note" "text", OUT "levels" "jsonb", OUT "note" "text") RETURNS "record"
+    LANGUAGE "plpgsql" IMMUTABLE
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  k text;
+  v jsonb;
+BEGIN
+  levels := '{}'::jsonb;
+  IF p_levels IS NOT NULL AND jsonb_typeof(p_levels) <> 'object' THEN
+    RAISE EXCEPTION 'Douleur : zones attendues' USING ERRCODE = '22023';
+  END IF;
+  FOR k, v IN SELECT * FROM jsonb_each(coalesce(p_levels, '{}'::jsonb)) LOOP
+    IF jsonb_typeof(v) <> 'number' OR (v #>> '{}')::numeric NOT IN (0,1,2,3,4,5,6,7,8,9,10) THEN
+      RAISE EXCEPTION 'Douleur entre 0 et 10' USING ERRCODE = '22023';
+    END IF;
+    IF length(btrim(k)) = 0 OR length(k) > 40 THEN
+      RAISE EXCEPTION 'Zone de douleur invalide' USING ERRCODE = '22023';
+    END IF;
+    IF (v #>> '{}')::int > 0 THEN
+      levels := levels || jsonb_build_object(btrim(k), (v #>> '{}')::int);
+    END IF;
+  END LOOP;
+  IF (SELECT count(*) FROM jsonb_object_keys(levels)) > 20 THEN
+    RAISE EXCEPTION 'Trop de zones de douleur' USING ERRCODE = '22023';
+  END IF;
+  note := nullif(btrim(coalesce(p_note, '')), '');
+  IF note IS NOT NULL AND length(note) > 500 THEN
+    RAISE EXCEPTION 'Commentaire de douleur trop long (500 caractères)' USING ERRCODE = '22023';
+  END IF;
+  IF levels = '{}'::jsonb THEN
+    note := NULL;
+  END IF;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."_session_pain_clean"("p_levels" "jsonb", "p_note" "text", OUT "levels" "jsonb", OUT "note" "text") OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."workout_logs" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "athlete_id" "uuid" NOT NULL,
@@ -4375,6 +4415,80 @@ $$;
 ALTER FUNCTION "public"."report_client_build"("p_build" "text") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."report_session_pain"("p_workout_log" "uuid" DEFAULT NULL::"uuid", "p_energy_assignment" "uuid" DEFAULT NULL::"uuid", "p_levels" "jsonb" DEFAULT '{}'::"jsonb", "p_note" "text" DEFAULT NULL::"text") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_me      uuid := auth.uid();
+  v_athlete uuid;
+  v_day     date;
+  c         record;
+  k         text;
+  v_level   int;
+  v_entry   uuid;
+  v_created boolean;
+  v_out     jsonb := '[]'::jsonb;
+BEGIN
+  IF num_nonnulls(p_workout_log, p_energy_assignment) <> 1 THEN
+    RAISE EXCEPTION 'Une séance attendue' USING ERRCODE = '22023';
+  END IF;
+  IF p_workout_log IS NOT NULL THEN
+    SELECT w.athlete_id, w.scheduled_date INTO v_athlete, v_day FROM public._workout_log_for_write(p_workout_log) w;
+  ELSE
+    SELECT a.athlete_id, a.scheduled_date INTO v_athlete, v_day FROM public._energy_assignment_for_write(p_energy_assignment) a;
+  END IF;
+  c := public._session_pain_clean(p_levels, p_note);
+  -- Deux envois simultanés pour le même athlète ne créent pas deux blessures.
+  PERFORM pg_advisory_xact_lock(hashtext('report_session_pain:' || v_athlete::text));
+
+  FOR k, v_level IN SELECT key, value::int FROM jsonb_each_text(c.levels) ORDER BY key LOOP
+    SELECT e.id INTO v_entry
+      FROM public.medical_entries e
+     WHERE e.athlete_id = v_athlete
+       AND e.status = 'en_cours'
+       AND e.zone IS NOT NULL
+       AND (lower(btrim(e.zone)) = lower(k)
+            OR starts_with(lower(btrim(e.zone)), lower(k) || ' ')
+            OR starts_with(lower(k), lower(btrim(e.zone)) || ' '))
+     ORDER BY coalesce(e.date, e.created_at::date) DESC, e.created_at DESC
+     LIMIT 1
+     FOR UPDATE;
+    v_created := NOT FOUND;
+
+    IF v_created THEN
+      INSERT INTO public.medical_entries
+        (athlete_id, kind, title, zone, date, status, notes, pain_level, context, declared_by, created_by)
+      VALUES
+        (v_athlete, 'blessure', 'Douleur en séance', k, v_day, 'en_cours', c.note, v_level, 'entrainement',
+         CASE WHEN v_me = v_athlete THEN 'athlete' ELSE 'coach' END, v_me)
+      RETURNING id INTO v_entry;
+    ELSE
+      UPDATE public.medical_entries SET pain_level = v_level WHERE id = v_entry;
+    END IF;
+
+    IF p_workout_log IS NOT NULL THEN
+      INSERT INTO public.injury_followups (entry_id, athlete_id, day, pain_level, note, workout_log_id, created_by)
+      VALUES (v_entry, v_athlete, v_day, v_level, c.note, p_workout_log, v_me)
+      ON CONFLICT (entry_id, workout_log_id) WHERE workout_log_id IS NOT NULL
+      DO UPDATE SET pain_level = EXCLUDED.pain_level, note = EXCLUDED.note, day = EXCLUDED.day;
+    ELSE
+      INSERT INTO public.injury_followups (entry_id, athlete_id, day, pain_level, note, energy_assignment_id, created_by)
+      VALUES (v_entry, v_athlete, v_day, v_level, c.note, p_energy_assignment, v_me)
+      ON CONFLICT (entry_id, energy_assignment_id) WHERE energy_assignment_id IS NOT NULL
+      DO UPDATE SET pain_level = EXCLUDED.pain_level, note = EXCLUDED.note, day = EXCLUDED.day;
+    END IF;
+
+    v_out := v_out || jsonb_build_object('zone', k, 'entry_id', v_entry, 'created', v_created);
+  END LOOP;
+  RETURN v_out;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."report_session_pain"("p_workout_log" "uuid", "p_energy_assignment" "uuid", "p_levels" "jsonb", "p_note" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."require_sync_consent"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public'
@@ -8238,6 +8352,30 @@ COMMENT ON TABLE "public"."hyrox_work_axes_rules" IS 'Règles d''axes de travail
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."injury_followups" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "entry_id" "uuid" NOT NULL,
+    "athlete_id" "uuid" NOT NULL,
+    "day" "date" NOT NULL,
+    "pain_level" smallint NOT NULL,
+    "note" "text",
+    "workout_log_id" "uuid",
+    "energy_assignment_id" "uuid",
+    "created_by" "uuid",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "injury_followups_note_check" CHECK ((("note" IS NULL) OR ("length"("note") <= 500))),
+    CONSTRAINT "injury_followups_one_session" CHECK (("num_nonnulls"("workout_log_id", "energy_assignment_id") <= 1)),
+    CONSTRAINT "injury_followups_pain_level_check" CHECK ((("pain_level" >= 1) AND ("pain_level" <= 10)))
+);
+
+
+ALTER TABLE "public"."injury_followups" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."injury_followups" IS 'Suivis d''une blessure déclarée : douleur 0-10 d''un jour, commentaire de l''athlète, séance d''origine (question de fin de séance, 15/11/2026). Écriture par report_session_pain.';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."macrocycles" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "athlete_id" "uuid" NOT NULL,
@@ -9376,6 +9514,11 @@ ALTER TABLE ONLY "public"."hyrox_work_axes_rules"
 
 
 
+ALTER TABLE ONLY "public"."injury_followups"
+    ADD CONSTRAINT "injury_followups_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."macrocycles"
     ADD CONSTRAINT "macrocycles_pkey" PRIMARY KEY ("id");
 
@@ -10208,6 +10351,30 @@ CREATE UNIQUE INDEX "idx_workout_logs_unique" ON "public"."workout_logs" USING "
 
 
 CREATE INDEX "idx_workout_rpe_athlete" ON "public"."workout_rpe" USING "btree" ("athlete_id");
+
+
+
+CREATE INDEX "injury_followups_athlete_day_idx" ON "public"."injury_followups" USING "btree" ("athlete_id", "day");
+
+
+
+CREATE INDEX "injury_followups_created_by_idx" ON "public"."injury_followups" USING "btree" ("created_by");
+
+
+
+CREATE INDEX "injury_followups_energy_idx" ON "public"."injury_followups" USING "btree" ("energy_assignment_id") WHERE ("energy_assignment_id" IS NOT NULL);
+
+
+
+CREATE UNIQUE INDEX "injury_followups_entry_energy_key" ON "public"."injury_followups" USING "btree" ("entry_id", "energy_assignment_id") WHERE ("energy_assignment_id" IS NOT NULL);
+
+
+
+CREATE INDEX "injury_followups_entry_idx" ON "public"."injury_followups" USING "btree" ("entry_id");
+
+
+
+CREATE UNIQUE INDEX "injury_followups_entry_workout_key" ON "public"."injury_followups" USING "btree" ("entry_id", "workout_log_id") WHERE ("workout_log_id" IS NOT NULL);
 
 
 
@@ -11207,6 +11374,31 @@ ALTER TABLE ONLY "public"."hyrox_test_params"
 
 ALTER TABLE ONLY "public"."hyrox_work_axes_rules"
     ADD CONSTRAINT "hyrox_work_axes_rules_version_fkey" FOREIGN KEY ("version") REFERENCES "public"."hyrox_test_grid_versions"("version") ON UPDATE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."injury_followups"
+    ADD CONSTRAINT "injury_followups_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."injury_followups"
+    ADD CONSTRAINT "injury_followups_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."injury_followups"
+    ADD CONSTRAINT "injury_followups_energy_assignment_id_fkey" FOREIGN KEY ("energy_assignment_id") REFERENCES "public"."energy_session_assignments"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."injury_followups"
+    ADD CONSTRAINT "injury_followups_entry_id_fkey" FOREIGN KEY ("entry_id") REFERENCES "public"."medical_entries"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."injury_followups"
+    ADD CONSTRAINT "injury_followups_workout_log_id_fkey" FOREIGN KEY ("workout_log_id") REFERENCES "public"."workout_logs"("id") ON DELETE SET NULL;
 
 
 
@@ -12444,6 +12636,13 @@ CREATE POLICY "hyrox_work_axes_rules_update" ON "public"."hyrox_work_axes_rules"
 
 
 
+ALTER TABLE "public"."injury_followups" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "injury_followups_read" ON "public"."injury_followups" FOR SELECT TO "authenticated" USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id"))));
+
+
+
 CREATE POLICY "life_events_delete" ON "public"."athlete_life_events" FOR DELETE USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
@@ -12981,6 +13180,10 @@ CREATE POLICY "staff_habit_logs_read" ON "public"."habit_logs" FOR SELECT TO "au
 
 
 CREATE POLICY "staff_habits_read" ON "public"."habits" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'wellness'::"text", 'read'::"text")));
+
+
+
+CREATE POLICY "staff_injury_followups_read" ON "public"."injury_followups" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'medical'::"text", 'read'::"text")));
 
 
 
@@ -14750,6 +14953,11 @@ GRANT ALL ON FUNCTION "public"."_runner"("text"[], "text"[], "text"[], "text"[],
 GRANT ALL ON FUNCTION "public"."_runner"("text"[], "text"[], "text"[], "text"[], "text"[]) TO "anon";
 GRANT ALL ON FUNCTION "public"."_runner"("text"[], "text"[], "text"[], "text"[], "text"[]) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."_runner"("text"[], "text"[], "text"[], "text"[], "text"[]) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."_session_pain_clean"("p_levels" "jsonb", "p_note" "text", OUT "levels" "jsonb", OUT "note" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."_session_pain_clean"("p_levels" "jsonb", "p_note" "text", OUT "levels" "jsonb", OUT "note" "text") TO "service_role";
 
 
 
@@ -20758,6 +20966,12 @@ GRANT ALL ON FUNCTION "public"."report_client_build"("p_build" "text") TO "servi
 
 
 
+REVOKE ALL ON FUNCTION "public"."report_session_pain"("p_workout_log" "uuid", "p_energy_assignment" "uuid", "p_levels" "jsonb", "p_note" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."report_session_pain"("p_workout_log" "uuid", "p_energy_assignment" "uuid", "p_levels" "jsonb", "p_note" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."report_session_pain"("p_workout_log" "uuid", "p_energy_assignment" "uuid", "p_levels" "jsonb", "p_note" "text") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."require_sync_consent"() TO "anon";
 GRANT ALL ON FUNCTION "public"."require_sync_consent"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."require_sync_consent"() TO "service_role";
@@ -22649,6 +22863,12 @@ GRANT ALL ON TABLE "public"."hyrox_test_params" TO "service_role";
 GRANT ALL ON TABLE "public"."hyrox_work_axes_rules" TO "anon";
 GRANT ALL ON TABLE "public"."hyrox_work_axes_rules" TO "authenticated";
 GRANT ALL ON TABLE "public"."hyrox_work_axes_rules" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."injury_followups" TO "anon";
+GRANT ALL ON TABLE "public"."injury_followups" TO "authenticated";
+GRANT ALL ON TABLE "public"."injury_followups" TO "service_role";
 
 
 

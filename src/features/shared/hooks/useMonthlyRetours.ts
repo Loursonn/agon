@@ -3,6 +3,8 @@ import { formatReps, hasIso } from "@/lib/formatSetsReps";
 import { readAppDataKeys } from "@/api/appData";
 import { listWorkoutLogs } from "@/api/workouts";
 import { listEnergyAssignments } from "@/api/energy";
+import { listInjuryFollowups } from "@/api/injuries";
+import { sessionPainBySession, sessionPainKey } from "@/lib/sessionPain";
 import { listTestSessionsWithResults } from "@/api/tests";
 import { listCompetitionsBetween } from "@/api/competitions";
 import { listExerciseComments } from "@/api/coachRetours";
@@ -77,7 +79,7 @@ async function fetchMonthData(athleteId: string, monthStart: Date): Promise<Mont
   const end   = format(endOfMonth(monthStart),   "yyyy-MM-dd");
 
   // ── 1. Load app_data + DB tables in parallel ─────────────────────────────
-  const [appDataRes, mergedWH, workoutList, energyRows, testRows, compRows, nutritionLogs, nutritionStrategy] = await Promise.all([
+  const [appDataRes, mergedWH, workoutList, energyRows, testRows, compRows, nutritionLogs, nutritionStrategy, painFollowups] = await Promise.all([
     readAppDataKeys(athleteId, ["asp:sets", "asp:exos", "asp:blockConfig", "asp:blockHistory", "asp:freesess", "asp:prog"]),
     // Wellness du bloc courant + blocs archivés, en jours ISO (table `wellness_entries`)
     getWellnessHistory(athleteId),
@@ -89,7 +91,10 @@ async function fetchMonthData(athleteId: string, monthStart: Date): Promise<Mont
     // Nutrition : `app_data` via la couche API (les tables `nutrition_*` n'existent pas).
     getNutritionDays(athleteId, start, end),
     getNutritionStrategy(athleteId),
+    // Douleurs de fin de séance (blessures déclarées / suivis), affichées sur la séance.
+    listInjuryFollowups(athleteId, { from: start, to: end }),
   ]);
+  const painBySession = sessionPainBySession(painFollowups);
 
   // Extract app_data
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -267,6 +272,8 @@ async function fetchMonthData(athleteId: string, monthStart: Date): Promise<Mont
       duration_s:     w.duration_s ?? null,
       notes:          w.notes      ?? null,
       rpe_score:      w.rpe_score  ?? null,
+      pain_levels:    painBySession.get(sessionPainKey.workout(w.id))?.levels ?? {},
+      pain_note:      painBySession.get(sessionPainKey.workout(w.id))?.note ?? null,
       wellness_day:   mergedWH[w.scheduled_date] ? wellnessScore(mergedWH[w.scheduled_date]) : null,
       planned_exercises:   planned,
       performed_exercises: performed,
@@ -311,6 +318,8 @@ async function fetchMonthData(athleteId: string, monthStart: Date): Promise<Mont
       session_kind:  es.session_kind     ?? null,
       note,
       rpe_score:     e.rpe_score         ?? null,
+      pain_levels:   painBySession.get(sessionPainKey.energy(e.id))?.levels ?? {},
+      pain_note:     painBySession.get(sessionPainKey.energy(e.id))?.note ?? null,
       intervals:     es.intervals        ?? [],
       step_log:      stepLog,
       block_logs:    e.block_logs        ?? null,

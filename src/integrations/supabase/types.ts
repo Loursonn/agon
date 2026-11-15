@@ -2988,6 +2988,81 @@ export type Database = {
           },
         ]
       }
+      injury_followups: {
+        Row: {
+          athlete_id: string
+          created_at: string
+          created_by: string | null
+          day: string
+          energy_assignment_id: string | null
+          entry_id: string
+          id: string
+          note: string | null
+          pain_level: number
+          workout_log_id: string | null
+        }
+        Insert: {
+          athlete_id: string
+          created_at?: string
+          created_by?: string | null
+          day: string
+          energy_assignment_id?: string | null
+          entry_id: string
+          id?: string
+          note?: string | null
+          pain_level: number
+          workout_log_id?: string | null
+        }
+        Update: {
+          athlete_id?: string
+          created_at?: string
+          created_by?: string | null
+          day?: string
+          energy_assignment_id?: string | null
+          entry_id?: string
+          id?: string
+          note?: string | null
+          pain_level?: number
+          workout_log_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "injury_followups_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "injury_followups_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "injury_followups_energy_assignment_id_fkey"
+            columns: ["energy_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "energy_session_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "injury_followups_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "medical_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "injury_followups_workout_log_id_fkey"
+            columns: ["workout_log_id"]
+            isOneToOne: false
+            referencedRelation: "workout_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       macrocycles: {
         Row: {
           athlete_id: string
@@ -5730,6 +5805,10 @@ export type Database = {
       _query: { Args: { "": string }; Returns: string }
       _refine_vol: { Args: { "": string }; Returns: string }
       _retval: { Args: { "": string }; Returns: string }
+      _session_pain_clean: {
+        Args: { p_levels: Json; p_note: string }
+        Returns: Record<string, unknown>
+      }
       _table_privs: { Args: never; Returns: unknown[] }
       _temptypes: { Args: { "": string }; Returns: string }
       _todo: { Args: never; Returns: string }
@@ -6462,6 +6541,15 @@ export type Database = {
         }
       }
       report_client_build: { Args: { p_build: string }; Returns: undefined }
+      report_session_pain: {
+        Args: {
+          p_energy_assignment?: string
+          p_levels?: Json
+          p_note?: string
+          p_workout_log?: string
+        }
+        Returns: Json
+      }
       reset_activity_laps_to_watch: {
         Args: { p_activity: string; p_expected_version: number }
         Returns: number

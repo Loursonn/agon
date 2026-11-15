@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -14,6 +14,9 @@ import {
   useUpdateEnergyAssignment,
 } from "@/features/shared/hooks/useEnergyAssignments";
 import { RpeSheet } from "@/features/athlete/components/RpeSheet";
+import { SessionPainQuestion } from "@/features/athlete/components/session/SessionPainQuestion";
+import { useSaveSessionPain } from "@/features/shared/hooks/useSessionPain";
+import { EMPTY_SESSION_PAIN, sessionPainPayload, type SessionPainAnswer } from "@/lib/sessionPain";
 import type { EnergySessionAssignmentRow, EnergyStep, EnergyInterval, BlockLogs } from "@/types/energy";
 import { localISO } from "@/lib/date";
 import type { ExosMap } from "@/features/shared/types/athlete";
@@ -318,6 +321,11 @@ function EnergyAthleteView({ athleteId }: { athleteId: string }) {
 
   const [rpeAssignmentId, setRpeAssignmentId] = useState<string | null>(null);
   const upsertRpe = useUpsertEnergyRpe();
+  // Question douleur de fin de séance (15/11) : Non par défaut, jamais bloquante.
+  const [pain, setPain] = useState<SessionPainAnswer>(EMPTY_SESSION_PAIN);
+  const savePain = useSaveSessionPain();
+  const painPayload = sessionPainPayload(pain);
+  const closeRpe = () => { setRpeAssignmentId(null); setPain(EMPTY_SESSION_PAIN); };
 
   const visible = [...assignments]
     .filter(a => (a.scheduled_date ?? "") >= cutoffStr)
@@ -355,17 +363,24 @@ function EnergyAthleteView({ athleteId }: { athleteId: string }) {
 
       {rpeAssignment && (
         <>
-          <div onClick={() => setRpeAssignmentId(null)} className="fixed inset-0 z-[100] bg-agon-ink/[0.6]" />
-          <div className="fixed inset-x-0 bottom-0 z-[101] animate-[rpeSlideUp_220ms_ease-out] rounded-t-[6px] border-t border-agon-brd bg-agon-s1 px-5 pb-10 pt-6">
+          <div onClick={closeRpe} className="fixed inset-0 z-[100] bg-agon-ink/[0.6]" />
+          <div className="fixed inset-x-0 bottom-0 z-[101] animate-[rpeSlideUp_220ms_ease-out] max-h-[92dvh] overflow-y-auto rounded-t-[6px] border-t border-agon-brd bg-agon-s1 px-5 pb-10 pt-6">
             <style>{`@keyframes rpeSlideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }`}</style>
             <div className="mx-auto mb-5 h-1 w-9 rounded-[2px] bg-agon-brd-l" />
             <div className="mb-1 text-[16px] font-extrabold text-agon-tx">Comment s'est passée la séance ?</div>
             <div className="mb-6 text-[12px] text-agon-tx3">Évalue ton effort global (échelle Foster 1-10)</div>
             <RpeGridInline
-              onSubmit={(v) => upsertRpe.mutate({ id: rpeAssignment.id, athleteId, rpe_score: v }, { onSettled: () => setRpeAssignmentId(null) })}
-              onSkip={() => setRpeAssignmentId(null)}
+              onSubmit={(v) => {
+                if (painPayload) savePain.mutate({ target: { kind: "energy", id: rpeAssignment.id }, athleteId, ...painPayload });
+                if (v != null) upsertRpe.mutate({ id: rpeAssignment.id, athleteId, rpe_score: v }, { onSettled: closeRpe });
+                else closeRpe();
+              }}
+              onSkip={closeRpe}
               isPending={upsertRpe.isPending}
-            />
+              canSubmitWithout={painPayload != null}
+            >
+              <SessionPainQuestion value={pain} onChange={setPain} />
+            </RpeGridInline>
           </div>
         </>
       )}
@@ -392,8 +407,17 @@ const RPE_LABEL: Record<RpeTone, string> = {
   erreur: "bg-agon-erreur-doux text-agon-erreur",
 };
 
-function RpeGridInline({ onSubmit, onSkip, isPending }: { onSubmit: (v: number) => void; onSkip: () => void; isPending: boolean }) {
+function RpeGridInline({ onSubmit, onSkip, isPending, children, canSubmitWithout = false }: {
+  onSubmit: (v: number | null) => void;
+  onSkip: () => void;
+  isPending: boolean;
+  /** Affiché entre l'échelle et le bouton (question douleur). */
+  children?: ReactNode;
+  /** Enregistrer sans RPE (une douleur a été saisie). */
+  canSubmitWithout?: boolean;
+}) {
   const [selected, setSelected] = useState<number | null>(null);
+  const canSubmit = selected != null || canSubmitWithout;
   return (
     <>
       <div className="mb-4 grid grid-cols-[repeat(5,1fr)] gap-2">
@@ -409,17 +433,18 @@ function RpeGridInline({ onSubmit, onSkip, isPending }: { onSubmit: (v: number) 
         ))}
       </div>
       <div className={cn(
-        "mb-7 min-h-[28px] rounded-[4px] px-3 py-1 text-center text-[13px] font-semibold",
+        "mb-5 min-h-[28px] rounded-[4px] px-3 py-1 text-center text-[13px] font-semibold",
         selected != null ? RPE_LABEL[rpeTone(selected)] : "bg-transparent text-agon-tx3",
       )}>
         {selected != null ? `${selected}/10 — ${FOSTER[selected]}` : "Sélectionne une valeur"}
       </div>
+      {children && <div className="mb-6">{children}</div>}
       <button
-        onClick={() => selected != null && onSubmit(selected)}
-        disabled={isPending || selected == null}
+        onClick={() => canSubmit && onSubmit(selected)}
+        disabled={isPending || !canSubmit}
         className={cn(
           "w-full rounded-[6px] border-none py-[15px] font-[inherit] text-[14px] font-bold",
-          selected != null ? "cursor-pointer bg-agon-accent text-agon-ink" : "cursor-default bg-agon-s2 text-agon-tx3",
+          canSubmit ? "cursor-pointer bg-agon-accent text-agon-ink" : "cursor-default bg-agon-s2 text-agon-tx3",
         )}
       >
         {isPending ? "Enregistrement…" : "Enregistrer"}

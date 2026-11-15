@@ -9,6 +9,9 @@ import { toast } from "sonner";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { SessionPainQuestion } from "@/features/athlete/components/session/SessionPainQuestion";
+import { useSaveSessionPain } from "@/features/shared/hooks/useSessionPain";
+import { EMPTY_SESSION_PAIN, sessionPainPayload, type SessionPainAnswer } from "@/lib/sessionPain";
 
 // ── RPE sheet ──────────────────────────────────────────────────────────────────
 
@@ -22,6 +25,11 @@ export function RpeSheetForLog({
   const qc = useQueryClient();
   const { athleteId } = useAthleteContext();
   const [rpe, setRpe] = useState<number | null>(null);
+  // Question douleur de fin de séance (15/11) : Non par défaut, jamais bloquante.
+  const [pain, setPain] = useState<SessionPainAnswer>(EMPTY_SESSION_PAIN);
+  const painPayload = sessionPainPayload(pain);
+  const savePain = useSaveSessionPain();
+  const canSave = rpe != null || painPayload != null;
 
   const { mutate: saveRpe, isPending } = useMutation({
     // Seule source du RPE : `workout_logs.rpe_score` (RPC). L'ancien upsert
@@ -51,6 +59,14 @@ export function RpeSheetForLog({
       toast.error("RPE non enregistré — vérifie ta connexion");
     },
   });
+
+  function handleSave() {
+    if (painPayload) {
+      savePain.mutate({ target: { kind: "workout", logId: workoutLogId }, athleteId, ...painPayload });
+    }
+    if (rpe != null) saveRpe(rpe);
+    else onClose();
+  }
 
   const RPE_ITEMS: Array<{ v: number; label: string; color: string }> = [
     { v: 1,  label: "Très léger",  color: H.vert },
@@ -86,6 +102,8 @@ export function RpeSheetForLog({
           background: C.bg,
           borderRadius: "6px 6px 0 0",
           padding: "24px 20px 40px",
+          maxHeight: "92dvh",
+          overflowY: "auto",
         }}
       >
         <div
@@ -115,7 +133,7 @@ export function RpeSheetForLog({
             display: "grid",
             gridTemplateColumns: "repeat(5, 1fr)",
             gap: 6,
-            marginBottom: 20,
+            marginBottom: 16,
           }}
         >
           {RPE_ITEMS.map(({ v, label, color }) => {
@@ -147,6 +165,9 @@ export function RpeSheetForLog({
             );
           })}
         </div>
+        <div style={{ marginBottom: 20 }}>
+          <SessionPainQuestion value={pain} onChange={setPain} />
+        </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button
             onClick={onClose}
@@ -166,18 +187,18 @@ export function RpeSheetForLog({
             Passer
           </button>
           <button
-            onClick={() => rpe != null && saveRpe(rpe)}
-            disabled={rpe == null || isPending}
+            onClick={() => canSave && handleSave()}
+            disabled={!canSave || isPending}
             style={{
               flex: 2,
               padding: "12px 0",
               borderRadius: 6,
               border: "none",
-              background: rpe != null ? (RPE_ITEMS.find(r => r.v === rpe)?.color ?? ACCENT) : C.s2,
-              color: rpe != null ? C.tx : C.tx3,
+              background: rpe != null ? (RPE_ITEMS.find(r => r.v === rpe)?.color ?? ACCENT) : canSave ? ACCENT : C.s2,
+              color: canSave ? C.tx : C.tx3,
               fontSize: 13,
               fontWeight: 700,
-              cursor: rpe != null ? "pointer" : "default",
+              cursor: canSave ? "pointer" : "default",
               fontFamily: "inherit",
             }}
           >

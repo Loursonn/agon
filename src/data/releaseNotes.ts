@@ -38,6 +38,37 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-16-douleur-de-seance",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "Douleur pendant la séance",
+    summary: "En fin de séance, votre athlète dit s'il a eu mal : zone, note sur 10 et commentaire. La douleur devient une blessure déclarée, visible dans son profil, sur la séance dans Retours et dans sa weekly review.",
+    sections: [
+      {
+        title: "Côté athlète",
+        points: [
+          "Après la validation d'une séance de muscu, d'énergie ou HYROX, avec le RPE : « Une douleur pendant la séance ? ». Non par défaut : la question ne bloque jamais la validation.",
+          "S'il répond Oui : il touche la zone sur la même carte que le wellness du matin, la note de 0 à 10, et peut laisser un commentaire.",
+          "La douleur rejoint ses blessures en cours ; il la clôture depuis son profil quand c'est passé.",
+        ],
+      },
+      {
+        title: "Côté coach",
+        points: [
+          "Chaque douleur de séance est une blessure déclarée : elle allume « blessure active » et apparaît dans le profil santé, en cours jusqu'à ce que l'athlète ou vous la clôturiez.",
+          "Pas de doublon : si une blessure est déjà en cours sur la même zone, sa note de douleur est mise à jour.",
+          "Dans Retours, la séance porte une pastille rouge « Douleur » ; le détail du jour donne les zones, les notes et le commentaire de l'athlète.",
+        ],
+      },
+      {
+        title: "Weekly review",
+        points: [
+          "Une douleur de séance déclenche les questions douleur de la weekly review, comme une douleur au wellness ou une blessure, et y est rappelée avec le nom de la séance.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-16-chargement-plus-rapide",
     date: "2026-11-16",
     kind: "fix",

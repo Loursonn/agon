@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SessionPainChip, SessionPainDetail } from "@/features/shared/components/SessionPain";
 import { formatPlannedSetsReps } from "@/lib/formatSetsReps";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -49,6 +50,8 @@ interface WorkoutType {
   session_id?: string | null;
   occurrence?: number | null;
   video_requests?: VideoRequestStatus[];
+  pain_levels?: Record<string, number>;
+  pain_note?: string | null;
 }
 
 interface WorkoutRetourCardProps {
@@ -429,6 +432,7 @@ export function WorkoutRetourCard({ workout, previousWeekWorkout }: WorkoutRetou
               RPE {workout.rpe_score}/10
             </span>
           )}
+          <SessionPainChip levels={workout.pain_levels} />
           <span className="text-[10px] text-agon-tx3">
             {format(new Date(workout.scheduled_date), "EEE d MMM", { locale: fr })}
           </span>
@@ -457,6 +461,7 @@ export function WorkoutRetourCard({ workout, previousWeekWorkout }: WorkoutRetou
       {expanded && (
         <div className="flex flex-col gap-2 border-t border-agon-brd px-3.5 py-3">
           <VideoRequestsList requests={workout.video_requests} />
+          <SessionPainDetail levels={workout.pain_levels} note={workout.pain_note} />
           {/* Meta + stats */}
           <div className="flex flex-wrap gap-2">
             {workout.duration_s != null && (

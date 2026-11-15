@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SessionPainChip, SessionPainDetail } from "@/features/shared/components/SessionPain";
 import { WatchRunTag } from "@/features/shared/components/WatchRunTag";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -202,6 +203,7 @@ export function EnergyRetourCard({ session }: EnergyRetourCardProps) {
               RPE {session.rpe_score}/10
             </span>
           )}
+          <SessionPainChip levels={session.pain_levels} />
           {session.session_kind && (
             <span className={cn("flex-none rounded-[4px] px-[5px] py-px text-[9px] font-bold", kindTint)}>
               {KIND_LABELS[session.session_kind] ?? session.session_kind}
@@ -219,6 +221,7 @@ export function EnergyRetourCard({ session }: EnergyRetourCardProps) {
       {/* Expanded */}
       {expanded && (
         <div className="flex flex-col gap-2.5 border-t border-agon-brd px-3.5 py-3">
+          <SessionPainDetail levels={session.pain_levels} note={session.pain_note} />
           {/* Meta row */}
           <div className="flex flex-wrap gap-3">
             {session.duration_min != null && (

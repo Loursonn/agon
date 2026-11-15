@@ -1,3 +1,4 @@
+import { sessionPainText } from "@/lib/sessionPain";
 import { useState } from "react";
 import { WatchRunTag } from "@/features/shared/components/WatchRunTag";
 import { isToday, format, parseISO } from "date-fns";
@@ -45,6 +46,13 @@ const BAR = {
 
 const ROW_HEAD = "flex flex-col items-start gap-[7px] py-[9px] pl-3 pr-[9px]";
 const MINI = "agon-mono flex-none text-[9.5px]";
+
+/** Douleur de séance (fin de séance) : repère court, détail dans le panneau du jour. */
+function PainMini({ levels }: { levels?: Record<string, number> | null }) {
+  const text = sessionPainText(levels);
+  if (!text) return null;
+  return <span title={"Douleur pendant la séance : " + text} className={cn(MINI, "font-semibold text-agon-rouge")}>DOULEUR</span>;
+}
 const CHECK_DONE = "text-[8px] font-bold text-agon-succes";
 const CHECK_PARTIAL = "text-[8px] font-bold text-agon-alerte";
 
@@ -168,6 +176,7 @@ function WorkoutRow({ workout, prevWorkout, isRescheduled, onShowDetail, onOpenE
         {done && workout.rpe_score != null && (
           <span className={cn(MINI, rpeText(workout.rpe_score))}>RPE {workout.rpe_score}</span>
         )}
+        <PainMini levels={workout.pain_levels} />
         {done && (
           <span
             onClick={onOpenEvolution ? (e) => { e.stopPropagation(); setOpen(v => !v); } : undefined}
@@ -319,6 +328,7 @@ function EnergyRow({ session, isRescheduled }: { session: DayEnergy; isReschedul
             RPE {session.rpe_score}
           </span>
         )}
+        <PainMini levels={session.pain_levels} />
         {session.session_kind && done && (
           <span className={cn(MINI, kindText)}>
             {session.session_kind.toUpperCase()}

@@ -2677,3 +2677,32 @@ et son README.
   qu'un vrai téléphone paie et que le banc ne ralentit pas) ; quelques lectures en double entre hooks
   (`asp:prog`, `asp:freesess`, compétitions, événements de vie). Pistes : regrouper les clés `app_data` en une
   lecture, ou servir l'API Supabase sous le domaine de l'app (plus de préflights).
+
+## 2026-11-16 — Douleur de séance : question en fin de séance, enregistrée comme blessure déclarée
+
+- **Mot d'Hugo** (15/11, réponse à « faudrait-il une vraie question douleur en fin de séance ? ») : « oui ajoute la
+  question douleur en fin de séance ». Puis, à « où est-ce enregistré ? » : « Comme blessure déclarée » (badge
+  « blessure active » allumé, blessure en cours jusqu'à clôture).
+- **Question** : « Une douleur pendant la séance ? » Non / Oui ; si Oui, carte douleur du wellness (mêmes zones,
+  `PainZoneMap`), note 0-10 par zone, commentaire facultatif. Non par défaut, jamais bloquante : sans réponse, rien
+  n'est écrit. Composant `SessionPainQuestion`, logique `src/lib/sessionPain.ts`.
+- **Où** : feuille RPE de la muscu (`RpeSheetForLog`), phase RPE de l'énergie (accueil et Programme), formulaire de fin
+  HYROX / spécifique (`SessionEndForm`), RPE énergie de la page « Séance » (`LogSeancePage`), feuille dédiée après une
+  séance classique validée depuis le Programme (`SessionPainSheet`). Pas sur l'ancienne saisie muscu de
+  `LogSeancePage` (séance retrouvée par nom et date, pas par id) ni sur les activités libres (`app_data`).
+- **Stockage** : chaque « oui » est une blessure déclarée (`medical_entries`) : par zone, la blessure en cours de la même
+  zone est suivie (sa note de douleur est mise à jour), sinon une blessure « Douleur en séance » est créée (en cours,
+  datée du jour de la séance, zone = libellé de la carte, contexte entraînement, déclarée par l'athlète). Le modèle des
+  blessures n'avait pas de suivi : nouvelle table `injury_followups` (blessure, jour, note 1-10, commentaire, séance
+  d'origine en lien nullable `ON DELETE SET NULL`), un suivi par blessure et par séance (rejouable sans doublon).
+  Même zone : égalité sans casse, ou un mot de plus d'un côté (« Genou gauche » suit « Genou »).
+  Écriture par la RPC atomique `report_session_pain` (verrou par athlète, `_session_pain_clean`), gardée hors ligne
+  (`session.pain`). Lecture : athlète, coachs (`is_coach_of`), staff « medical » ; aucune policy d'écriture. Aucune
+  colonne sur les séances (pas de second stockage de la même douleur). Export RGPD : `injury_followups`. Migration
+  `20261116120000_session_pain_injury.sql`, test `supabase/tests/session_pain_injury.sql` ; la première version
+  (colonnes `pain_levels` / `pain_note` sur les séances, `20261116110000`) n'est jamais allée en prod et a été retirée
+  d'agon-test.
+- **Weekly review** : les suivis de la semaine comptent dans `weekPainReports` (source « seance », une ligne par séance,
+  « séance : <nom> », zones, commentaire) ; une blessure née d'une séance n'est pas répétée en ligne « blessure ».
+- **Coach** : la blessure apparaît dans le profil santé et les badges « blessure active » ; sur la séance, pastille
+  « Douleur » (Retours semaine et mois, panneau du jour, tiroir « Prévu et réalisé »), lue dans les suivis.
