@@ -51,20 +51,27 @@ export function painZoneLabel(id: string): string {
   return UNIQUE.find((z) => z.id === id)?.label ?? id;
 }
 
-/** Repères affichés sous l'échelle 0-10 (demande d'Hugo, 14/11). */
+/** Repères affichés sous l'échelle 0-10 : 1-2 gêne, la douleur commence à 3 (Hugo, 15/11). */
 export const PAIN_SCALE_MARKS: Array<{ at: number; label: string }> = [
   { at: 0, label: "aucune" },
-  { at: 2, label: "gêne" },
-  { at: 4, label: "douleur" },
+  { at: 1, label: "gêne" },
+  { at: 3, label: "douleur" },
   { at: 10, label: "insupportable" },
 ];
 
-/** Mot du palier : 0 aucune, 1-3 gêne, 4-9 douleur, 10 insupportable. */
+/**
+ * Mot de chaque note 0-10, le même partout (carte douleur, blessures, fin de
+ * séance). Hugo, 15/11 : 1 petite gêne, 2 gêne modérée, 3 douleur légère.
+ */
 export function painWord(n: number): string {
-  if (n <= 0) return "aucune";
-  if (n <= 3) return "gêne";
-  if (n >= 10) return "insupportable";
-  return "douleur";
+  if (n <= 0) return "aucune douleur";
+  if (n === 1) return "petite gêne";
+  if (n === 2) return "gêne modérée";
+  if (n === 3) return "douleur légère";
+  if (n <= 5) return "douleur modérée";
+  if (n <= 7) return "douleur forte";
+  if (n <= 9) return "douleur très forte";
+  return "douleur insupportable";
 }
 
 export interface PainZoneNote {

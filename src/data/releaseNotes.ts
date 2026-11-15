@@ -38,6 +38,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-16-echelle-douleur",
+    date: "2026-11-16",
+    kind: "fix",
+    title: "Échelle de douleur : des mots plus justes pour les petites notes",
+    summary:
+      "Sur l'échelle de 0 à 10, 1 se lit « petite gêne », 2 « gêne modérée », et la douleur commence à 3 (« douleur légère »).",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "0 aucune douleur · 1 petite gêne · 2 gêne modérée · 3 douleur légère · 4-5 douleur modérée · 6-7 douleur forte · 8-9 douleur très forte · 10 douleur insupportable.",
+          "Les mêmes mots partout : carte douleur du matin, question douleur de fin de séance, blessures dans le profil et dans Retours.",
+          "Les notes déjà saisies ne changent pas, seul leur libellé change.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-16-hyrox-chrono-final",
     date: "2026-11-16",
     kind: "fix",

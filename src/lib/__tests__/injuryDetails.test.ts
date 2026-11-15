@@ -57,12 +57,13 @@ describe("douleur", () => {
     // Une gêne peut se déclarer sans douleur du jour : 0 est une vraie réponse,
     // pas une absence de réponse.
     expect(painReading(0)).toBe("aucune douleur");
-    expect(painReading(1)).toBe("douleur légère");
-    expect(painReading(2)).toBe("douleur légère");
+    expect(painReading(1)).toBe("petite gêne");
+    expect(painReading(2)).toBe("gêne modérée");
+    expect(painReading(3)).toBe("douleur légère");
     expect(painReading(4)).toBe("douleur modérée");
-    expect(painReading(6)).toBe("douleur gênante");
-    expect(painReading(8)).toBe("douleur forte");
-    expect(painReading(10)).toBe("douleur très forte");
+    expect(painReading(6)).toBe("douleur forte");
+    expect(painReading(8)).toBe("douleur très forte");
+    expect(painReading(10)).toBe("douleur insupportable");
     expect(painReading(null)).toBe(null);
   });
 });
@@ -170,7 +171,7 @@ describe("état du formulaire", () => {
 describe("résumé en une ligne", () => {
   it("zone, douleur et impact", () => {
     expect(injurySummary(gene({ zone: "Cheville gauche", pain_level: 8, training_impact: "arret_partiel" })))
-      .toBe("Cheville gauche · douleur forte · Arrêt partiel");
+      .toBe("Cheville gauche · douleur très forte · Arrêt partiel");
   });
 
   it("retombe sur le titre quand la zone manque", () => {
