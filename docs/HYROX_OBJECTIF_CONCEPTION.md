@@ -339,7 +339,7 @@ Raisons d'Hugo : le terrain Pro est une distribution tronquée (les moins bons c
 | Objet | Contenu | RLS |
 |---|---|---|
 | `hyrox_objective_versions` | `version` (ex. `obj@1`), `active` (une seule), `notes`, `created_at` | lecture authentifiée, écriture admin (comme `hyrox_test_grid_versions`) |
-| `hyrox_objective_grid` | `version`, `division` (`OH`…`DX`), `run_avg_s`, `segment` (8 stations, `roxzone_total`, `run_shape_1..8`), `value` (s ou coefficient), `source`, `is_estimate` ; unique (`version`, `division`, `run_avg_s`, `segment`) | idem |
+| `hyrox_objective_grid` | une ligne par `version`, `division` (`men`, `women`, `men_pro`, `women_pro`, `doubles_men`, `doubles_women`, `doubles_mixed`) et `run_avg_s` : `ski_s` … `wall_balls_s`, `roxzone_s`, `run_shape numeric[8]`, `source`, `is_estimate` ; clé (`version`, `division`, `run_avg_s`) | idem |
 | `hyrox_race_plans` + colonnes | `run_avg_s int` (null = plan ancien, par chrono), `model_version text`, `locked_total boolean default true` | inchangées |
 | `hyrox_season_goals` | `athlete_id`, `season` (`2026-27`), `division`, `run_avg_s`, `note`, `created_by`, horodatages ; unique (`athlete_id`, `season`, `division`) | `athlete_id = (SELECT auth.uid())` ou `((SELECT public.i_am_coach()) AND is_coach_of(athlete_id))` ou admin, comme `hyrox_results` |
 
@@ -415,7 +415,7 @@ Notations : `a_k` réalisé, `c_k` cible du segment `k`, `perte_k = max(0, a_k �
 | Levier | Formule |
 |---|---|
 | **Chaque station** (8) | `perte_station`, moins la part no reps pour les wall balls |
-| **Allure de course** | si le run moyen réalisé est plus lent que celui de l'objectif : `Σ runs réalisés − Σ cibles − (pertes déjà comptées en stratégie)`, si > 0 |
+| **Allure de course** | niveau `g` = écart tenu sur les runs les plus réguliers (quart le plus rapide des écarts des runs 2 à 7, au moins 0) ; capacité = `Σ min(max(0, a_k − c_k), g)` sur les 8 runs. Les leviers de stratégie se calculent au-delà de `g` (un ralentissement de fin de course reste de la stratégie). Le départ trop rapide se juge contre `c_1 + g`. |
 
 **Chrono possible** = chrono réalisé − Σ leviers. Chaque seconde de retard est comptée **une seule fois** (les runs sont partagés entre départ / régularité / sleds / run 8 / capacité dans cet ordre). Les avances ne sont jamais retirées.
 
