@@ -11,7 +11,10 @@ const stream = new Proxy({ t, timer: null, hr: t.map((s) => (s < 600 ? 120 : 150
 let plans: unknown[] = [];
 let watch: { loading: boolean; activityId: string | null; detail: unknown; error: unknown } = { loading: false, activityId: null, detail: null, error: null };
 
-vi.mock("@/features/shared/hooks/hyrox/useRaceWatch", () => ({ useRaceWatch: () => watch }));
+vi.mock("@/features/shared/hooks/hyrox/useRaceWatch", () => ({
+  useRaceWatch: () => ({ linked: false, candidates: [], ...watch }),
+  useLinkRaceWatch: () => ({ mutate: vi.fn(), isPending: false }),
+}));
 vi.mock("@/features/shared/hooks/hyrox/useHyroxReferences", () => ({
   useHyroxReferences: () => ({ data: [{ division: "all", bracket: "all", segment: "ski", p1_s: 200, p10_s: 220, p50_s: 240, p90_s: 300 }] }),
 }));
@@ -38,7 +41,7 @@ describe("RaceAnalysis", () => {
     watch = { loading: false, activityId: null, detail: null, error: null };
     render(<RaceAnalysis race={race} onBack={() => {}} />);
     expect(screen.getByText("HYROX Paris")).toBeTruthy();
-    expect(screen.getByText(/Aucune activité de montre/)).toBeTruthy();
+    expect(screen.getAllByText(/Aucune activité de montre/).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("tab", { name: "Gains" }));
     expect(screen.getAllByText("SkiErg").length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("tab", { name: "Runs" }));
