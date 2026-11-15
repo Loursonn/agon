@@ -2519,6 +2519,8 @@ export type Database = {
           updated_at: string
           venue: string | null
           wall_balls_s: number | null
+          watch_activity_id: string | null
+          watch_offset_s: number | null
         }
         Insert: {
           activity_url?: string | null
@@ -2568,6 +2570,8 @@ export type Database = {
           updated_at?: string
           venue?: string | null
           wall_balls_s?: number | null
+          watch_activity_id?: string | null
+          watch_offset_s?: number | null
         }
         Update: {
           activity_url?: string | null
@@ -2617,6 +2621,8 @@ export type Database = {
           updated_at?: string
           venue?: string | null
           wall_balls_s?: number | null
+          watch_activity_id?: string | null
+          watch_offset_s?: number | null
         }
         Relationships: [
           {
@@ -2638,6 +2644,20 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hyrox_results_watch_activity_id_fkey"
+            columns: ["watch_activity_id"]
+            isOneToOne: false
+            referencedRelation: "ai_provider_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hyrox_results_watch_activity_id_fkey"
+            columns: ["watch_activity_id"]
+            isOneToOne: false
+            referencedRelation: "provider_activities"
             referencedColumns: ["id"]
           },
         ]

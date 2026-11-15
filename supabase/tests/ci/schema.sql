@@ -8045,6 +8045,8 @@ CREATE TABLE IF NOT EXISTS "public"."hyrox_results" (
     "roxzone_rank" integer,
     "roxzone_top_pct" numeric(5,2),
     "roxzone_cause" "text",
+    "watch_activity_id" "uuid",
+    "watch_offset_s" integer,
     CONSTRAINT "hyrox_results_division_check" CHECK (("division" = ANY (ARRAY['women'::"text", 'women_pro'::"text", 'men'::"text", 'men_pro'::"text", 'doubles_women'::"text", 'doubles_men'::"text", 'doubles_mixed'::"text", 'doubles_women_pro'::"text", 'doubles_men_pro'::"text", 'relay_women'::"text", 'relay_men'::"text", 'relay_mixed'::"text", 'adaptive'::"text"]))),
     CONSTRAINT "hyrox_results_format_check" CHECK (("format" = ANY (ARRAY['solo'::"text", 'doubles'::"text", 'relay'::"text", 'sim_full'::"text", 'sim_34'::"text", 'sim_half'::"text"]))),
     CONSTRAINT "hyrox_results_roxzone_cause_check" CHECK (("roxzone_cause" = ANY (ARRAY['marche'::"text", 'orga'::"text", 'site'::"text"]))),
@@ -8053,7 +8055,8 @@ CREATE TABLE IF NOT EXISTS "public"."hyrox_results" (
     CONSTRAINT "hyrox_results_source_check" CHECK (("source" = ANY (ARRAY['manual'::"text", 'import'::"text"]))),
     CONSTRAINT "hyrox_results_status_check" CHECK (("status" = ANY (ARRAY['finished'::"text", 'dnf'::"text", 'dns'::"text", 'dq'::"text"]))),
     CONSTRAINT "hyrox_results_top_pct_overall_check" CHECK ((("top_pct_overall" >= (0)::numeric) AND ("top_pct_overall" <= (100)::numeric))),
-    CONSTRAINT "hyrox_results_total_s_check" CHECK (("total_s" > 0))
+    CONSTRAINT "hyrox_results_total_s_check" CHECK (("total_s" > 0)),
+    CONSTRAINT "hyrox_results_watch_offset_s_check" CHECK ((("watch_offset_s" IS NULL) OR (("watch_offset_s" >= '-3600'::integer) AND ("watch_offset_s" <= 43200))))
 );
 
 
@@ -8069,6 +8072,14 @@ COMMENT ON COLUMN "public"."hyrox_results"."roxzone_top_pct" IS 'Top % en Roxzon
 
 
 COMMENT ON COLUMN "public"."hyrox_results"."roxzone_cause" IS 'Cause d''une perte en Roxzone : marche (après les stations), orga (transitions), site (grand site).';
+
+
+
+COMMENT ON COLUMN "public"."hyrox_results"."watch_activity_id" IS 'Activité de montre liée à la course (choisie par l''athlète ou le coach). NULL : activité du même jour proposée d''office.';
+
+
+
+COMMENT ON COLUMN "public"."hyrox_results"."watch_offset_s" IS 'Seconde de l''enregistrement de la montre où la course commence (négatif : montre lancée après le départ). NULL : recalage automatique.';
 
 
 
@@ -9867,6 +9878,10 @@ CREATE INDEX "hyrox_results_created_by_fk_idx" ON "public"."hyrox_results" USING
 
 
 
+CREATE INDEX "hyrox_results_watch_activity_id_fk_idx" ON "public"."hyrox_results" USING "btree" ("watch_activity_id");
+
+
+
 CREATE INDEX "hyrox_test_analyses_created_by_fk_idx" ON "public"."hyrox_test_analyses" USING "btree" ("created_by");
 
 
@@ -11115,6 +11130,11 @@ ALTER TABLE ONLY "public"."hyrox_results"
 
 ALTER TABLE ONLY "public"."hyrox_results"
     ADD CONSTRAINT "hyrox_results_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."hyrox_results"
+    ADD CONSTRAINT "hyrox_results_watch_activity_id_fkey" FOREIGN KEY ("watch_activity_id") REFERENCES "public"."provider_activities"("id") ON DELETE SET NULL;
 
 
 
