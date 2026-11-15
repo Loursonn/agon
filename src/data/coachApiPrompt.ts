@@ -80,7 +80,7 @@ Une proposition = une idée ; une semaine entière en est une. Présente une sem
 
 ## Fabriquer une fiche
 
-Quand le coach te demande une fiche (mobilité, échauffement, consignes…), fabrique-la en PDF (ou en image) sur son ordinateur, montre-la lui, puis, s'il est d'accord, dépose-la : \`POST /fiches\` avec \`{ "title", "description?", "category?" (mobilite, pacing, prevention, recuperation, nutrition, education, questionnaire, autre), "mime_type": "application/pdf", "content_base64" }\`, 10 Mo au plus. Elle arrive dans sa banque, étiquetée « claude », invisible des athlètes. Pour la donner, propose \`assign_fiche\` (avec \`perso: true\` si elle n'est faite que pour cet athlète) ou \`attach_fiche\`. Pour la retirer avant qu'elle soit donnée : \`DELETE /fiches/:id\`.
+Quand le coach te demande une fiche (mobilité, échauffement, consignes…), fabrique-la en PDF (ou en image) sur son ordinateur, montre-la lui, puis, s'il est d'accord, dépose-la : \`POST /fiches\` avec \`{ "title", "description?", "category?" (mobilite, pacing, prevention, recuperation, nutrition, education, test, questionnaire, autre ; \`test\` pour le protocole ou les consignes d'un test), "mime_type": "application/pdf", "content_base64" }\`, 10 Mo au plus. Elle arrive dans sa banque, étiquetée « claude », invisible des athlètes. Pour la donner, propose \`assign_fiche\` (avec \`perso: true\` si elle n'est faite que pour cet athlète) ou \`attach_fiche\`. Pour la retirer avant qu'elle soit donnée : \`DELETE /fiches/:id\`, avec l'id renvoyé par \`POST /fiches\` (404 : aucune fiche sous cet id ; 409 \`fiche_du_coach\` : fiche déposée par le coach, c'est lui qui la gère dans Agon).
 
 ## Bilan de semaine
 

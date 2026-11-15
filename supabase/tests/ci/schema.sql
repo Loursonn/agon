@@ -7732,7 +7732,9 @@ CREATE TABLE IF NOT EXISTS "public"."docs" (
     "archived_at" timestamp with time zone,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "docs_category_check" CHECK (("category" = ANY (ARRAY['mobilite'::"text", 'pacing'::"text", 'prevention'::"text", 'recuperation'::"text", 'nutrition'::"text", 'education'::"text", 'questionnaire'::"text", 'autre'::"text"]))),
+    "created_via" "text",
+    CONSTRAINT "docs_category_check" CHECK (("category" = ANY (ARRAY['mobilite'::"text", 'pacing'::"text", 'prevention'::"text", 'recuperation'::"text", 'nutrition'::"text", 'education'::"text", 'test'::"text", 'questionnaire'::"text", 'autre'::"text"]))),
+    CONSTRAINT "docs_created_via_check" CHECK ((("created_via" IS NULL) OR ("created_via" = 'api'::"text"))),
     CONSTRAINT "docs_file_required" CHECK ((("kind" = 'questionnaire'::"text") OR ("file_path" IS NOT NULL))),
     CONSTRAINT "docs_kind_check" CHECK (("kind" = ANY (ARRAY['pdf'::"text", 'image'::"text", 'questionnaire'::"text"]))),
     CONSTRAINT "docs_self_service_bank_only" CHECK (((NOT "is_self_service") OR ("athlete_id" IS NULL)))
@@ -7740,6 +7742,10 @@ CREATE TABLE IF NOT EXISTS "public"."docs" (
 
 
 ALTER TABLE "public"."docs" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."docs"."created_via" IS 'api : fiche déposée par l''assistant IA du coach (coach-api POST /fiches), qu''il peut retirer (DELETE /fiches/:id). NULL : créée dans l''app.';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."energy_sessions" (

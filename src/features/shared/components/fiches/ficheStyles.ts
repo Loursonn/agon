@@ -10,6 +10,7 @@ export const CATEGORY_COLOR: Record<FicheCategory, string> = {
   recuperation: C.g,
   nutrition: C.ame,
   education: C.ac,
+  test: C.r,
   questionnaire: C.tx2,
   autre: C.tx3,
 };
@@ -69,6 +70,7 @@ export const CATEGORY_CHIP_ON: Record<FicheCategory, string> = {
   recuperation: "border-agon-succes/[0.5] bg-agon-succes/[0.12] text-agon-succes",
   nutrition: "border-agon-amethyste/[0.5] bg-agon-amethyste/[0.12] text-agon-amethyste",
   education: CHIP_ON_ACCENT,
+  test: "border-agon-erreur/[0.5] bg-agon-erreur/[0.12] text-agon-erreur",
   questionnaire: "border-agon-tx2/[0.5] bg-agon-tx2/[0.12] text-agon-tx2",
   autre: "border-agon-tx3/[0.5] bg-agon-tx3/[0.12] text-agon-tx3",
 };
@@ -79,6 +81,7 @@ export const CATEGORY_BORDER_L: Record<FicheCategory, string> = {
   recuperation: "border-l-agon-succes",
   nutrition: "border-l-agon-amethyste",
   education: "border-l-agon-accent",
+  test: "border-l-agon-erreur",
   questionnaire: "border-l-agon-tx2",
   autre: "border-l-agon-tx3",
 };
@@ -90,6 +93,7 @@ export const CATEGORY_SOFT: Record<FicheCategory, string> = {
   recuperation: "border-agon-succes/[0.25] bg-agon-succes/[0.08]",
   nutrition: "border-agon-amethyste/[0.25] bg-agon-amethyste/[0.08]",
   education: "border-agon-accent/[0.25] bg-agon-accent/[0.08]",
+  test: "border-agon-erreur/[0.25] bg-agon-erreur/[0.08]",
   questionnaire: "border-agon-tx2/[0.25] bg-agon-tx2/[0.08]",
   autre: "border-agon-tx3/[0.25] bg-agon-tx3/[0.08]",
 };
@@ -102,6 +106,7 @@ export const CATEGORY_TEXT: Record<FicheCategory, string> = {
   recuperation: "text-agon-succes",
   nutrition: "text-agon-amethyste",
   education: "text-agon-accent",
+  test: "text-agon-erreur",
   questionnaire: "text-agon-tx2",
   autre: "text-agon-tx3",
 };

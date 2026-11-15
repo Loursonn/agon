@@ -11,6 +11,7 @@ export type FicheCategory =
   | 'recuperation'
   | 'nutrition'
   | 'education'
+  | 'test'
   | 'questionnaire'
   | 'autre';
 
@@ -21,13 +22,18 @@ export const FICHE_CATEGORY_LABEL: Record<FicheCategory, string> = {
   recuperation: 'Récupération',
   nutrition: 'Nutrition',
   education: 'Éducatif',
+  test: 'Test',
   questionnaire: 'Questionnaire',
   autre: 'Autre',
 };
 
-/** Catégories utilisables en V1 (questionnaire réservé V2). */
+/**
+ * Catégories utilisables en V1 (questionnaire réservé V2). « test » : fiche
+ * qui accompagne un test (protocole, consignes de passation), rangée dans la
+ * banque comme les autres, sans lien à un athlète tant qu'on ne l'attribue pas.
+ */
 export const FICHE_CATEGORIES: FicheCategory[] = [
-  'mobilite', 'pacing', 'prevention', 'recuperation', 'nutrition', 'education', 'autre',
+  'mobilite', 'pacing', 'prevention', 'recuperation', 'nutrition', 'education', 'test', 'autre',
 ];
 
 export type DocKind = 'pdf' | 'image' | 'questionnaire';
@@ -53,6 +59,8 @@ export interface Doc {
   archived_at: string | null;
   created_at: string;
   updated_at: string;
+  /** 'api' : déposée par l'assistant IA du coach (coach-api). NULL : créée dans l'app. */
+  created_via?: string | null;
 }
 
 export type DocAssignmentSource = 'manuel' | 'programme' | 'energie';

@@ -317,13 +317,21 @@ Dans la même planification :
   voit que l'assiduité, pas le nom, et ne les modifie pas.
 
 **Déposer une fiche** fabriquée par l'assistant : `POST /fiches` avec
-`{ "title", "description?", "category?", "mime_type", "content_base64" }`.
+`{ "title", "description?", "category?", "mime_type", "content_base64" }`
+(`category` : mobilite, pacing, prevention, recuperation, nutrition,
+education, test, questionnaire, autre ; `test` pour le protocole ou les
+consignes d'un test).
 Formats : `application/pdf`, `image/jpeg`, `image/png`, `image/webp` ; 10 Mo
 au plus. Elle arrive dans ta banque avec l'étiquette « claude » et **aucun
 athlète ne la voit** tant qu'une proposition ne l'attribue pas ou ne la
-rattache pas à une séance. Pour la retirer : `DELETE /fiches/:id` (refusé si
-elle a été donnée, a des variantes ou des commentaires), ou supprime-la dans
-Agon.
+rattache pas à une séance. Pour la retirer : `DELETE /fiches/:id` avec l'id
+renvoyé par `POST /fiches` (refusé si elle a été donnée, a des variantes ou
+des commentaires), ou supprime-la dans Agon. L'API reconnaît ses fiches à un
+marqueur posé à la création (`docs.created_via = 'api'`) : retirer
+l'étiquette « claude » dans Agon ne change rien. Réponses : 404
+`fiche_introuvable` (aucune fiche de ta banque sous cet id), 409
+`fiche_du_coach` (fiche déposée par le coach dans Agon : c'est lui qui la
+gère), 409 `fiche_utilisee`.
 
 **Annuler** une planification remet tout comme avant, suppressions en
 cascade comprises (périodes, séances prévues, liens des séances faites et

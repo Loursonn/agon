@@ -1656,6 +1656,7 @@ export type Database = {
           category: string
           coach_id: string
           created_at: string
+          created_via: string | null
           description: string | null
           file_path: string | null
           file_size: number | null
@@ -1677,6 +1678,7 @@ export type Database = {
           category?: string
           coach_id: string
           created_at?: string
+          created_via?: string | null
           description?: string | null
           file_path?: string | null
           file_size?: number | null
@@ -1698,6 +1700,7 @@ export type Database = {
           category?: string
           coach_id?: string
           created_at?: string
+          created_via?: string | null
           description?: string | null
           file_path?: string | null
           file_size?: number | null

@@ -24,6 +24,7 @@ import { buildFiches, buildHabits, buildPeriodisation, buildSummary, firstName, 
 import type { CareState } from "../_shared/coachApiCare.ts";
 import { cleanText, Invalid, isObj, oneOf, onlyKeys, reqText } from "../_shared/coachApiCheck.ts";
 import { collectDocIds } from "../_shared/fiches.ts";
+import { API_FICHE_CATEGORIES, ficheDeleteRefusal } from "../_shared/coachApiFiches.ts";
 import { INJURY_EXPORT_COLUMNS } from "../_shared/domain/injuries.ts";
 
 const RATE_LIMIT_PER_MINUTE = 60;
@@ -552,7 +553,6 @@ const FICHE_MIME: Record<string, { ext: string; kind: "pdf" | "image"; magic: (b
     magic: (b) => String.fromCharCode(...b.slice(0, 4)) === "RIFF" && String.fromCharCode(...b.slice(8, 12)) === "WEBP",
   },
 };
-const FICHE_CATEGORIES = ["mobilite", "pacing", "prevention", "recuperation", "nutrition", "education", "questionnaire", "autre"] as const;
 
 /**
  * Fiche fabriquée par l'assistant (PDF ou image) : ajoutée à la banque du
@@ -585,7 +585,7 @@ async function postFiche(admin: SupabaseClient, caller: Caller, req: Request) {
     row = {
       title: reqText(raw.title, 120, "title"),
       description: raw.description === undefined || raw.description === null ? null : (cleanText(raw.description, 1000, "description") || null),
-      category: raw.category === undefined ? "autre" : oneOf(raw.category, FICHE_CATEGORIES, "category"),
+      category: raw.category === undefined ? "autre" : oneOf(raw.category, API_FICHE_CATEGORIES, "category"),
       mime,
       bytes,
     };
@@ -608,6 +608,7 @@ async function postFiche(admin: SupabaseClient, caller: Caller, req: Request) {
     description: row.description,
     category: row.category,
     tags: ["claude"],
+    created_via: "api",
     kind: FICHE_MIME[row.mime].kind,
     file_path: path,
     file_size: row.bytes.length,
@@ -625,28 +626,32 @@ async function postFiche(admin: SupabaseClient, caller: Caller, req: Request) {
   }, 201);
 }
 
-/** Retire une fiche déposée par l'assistant, tant que personne ne l'a reçue. */
+/**
+ * Retire une fiche déposée par l'assistant, tant que personne ne l'a reçue.
+ * « Déposée par l'assistant » = marquée created_via 'api' à la création (ou,
+ * pour les plus anciennes, étiquetée « claude ») : retirer l'étiquette dans
+ * l'app ne la rend plus « introuvable » (T-delete-fiches-id-renvoie-404).
+ */
 async function deleteFiche(admin: SupabaseClient, caller: Caller, docId: string) {
   const { data: doc, error } = await admin
-    .from("docs").select("id, file_path, tags").eq("id", docId).eq("coach_id", caller.coachId).maybeSingle();
+    .from("docs").select("id, file_path, tags, created_via").eq("id", docId).eq("coach_id", caller.coachId).maybeSingle();
   if (error) throw new Error("docs: " + error.message);
-  if (!doc || !(Array.isArray(doc.tags) && doc.tags.includes("claude"))) {
-    return fail(404, "fiche_introuvable", "Fiche inconnue. Seules les fiches déposées par l'assistant se retirent ici ; les autres, le coach les gère dans Agon.");
-  }
+  const first = ficheDeleteRefusal(doc as never, null);
+  if (first) return fail(first.status, first.code, first.message);
   await logAccess(admin, caller, "DELETE /fiches/:id", null);
   const count = async (table: string, column: string) => {
     const { count: n, error: cErr } = await admin.from(table).select("id", { count: "exact", head: true }).eq(column, docId);
     if (cErr) throw new Error(`${table}: ${cErr.message}`);
     return n ?? 0;
   };
-  if ((await count("doc_assignments", "doc_id")) > 0) {
-    return fail(409, "fiche_utilisee", "Fiche attribuée ou rattachée à une séance : retire-la d'abord (unassign_fiche, detach_fiche), ou annule la proposition qui l'a donnée.");
-  }
-  if ((await count("docs", "origin_id")) > 0 || (await count("doc_comments", "doc_id")) > 0) {
-    return fail(409, "fiche_utilisee", "Le coach en a fait des variantes ou elle a des commentaires : elle reste, le coach la gère dans Agon.");
-  }
-  if (doc.file_path) {
-    const { error: rmErr } = await admin.storage.from("docs").remove([doc.file_path as string]);
+  const refusal = ficheDeleteRefusal(doc as never, {
+    assignments: await count("doc_assignments", "doc_id"),
+    variants: await count("docs", "origin_id"),
+    comments: await count("doc_comments", "doc_id"),
+  });
+  if (refusal) return fail(refusal.status, refusal.code, refusal.message);
+  if (doc!.file_path) {
+    const { error: rmErr } = await admin.storage.from("docs").remove([doc!.file_path as string]);
     if (rmErr) throw new Error("storage docs: " + rmErr.message);
   }
   const { error: dErr } = await admin.from("docs").delete().eq("id", docId).eq("coach_id", caller.coachId);
@@ -966,7 +971,7 @@ serve(async (req) => {
     if (route === "GET /tests") return await getTests(admin, caller, url);
     if (route === "POST /fiches") return await postFiche(admin, caller, req);
     if (route === "DELETE /fiches/:id") {
-      if (!UUID.test(seg[1])) return fail(404, "fiche_introuvable", "Fiche inconnue.");
+      if (!UUID.test(seg[1])) return fail(404, "fiche_introuvable", "Id de fiche invalide : prends l'id renvoyé par POST /fiches.");
       return await deleteFiche(admin, caller, seg[1]);
     }
 
