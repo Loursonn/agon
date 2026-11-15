@@ -1,18 +1,18 @@
-// Banc local de 20261115220000_rls_microcycles_fast.sql dans PGlite (Postgres en WASM), sans Docker
+// Banc local de 20261115230000_rls_microcycles_fast.sql dans PGlite (Postgres en WASM), sans Docker
 // ni prod : fonctions et policies exactes de la prod (lues dans supabase/tests/ci/schema.sql) sur des
 // tables réduites aux colonnes utiles, données fictives aléatoires de toutes les formes (dont les
 // cycles « mixtes »). Pour chaque graine : ce que chaque utilisateur voit, modifie et peut insérer,
 // avant puis après la migration, doit être identique ; puis supabase/tests/rls_microcycles_equivalence.sql
 // est rejoué sur la même base. Si schema.sql contient déjà la migration, le retour arrière
-// (supabase/rollback/20261115220000_…) remet d'abord l'état « avant ».
+// (supabase/rollback/20261115230000_…) remet d'abord l'état « avant ».
 // Usage, depuis la racine du dépôt :
 //   npm i --no-save --no-package-lock --prefix supabase/tests @electric-sql/pglite@0.2.17
 //   node supabase/tests/rls_microcycles_pglite.mjs 1 23      (graines 1 à 23)
 import { PGlite } from "@electric-sql/pglite";
 import { readFileSync } from "node:fs";
 
-const MIG = "supabase/migrations/20261115220000_rls_microcycles_fast.sql";
-const ROLLBACK = "supabase/rollback/20261115220000_rls_microcycles_fast.sql";
+const MIG = "supabase/migrations/20261115230000_rls_microcycles_fast.sql";
+const ROLLBACK = "supabase/rollback/20261115230000_rls_microcycles_fast.sql";
 const TEST = "supabase/tests/rls_microcycles_equivalence.sql";
 const SCHEMA = readFileSync("supabase/tests/ci/schema.sql", "utf8");
 
