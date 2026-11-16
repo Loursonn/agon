@@ -6,7 +6,8 @@
  *   - une séance dont l'athlète a changé la date (`rescheduled_by_athlete`),
  *     sauf s'il l'a remise à sa date d'origine ;
  *   - des séries ou exercices ajoutés en plus du programme (`bonusSets`,
- *     `customExercises`, ancien format encore présent sur de vieilles séances).
+ *     `customExercises`, ancien format encore présent sur de vieilles séances ;
+ *     `addedExercises`, exercices ajoutés pendant la séance depuis le 16/11/2026).
  *
  * Saisir ses charges, noter sa forme ou commenter n'est PAS une modification :
  * c'est faire la séance (avant 2026-11-15 le badge comptait toutes ces
@@ -16,6 +17,8 @@
  * (clé = séance + date, donc un nouveau déplacement de la même séance revient).
  */
 
+import { addedExercisesOf } from "@shared/domain/athleteMods";
+
 export interface AthleteChangeInput {
   id: string;
   sessionName: string;
@@ -24,7 +27,7 @@ export interface AthleteChangeInput {
   recordedOriginalDate: string | null;
   rescheduledByAthlete: boolean;
   coachAlert: boolean;
-  athleteModifications: { bonusSets?: unknown; customExercises?: unknown } | null;
+  athleteModifications: { bonusSets?: unknown; customExercises?: unknown; addedExercises?: unknown } | null;
   /** Dernière écriture sur la séance (approxime le moment du changement). */
   updatedAt?: string | null;
 }
@@ -46,6 +49,12 @@ export interface AthleteChange {
 /** Jours regardés en arrière par le badge (les séances à venir comptent toujours). */
 export const CHANGES_WINDOW_DAYS = 28;
 
+/** Exercices ajoutés par l'athlète : ancien format + ajouts pendant la séance. */
+export function countAddedExercises(mods: { customExercises?: unknown; addedExercises?: unknown } | null | undefined): number {
+  const custom = Array.isArray(mods?.customExercises) ? mods.customExercises.length : 0;
+  return custom + addedExercisesOf(mods).length;
+}
+
 function countBonusSets(v: unknown): number {
   if (!Array.isArray(v)) return 0;
   return v.reduce((n: number, b) => {
@@ -61,8 +70,7 @@ export function toAthleteChange(log: AthleteChangeInput): AthleteChange | null {
   // (`moveWorkoutToDayByAthlete` ne la garde pas) : déplacée quand même.
   const moved = log.rescheduledByAthlete && orig !== log.scheduledDate;
   const addedSets = countBonusSets(log.athleteModifications?.bonusSets);
-  const ex = log.athleteModifications?.customExercises;
-  const addedExercises = Array.isArray(ex) ? ex.length : 0;
+  const addedExercises = countAddedExercises(log.athleteModifications);
   if (!moved && addedSets === 0 && addedExercises === 0) return null;
   return {
     key: `${log.id}@${log.scheduledDate}`,

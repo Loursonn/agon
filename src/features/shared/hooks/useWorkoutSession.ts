@@ -35,6 +35,8 @@ export interface WorkoutExerciceData {
   superset_with_next?: boolean;
   /** Retour vidéo demandé par le coach pour cette séance (null si aucun) */
   video_request?: VideoRequest | null;
+  /** Exercice ajouté par l'athlète pendant la séance (hors programme). */
+  added?: boolean;
 }
 
 export interface WorkoutBlocData {

@@ -1,3 +1,4 @@
+import { ADDED_BY_ATHLETE_LABEL, addedExercisesOf } from "@/lib/addedExercises";
 import { useQuery } from "@tanstack/react-query";
 import { formatReps, hasIso } from "@/lib/formatSetsReps";
 import { readAppDataKeys } from "@/api/appData";
@@ -169,6 +170,8 @@ async function fetchWeekData(
         globalExNameMap.set(ce.tempId, ce.name);
       }
     }
+    // Exercices ajoutés par l'athlète pendant la séance (ids propres à la séance).
+    for (const a of addedExercisesOf(mods)) globalExNameMap.set(a.id, `${a.name} (${ADDED_BY_ATHLETE_LABEL.toLowerCase()})`);
     const ss = mods?.sessionSets;
     if (ss) {
       for (const id of Object.keys(ss)) {

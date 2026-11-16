@@ -38,6 +38,31 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-16-fix-ajouter-exercice-seance",
+    date: "2026-11-16",
+    kind: "fix",
+    title: "L'athlète peut de nouveau ajouter un exercice imprévu pendant sa séance",
+    summary: "Un exercice fait en plus du programme se note maintenant pendant la séance de musculation, et vous le voyez dans la séance réalisée.",
+    sections: [
+      {
+        title: "Côté athlète",
+        points: [
+          "En bas de la séance, « + Ajouter un exercice » : il cherche dans la banque d'exercices ou tape un nom libre s'il ne le trouve pas.",
+          "L'exercice arrive avec une série à remplir (charge, reps, RIR) ; « + Série bonus » pour les suivantes.",
+          "Ajouté par erreur ? « Retirer cet exercice » tant qu'aucune série n'est remplie.",
+        ],
+      },
+      {
+        title: "Côté coach",
+        points: [
+          "Dans le planning, le récap « Prévu vs Réalisé » montre l'exercice sous « Ajouté par l'athlète », avec ses séries.",
+          "Il compte dans le badge « modifs » et dans les Retours (« +1 exercice ajouté ») ; votre programme, lui, ne change pas.",
+          "Choisi dans la banque, il alimente aussi les records de l'athlète.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-16-hyrox-ma-saison-profil-effort",
     date: "2026-11-16",
     kind: "feature",

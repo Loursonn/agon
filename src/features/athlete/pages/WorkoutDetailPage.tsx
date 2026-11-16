@@ -7,6 +7,8 @@ import { C, H } from "@/lib/theme";
 import { ExerciceCard } from "@/features/athlete/components/workout-detail/ExerciceCard";
 import { FicheLinks } from "@/features/shared/components/fiches/FicheLinks";
 import { FinishWorkoutSheet } from "@/features/athlete/components/workout/FinishWorkoutSheet";
+import { AddExerciseSheet } from "@/features/athlete/components/workout/AddExerciseSheet";
+import { addedExercisesOf, canRemoveAddedExercise, newAddedExercise, withAddedBloc, withAddedExercise, withoutAddedExercise } from "@/lib/addedExercises";
 import { type FocusExercise, firstPendingBloc, nextPendingSet, stepValue } from "@/lib/workoutFocus";
 import { FocusInputBar } from "@/features/athlete/components/workout/FocusInputBar";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -88,6 +90,16 @@ export default function WorkoutDetailPage() {
     return 0;
   });
 
+  const [showAddEx, setShowAddEx] = useState(false);
+
+  // Blocs du programme + « Exercices ajoutés » par l'athlète (séance réalisée seule).
+  // Avant l'init, la saisie locale est vide : on lit celle du serveur.
+  const addedRaw = setsInit ? localMods.addedExercises : workout.athleteModifications?.addedExercises;
+  const blocs = useMemo(
+    () => withAddedBloc(workout.blocs, addedExercisesOf({ addedExercises: addedRaw })),
+    [workout.blocs, addedRaw],
+  );
+
   const restRef = useRef<ReturnType<typeof setInterval>>();
   const elapsedRef = useRef<ReturnType<typeof setInterval>>();
   const loopRef = useRef(false);
@@ -95,8 +107,8 @@ export default function WorkoutDetailPage() {
 
   // ── Collect all exIds for usePrevWorkoutSets ─────────────────────────────
   const allExIds = useMemo(
-    () => workout.blocs.flatMap((b) => b.exercices.map((e) => e.id)),
-    [workout.blocs],
+    () => blocs.flatMap((b) => b.exercices.map((e) => e.id)),
+    [blocs],
   );
 
   const prevSets = usePrevWorkoutSets(
@@ -112,11 +124,11 @@ export default function WorkoutDetailPage() {
   const { data: recordLinks } = useRecordLinks(athleteId);
   const recordRefByEx = useMemo(() => {
     const out: Record<string, string | null> = {};
-    for (const bloc of workout.blocs) {
+    for (const bloc of blocs) {
       for (const ex of bloc.exercices) out[ex.id] = resolveRecordRef(ex, recordLinks ?? {});
     }
     return out;
-  }, [workout.blocs, recordLinks]);
+  }, [blocs, recordLinks]);
   const oneRmByEx = useMemo(() => {
     const out: Record<string, number | null> = {};
     for (const [exId, ref] of Object.entries(recordRefByEx)) out[exId] = ref ? bestByRef[ref]?.kg ?? null : null;
@@ -125,8 +137,8 @@ export default function WorkoutDetailPage() {
 
   // ── Vidéos banque d'exercices (exercise_id → youtube_id) ─────────────────
   const bankExerciseIds = useMemo(
-    () => [...new Set(workout.blocs.flatMap((b) => b.exercices.map((e) => e.exercise_id).filter((x): x is string => !!x)))],
-    [workout.blocs],
+    () => [...new Set(blocs.flatMap((b) => b.exercices.map((e) => e.exercise_id).filter((x): x is string => !!x)))],
+    [blocs],
   );
   const { data: videoMap = {} } = useExerciseVideos(bankExerciseIds);
 
@@ -160,12 +172,14 @@ export default function WorkoutDetailPage() {
       }
     }
     const savedSets = base.sessionSets ?? {};
+    // Exercices ajoutés par l'athlète : lus dans la saisie (serveur ou brouillon).
+    const initBlocs = withAddedBloc(workout.blocs, addedExercisesOf(base));
 
     setSets((prev) => {
       const next: AllSets = { ...prev };
       let changed = false;
 
-      for (const bloc of workout.blocs) {
+      for (const bloc of initBlocs) {
         for (const ex of bloc.exercices) {
           const rows = buildExSets(ex, savedSets[ex.id], prev[ex.id], oneRmByEx[ex.id]);
           if (!sameSets(rows, prev[ex.id])) {
@@ -195,7 +209,7 @@ export default function WorkoutDetailPage() {
     setSets((prev) => {
       let changed = false;
       const next = { ...prev };
-      for (const bloc of workout.blocs) {
+      for (const bloc of blocs) {
         for (const ex of bloc.exercices) {
           if (ex.params.charge_unit !== "%RM" || ex.mode === "libre") continue;
           const exSets = next[ex.id];
@@ -217,7 +231,7 @@ export default function WorkoutDetailPage() {
       }
       return changed ? next : prev;
     });
-  }, [setsInit, oneRmByEx, workout.blocs]);
+  }, [setsInit, oneRmByEx, blocs]);
 
   // ── Backfill empty cells from prevSets once they load ───────────────────
   useEffect(() => {
@@ -590,6 +604,40 @@ export default function WorkoutDetailPage() {
     [saveWorkoutSets],
   );
 
+  // ── Exercice imprévu ajouté par l'athlète (une série vide pour commencer) ──
+  const addExercise = useCallback(
+    (p: { name: string; exerciseId: string | null }) => {
+      const added = newAddedExercise(p);
+      const prev = setsRef.current;
+      const next = { ...prev, [added.id]: [{ ...BLANK_SET }] };
+      const mods = allSetsToMods(next, withAddedExercise(localModsRef.current, added));
+      setSets(next);
+      setLocalMods(mods);
+      saveWorkoutSets(mods);
+      setShowAddEx(false);
+      haptic();
+      // Le bloc « Exercices ajoutés » est le dernier : on y va pour saisir.
+      setFocusBloc(workout.blocs.length);
+      requestAnimationFrame(() => document.getElementById("ex-" + added.id)?.scrollIntoView({ block: "center", behavior: "smooth" }));
+    },
+    [saveWorkoutSets, workout.blocs.length],
+  );
+
+  // Retirer un ajout fait par erreur, tant qu'aucune série n'y est saisie.
+  const removeAddedExercise = useCallback(
+    (exId: string) => {
+      const current = allSetsToMods(setsRef.current, localModsRef.current);
+      if (!canRemoveAddedExercise(current, exId)) return;
+      const { [exId]: _drop, ...next } = setsRef.current;
+      void _drop;
+      const mods = withoutAddedExercise(current, exId);
+      setSets(next);
+      setLocalMods(mods);
+      saveWorkoutSets(mods);
+    },
+    [saveWorkoutSets],
+  );
+
   // ── Update comment / forme ───────────────────────────────────────────────
   const updateExComment = useCallback(
     (exId: string, comment: string) => {
@@ -741,7 +789,7 @@ export default function WorkoutDetailPage() {
   // ── Progress bar ─────────────────────────────────────────────────────────
   const { progTotal, progDone } = useMemo(() => {
     let total = 0, done = 0;
-    for (const bloc of workout.blocs) {
+    for (const bloc of blocs) {
       for (const ex of bloc.exercices) {
         const exSets = sets[ex.id] ?? [];
         total += exSets.length;
@@ -749,7 +797,7 @@ export default function WorkoutDetailPage() {
       }
     }
     return { progTotal: total, progDone: done };
-  }, [sets, workout.blocs]);
+  }, [sets, blocs]);
 
   const isCompleted = workout.status === "completed";
   const canEdit = !isCompleted && !!id;
@@ -775,16 +823,16 @@ export default function WorkoutDetailPage() {
 
   // ── Mode « un bloc à la fois » ─────────────────────────────────────────
   const focusBlocs = useMemo<FocusExercise[][]>(
-    () => workout.blocs.map((b) => b.exercices.map((e) => ({
+    () => blocs.map((b) => b.exercices.map((e) => ({
       id: e.id,
       supersetWithNext: !!e.superset_with_next,
       skip: e.mode === "libre" || !!e.params?.cluster,
       nbSets: e.mode === "libre" ? 1 : (e.params?.nb_series ?? 0),
     }))),
-    [workout.blocs],
+    [blocs],
   );
   const autoBloc = useMemo(() => firstPendingBloc(focusBlocs, sets), [focusBlocs, sets]);
-  const activeBloc = Math.min(focusBloc ?? autoBloc, Math.max(0, workout.blocs.length - 1));
+  const activeBloc = Math.min(focusBloc ?? autoBloc, Math.max(0, blocs.length - 1));
 
   // ── Early returns ────────────────────────────────────────────────────────
   if (workout.isLoading) {
@@ -821,10 +869,10 @@ export default function WorkoutDetailPage() {
     );
   }
 
-  const focusOn = canEdit && focusMode && workout.blocs.length > 0;
+  const focusOn = canEdit && focusMode && blocs.length > 0;
   const focus = (() => {
     if (!focusOn) return null;
-    const bloc = workout.blocs[activeBloc];
+    const bloc = blocs[activeBloc];
     if (!bloc) return null;
     const pend = nextPendingSet(focusBlocs[activeBloc] ?? [], sets);
     const restSec = blocRestSeconds(bloc);
@@ -854,7 +902,7 @@ export default function WorkoutDetailPage() {
   })();
   // Pavé de la charge ouvert depuis la zone du bas : Prescrit, Préc., +2,5, +5 (planche SeanceEnCours, écran 02).
   const kgPresets = (t: PadTarget) => {
-    const ex = workout.blocs.flatMap((b) => b.exercices).find((e) => e.id === t.exId);
+    const ex = blocs.flatMap((b) => b.exercices).find((e) => e.id === t.exId);
     if (!ex || ex.params.charge_unit !== "kg") return undefined;
     const num = (v: string | number | null | undefined) => (v == null || v === "" ? null : parseFloat(String(v).replace(",", ".")));
     const presc = num(getSetTarget(ex.params, t.setIdx, oneRmByEx[ex.id]).kg);
@@ -1022,7 +1070,7 @@ export default function WorkoutDetailPage() {
           gap: 16,
         }}
       >
-        {canEdit && !focusMode && workout.blocs.length > 0 && (
+        {canEdit && !focusMode && blocs.length > 0 && (
           <button
             type="button"
             onClick={() => { setFocusMode(true); window.scrollTo(0, 0); }}
@@ -1040,9 +1088,9 @@ export default function WorkoutDetailPage() {
           athleteId={athleteId}
         />
 
-        <VideoRequestBanner blocs={workout.blocs} videoSent={localMods.videoSent} />
+        <VideoRequestBanner blocs={blocs} videoSent={localMods.videoSent} />
 
-        {workout.blocs.length === 0 ? (
+        {blocs.length === 0 ? (
           <div
             style={{
               padding: 32,
@@ -1054,7 +1102,7 @@ export default function WorkoutDetailPage() {
             Aucun exercice dans cette séance
           </div>
         ) : (
-          workout.blocs.map((bloc, blocIdx) => {
+          blocs.map((bloc, blocIdx) => {
             if (focusOn && blocIdx !== activeBloc) return null;
             const bColor = blocColor(bloc.color, blocIdx);
             const timing = timingLabel(bloc);
@@ -1317,12 +1365,12 @@ export default function WorkoutDetailPage() {
                     }
 
                     return (
-                      <Fragment key={ex.id}>
+                      <div key={ex.id} id={"ex-" + ex.id} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                       <ExerciceCard
                         exId={ex.id}
                         name={ex.exercise_name}
                         muscle={ex.muscle}
-                        prescription={formatPrescription(ex.params)}
+                        prescription={ex.added ? "Hors programme" : formatPrescription(ex.params)}
                         coachComment={ex.comment}
                         youtubeId={ex.exercise_id ? videoMap[ex.exercise_id] : undefined}
                         onShowVideo={() => {
@@ -1355,6 +1403,15 @@ export default function WorkoutDetailPage() {
                         onStopRest={stopRest}
                         onAdjustRest={adjustRest}
                       />
+                      {ex.added && canEdit && canRemoveAddedExercise(allSetsToMods(sets, localMods), ex.id) && (
+                        <button
+                          type="button"
+                          onClick={() => removeAddedExercise(ex.id)}
+                          style={{ alignSelf: "flex-end", background: "none", border: "none", color: C.tx3, fontSize: 12, cursor: "pointer", fontFamily: "inherit", padding: "0 4px", textDecoration: "underline" }}
+                        >
+                          Retirer cet exercice
+                        </button>
+                      )}
                       {renderVideoRequest(ex)}
                       {/* Superset connector — no rest between linked exercises */}
                       {ex.superset_with_next && nextEx && (
@@ -1368,7 +1425,7 @@ export default function WorkoutDetailPage() {
                           </span>
                         </div>
                       )}
-                      </Fragment>
+                      </div>
                     );
                   })}
                         </Fragment>
@@ -1382,8 +1439,8 @@ export default function WorkoutDetailPage() {
         )}
 
         {/* À suivre : blocs après celui en cours (planche AthleteSeanceA) */}
-        {focusOn && activeBloc < workout.blocs.length - 1 && (() => {
-          const rest = workout.blocs.slice(activeBloc + 1);
+        {focusOn && activeBloc < blocs.length - 1 && (() => {
+          const rest = blocs.slice(activeBloc + 1);
           const n = rest.reduce((k, b) => k + b.exercices.length, 0);
           return (
             <div style={{ margin: "12px 16px 0", padding: "12px 14px", borderRadius: 14, background: C.s1, border: "1px solid " + C.brd }}>
@@ -1402,7 +1459,7 @@ export default function WorkoutDetailPage() {
                   >
                     <span style={{ flex: 1, minWidth: 0 }}>
                       <span style={{ display: "block", fontSize: 13.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.exercise_name}</span>
-                      <span style={{ display: "block", ...MONO, fontSize: 11.5, color: C.tx3, marginTop: 1 }}>{prescriptionLine(e.mode, e.params)}</span>
+                      <span style={{ display: "block", ...MONO, fontSize: 11.5, color: C.tx3, marginTop: 1 }}>{e.added ? "Hors programme" : prescriptionLine(e.mode, e.params)}</span>
                     </span>
                     <span style={{ ...MONO, fontSize: 11, color: C.tx3, flex: "none" }}>
                       {b.exercices.length > 1 ? `Superset ${ei + 1}/${b.exercices.length}` : `Bloc ${blocLetter(idx)}`}
@@ -1413,6 +1470,17 @@ export default function WorkoutDetailPage() {
             </div>
           );
         })()}
+
+        {/* Exercice imprévu : ajouté à la séance réalisée seulement */}
+        {canEdit && (
+          <button
+            type="button"
+            onClick={() => setShowAddEx(true)}
+            style={{ width: "100%", minHeight: 48, borderRadius: 12, border: "1px dashed " + C.brdL, background: "transparent", color: C.tx2, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}
+          >
+            + Ajouter un exercice
+          </button>
+        )}
 
         {/* Completed session comment */}
         {isCompleted && localMods.sessionComment && (
@@ -1486,9 +1554,9 @@ export default function WorkoutDetailPage() {
         <FocusInputBar
           blocLabel={focus.blocLabel}
           blocIndex={activeBloc}
-          blocCount={workout.blocs.length}
+          blocCount={blocs.length}
           onPrev={() => { setFocusBloc(Math.max(0, activeBloc - 1)); window.scrollTo(0, 0); }}
-          onNext={() => { setFocusBloc(Math.min(workout.blocs.length - 1, activeBloc + 1)); window.scrollTo(0, 0); }}
+          onNext={() => { setFocusBloc(Math.min(blocs.length - 1, activeBloc + 1)); window.scrollTo(0, 0); }}
           pending={focus.pending ? {
             exName: focus.pending.ex.exercise_name,
             setNumber: focus.pending.setIdx + 1,
@@ -1649,11 +1717,16 @@ export default function WorkoutDetailPage() {
         </div>
       )}
 
+      {/* ── Ajouter un exercice imprévu ── */}
+      {showAddEx && canEdit && (
+        <AddExerciseSheet onPick={addExercise} onClose={() => setShowAddEx(false)} />
+      )}
+
       {/* ── Finish dialog ── */}
       {showFinish && (
         <FinishWorkoutSheet
           title={workout.sessionName}
-          {...countSets(workout.blocs, sets)}
+          {...countSets(blocs, sets)}
           comment={localMods.sessionComment ?? ""}
           forme={localMods.sessionForme}
           onCommentChange={updateSessionComment}

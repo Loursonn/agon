@@ -1,3 +1,4 @@
+import { addedExercisesOf } from "@/lib/addedExercises";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { X } from "lucide-react";
@@ -25,11 +26,12 @@ export function WorkoutRecapModal({ event, athleteId, onClose }: { event: CalEve
   // Modif ponctuelle du coach : c'est la version que l'athlète a eue
   const ovrBlocs = mods?.coachOverride?.blocs as Bloc[] | undefined;
   const sourceSession = progSession && ovrBlocs?.length ? { ...progSession, blocs: ovrBlocs } : progSession;
-  const exoRows = buildExoRows(sourceSession, sessionSets, weekNumber);
+  const exoRows = buildExoRows(sourceSession, sessionSets, weekNumber, addedExercisesOf(mods));
 
   // Stats summary
   const totalPlanned = exoRows.filter(e => e.planned).length;
-  const totalDone = exoRows.filter(e => e.actual.length > 0).length;
+  // Exercices du programme réalisés (un ajout de l'athlète n'est pas « prévu »).
+  const totalDone = exoRows.filter(e => (totalPlanned ? e.planned : true) && e.actual.length > 0).length;
   const totalSets = exoRows.reduce((acc, e) => acc + e.actual.length, 0);
 
   return (

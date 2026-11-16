@@ -207,6 +207,8 @@ export interface CoachSessionOverride {
 export interface AthleteModifications {
   bonusSets?: BonusSet[];
   customExercises?: CustomExercise[];
+  /** Exercices ajoutés par l'athlète pendant la séance ; séries dans sessionSets[id]. */
+  addedExercises?: import("@shared/domain/athleteMods").AddedExercise[];
   // NEW fields for new ProgSession-based sessions:
   sessionSets?: Record<string, SessionSetLog[]>;    // key = Exercice.id
   exerciceComments?: Record<string, string>;         // key = Exercice.id
