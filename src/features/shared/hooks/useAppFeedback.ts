@@ -3,6 +3,7 @@
  * Athlète : envoie un bug / une idée. Coach certifié / admin : liste + statut.
  * Adaptateurs de `src/api/appContent.ts`.
  */
+import { STALE_MS } from "@/lib/queryCache";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   appContentKeys, deleteAppFeedback, invalidateAppFeedback, listAppFeedback, sendAppFeedback, setAppFeedbackStatus,
@@ -17,7 +18,7 @@ export const FEEDBACK_STATUS_LABEL: Record<AppFeedbackStatus, string> = { new: "
 export function useAppFeedbackList() {
   return useQuery<AppFeedbackRow[]>({
     queryKey: appContentKeys.appFeedbackList,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     queryFn: listAppFeedback,
   });
 }

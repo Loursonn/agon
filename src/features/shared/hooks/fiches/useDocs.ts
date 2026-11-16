@@ -2,6 +2,7 @@
  * Module Fiches — lectures (React Query), adaptateurs de `src/api/docs.ts`.
  * RLS : la visibilité est entièrement portée par can_read_doc() côté base.
  */
+import { STALE_MS } from "@/lib/queryCache";
 import { useQuery } from "@tanstack/react-query";
 import {
   docSignedUrl, docsKeys, getAthleteDocs, getDoc, getDocsByIds, listBankDocs, listFamilyAssignments,
@@ -17,7 +18,7 @@ export function useDocsBank(coachId: string | undefined) {
   return useQuery<DocFamily[]>({
     queryKey: docsKeys.bank(coachId ?? ""),
     enabled: !!coachId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     queryFn: () => listBankDocs(coachId!),
   });
 }
@@ -27,7 +28,7 @@ export function useSelfServiceDocs(coachId: string | null | undefined) {
   return useQuery<DocFamily[]>({
     queryKey: docsKeys.selfService(coachId ?? ""),
     enabled: !!coachId,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => listSelfServiceDocs(coachId!),
   });
 }
@@ -36,7 +37,7 @@ export function useDoc(docId: string | undefined | null) {
   return useQuery<Doc | null>({
     queryKey: docsKeys.one(docId ?? ""),
     enabled: !!docId,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => getDoc(docId!),
   });
 }
@@ -46,7 +47,7 @@ export function useDocVariants(originId: string | undefined | null) {
   return useQuery<Doc[]>({
     queryKey: docsKeys.family(originId ?? ""),
     enabled: !!originId,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => listFamilyDocs(originId!),
   });
 }
@@ -57,7 +58,7 @@ export function useDocsByIds(ids: string[]) {
   return useQuery<Record<string, Doc>>({
     queryKey: docsKeys.byIds(sorted.join(",")),
     enabled: sorted.length > 0,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => getDocsByIds(sorted),
   });
 }
@@ -67,7 +68,7 @@ export function useAthleteDocs(athleteId: string | undefined | null) {
   return useQuery<AthleteDocs>({
     queryKey: docsKeys.athlete(athleteId ?? ""),
     enabled: !!athleteId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     queryFn: () => getAthleteDocs(athleteId!),
   });
 }
@@ -77,7 +78,7 @@ export function useDocFamilyAssignments(originId: string | undefined | null) {
   return useQuery<DocAssignmentWithFamily[]>({
     queryKey: docsKeys.familyAssignments(originId ?? ""),
     enabled: !!originId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     queryFn: () => listFamilyAssignments(originId!),
   });
 }

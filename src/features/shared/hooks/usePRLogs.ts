@@ -5,6 +5,7 @@
  * source = 'manual'   → saisi par le coach ou l'athlète
  * source = 'computed' → calculé depuis une séance (Epley, arrondi 0,5 kg)
  */
+import { STALE_MS } from "@/lib/queryCache";
 import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -26,7 +27,7 @@ export function usePRLogs(athleteId: string | undefined) {
   return useQuery({
     queryKey: recordKeys.list(athleteId ?? ""),
     enabled: !!athleteId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     queryFn: () => getRecords(athleteId!),
   });
 }

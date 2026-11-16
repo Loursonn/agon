@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useQuery } from "@tanstack/react-query";
 import { competitionKeys, getNextCompetition, type UpcomingCompetitionRow } from "@/api/competitions";
 
@@ -11,7 +12,6 @@ export function useUpcomingCompetition(athleteId: string) {
     queryKey: competitionKeys.next(athleteId),
     queryFn: () => getNextCompetition(athleteId),
     enabled: !!athleteId,
-    staleTime: 60_000,
-    refetchOnWindowFocus: true,
+    staleTime: STALE_MS,
   });
 }

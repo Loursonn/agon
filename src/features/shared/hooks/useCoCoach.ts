@@ -7,6 +7,7 @@
  * Ajout : par le coach référent ou par l'athlète, avec le code coach du 2e coach.
  * Retrait : coach référent, athlète, ou le co-coach lui-même.
  */
+import { STALE_MS } from "@/lib/queryCache";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   addCoCoach, coachKeys, getAthleteCoaches, invalidateAthleteCoaches, removeCoCoach, unlinkAthlete,
@@ -20,7 +21,7 @@ export function useAthleteCoaches(athleteId: string | null | undefined) {
   return useQuery<AthleteCoaches>({
     queryKey: coachKeys.athleteCoaches(athleteId ?? ""),
     enabled: !!athleteId,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => getAthleteCoaches(athleteId!),
   });
 }

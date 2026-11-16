@@ -35,6 +35,11 @@ import { STATE_LABEL, objectiveLookup } from "@/lib/hyrox/objective/vsObjective"
 import { raceStrategy } from "@/lib/hyrox/objective/strategy";
 import { leverHints, leverViews, validatedRules } from "@/lib/hyrox/objective/levers";
 import { useHyroxAnalyses } from "@/features/shared/hooks/hyrox/useHyroxTests";
+import { pickRef, useHyroxReferences } from "@/features/shared/hooks/hyrox/useHyroxReferences";
+import type { RefLookup } from "@/lib/hyrox/calc";
+import { raceVerdict } from "@/lib/hyrox/verdict";
+import { useAuth } from "@/hooks/useAuth";
+import RaceVerdictView from "./RaceVerdictView";
 
 /**
  * Analyse de course HYROX (planches HyroxAnaTel et HyroxAnaCoachOrdi) :
@@ -42,8 +47,9 @@ import { useHyroxAnalyses } from "@/features/shared/hooks/hyrox/useHyroxTests";
  * objectif construit sur le run du jour, docs/HYROX_OBJECTIF_CONCEPTION.md §4),
  * croisé avec la montre. Même écran pour l'athlète et le coach ; côté coach,
  * la frise ajoute allure et cadence, la montre passe en 02 et le tableau des
- * 17 segments est déplié. Aucune position dans la catégorie : seul le rang
- * officiel est affiché. Toutes les phrases sont des règles calculées (aucune IA).
+ * 17 segments est déplié. En tête, le verdict (lot 6) : « top X % » de la
+ * catégorie, points forts et freins, marge ; la carte à partager est réservée
+ * à l'athlète. Toutes les phrases sont des règles calculées (aucune IA).
  */
 
 const TABS = [
@@ -86,6 +92,8 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
   const { data: coaches } = useAthleteCoaches(race.athlete_id);
   const { data: plans = [] } = useHyroxRacePlans(race.athlete_id);
   const coachAnalyses = useHyroxAnalyses(coach ? race.athlete_id : undefined);
+  const { data: refRows = [] } = useHyroxReferences();
+  const { profile } = useAuth();
   const [compareChoice, setCompareChoice] = useState<CompareKind | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [versusId, setVersusId] = useState<string | null>(null);
@@ -134,6 +142,17 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
     return leverViews(strategy, rules, hints);
   }, [strategy, rules, stream, analysis, sv2, offset, recov?.avgDrop]);
 
+  const refs: RefLookup = useMemo(() => (d, s, b) => pickRef(refRows, d, s, b) ?? undefined, [refRows]);
+  const verdict = useMemo(
+    () => raceVerdict({ race, refs, objective: vsObj?.total ?? null, strategy }),
+    [race, refs, vsObj, strategy],
+  );
+  const verdictShown = !!(verdict.level || verdict.objective || verdict.margin);
+  // Carte à partager : l'athlète seulement (Q3 du lot 6), avec son nom s'il regarde sa propre course.
+  const canShare = !coach;
+  const athleteName = profile?.id === race.athlete_id ? profile?.full_name ?? null : null;
+  const openShare = () => setTab("partager");
+
   const best = allRaces
     .filter((r) => r.is_official && r.division === race.division && r.status === race.status)
     .reduce<number | null>((m, r) => (m == null || r.total_s < m ? r.total_s : m), null);
@@ -171,7 +190,8 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
   const totalColor = total ? (total.state === "on" ? C.tx2 : objectiveColor(total.state)) : C.tx2;
   const totalValue = total ? (total.deltaS === 0 ? "0" : `${total.deltaS > 0 ? "+" : "−"}${fmtGap(total.deltaS)}`) : null;
   const objSub = ov ? `${fmtClock(ov.objective.totalS)}${ov.objective.runAvgS != null ? ` · run ${fmtPace(ov.objective.runAvgS)}` : ""}${ov.objective.source === "run_du_jour" ? " · run du jour" : ""}` : "";
-  const rank = race.rank_overall != null && race.participants_overall ? { r: race.rank_overall, n: race.participants_overall } : null;
+  // La place est dans le verdict quand il est affiché.
+  const rank = !verdictShown && race.rank_overall != null && race.participants_overall ? { r: race.rank_overall, n: race.participants_overall } : null;
 
   const crumb = (
     <nav aria-label="Fil d'Ariane" style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
@@ -199,10 +219,12 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
           style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: 0, color: C.tx2, fontSize: 13, cursor: "pointer", textAlign: "left" }}>
           <ChevronLeft size={16} /> HYROX · Courses
         </button>
-        <button type="button" onClick={() => setTab(tab === "partager" ? "debrief" : "partager")} aria-pressed={tab === "partager"} aria-label="Partager"
-          style={{ width: 36, height: 36, flex: "none", borderRadius: 10, border: `1px solid ${tab === "partager" ? C.ac : C.brdL}`, background: tab === "partager" ? alpha(C.ac, 0.16) : "transparent", color: tab === "partager" ? C.ac : C.tx, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+        {canShare && (
+        <button type="button" onClick={() => setTab(tab === "partager" ? "debrief" : "partager")} aria-pressed={tab === "partager"} aria-label="Partager ma course"
+          style={{ width: 44, height: 44, flex: "none", borderRadius: 10, border: `1px solid ${tab === "partager" ? C.ac : C.brdL}`, background: tab === "partager" ? alpha(C.ac, 0.16) : "transparent", color: tab === "partager" ? C.ac : C.tx, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
           <Share2 size={15} />
         </button>
+        )}
       </div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
         <span style={{ ...PPILL, background: race.is_official ? C.rouge : C.o, color: C.ink }}>{race.is_official ? "Compétition" : "Simulation"}</span>
@@ -266,10 +288,12 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
                 <button type="button" onClick={() => onDelete(race)} style={{ ...buttonStyle(), color: C.r, borderColor: C.r }}><Trash2 size={14} /> Confirmer la suppression</button>
               </>
             : <button type="button" onClick={() => setConfirmDelete(true)} style={buttonStyle()} aria-label="Supprimer la course"><Trash2 size={14} /></button>)}
+          {canShare && (
           <button type="button" onClick={() => setTab(tab === "partager" ? "course" : "partager")}
-            style={buttonStyle()} aria-pressed={tab === "partager"}>
-            <Share2 size={14} /> Partager
+            style={tab === "partager" ? buttonStyle() : buttonStyle("primary")} aria-pressed={tab === "partager"}>
+            <Share2 size={14} /> {tab === "partager" ? "Revenir à l'analyse" : "Partager ma course"}
           </button>
+          )}
         </div>
       </div>
 
@@ -294,9 +318,13 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
         )}
         {rank && <Stat bare label="Rang" value={String(rank.r)} unit={`/ ${rank.n}`} sub={`Top ${Math.max(1, Math.round((rank.r / rank.n) * 100))} %`} />}
       </div>
-      {debriefView("desktop")}
+      {verdictShown && tab !== "partager" && <RaceVerdictView verdict={verdict} totalS={race.total_s} phone={false} />}
+      {tab !== "partager" && debriefView("desktop")}
       </>}
 
+      {phone && verdictShown && tab !== "partager" && (
+        <RaceVerdictView verdict={verdict} totalS={race.total_s} phone onShare={canShare ? openShare : undefined} />
+      )}
       {phone ? phoneTabs : (
       <div style={{ display: "flex", gap: 18, borderBottom: `1px solid ${C.brd}` }} role="tablist">
         {TABS.filter((t) => t.key !== "debrief").map((t) => {
@@ -361,11 +389,7 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
             </div>
       )}
       {tab !== "partager" && tab !== "comparer" && <RaceComments race={race} />}
-      {tab === "partager" && (
-        <RaceShareTab race={race} analysis={analysis} division={division} isRecord={isRecord}
-          coachName={coaches?.referent?.full_name ?? null} attribution={attribution}
-          hr={stream?.hr ? stream.t.flatMap((t, i) => (t >= offset && t <= offset + race.total_s && i % 10 === 0 ? [stream.hr![i]] : [])) : null} />
-      )}
+      {tab === "partager" && canShare && <RaceShareTab race={race} verdict={verdict} athleteName={athleteName} />}
     </div>
   );
 }

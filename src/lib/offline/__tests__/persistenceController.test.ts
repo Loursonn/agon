@@ -47,6 +47,40 @@ describe("createPersistenceController", () => {
     expect(client.getQueryData(["workouts", "u1"])).toEqual([{ id: "w1" }]);
   });
 
+  it("cache restauré de plus de 30 s : affiché mais relu au rechargement", async () => {
+    const store = memoryStore();
+    await seed(store, "u1", ["workouts", "u1"], [{ id: "w1" }]);
+    // Écrit il y a 1 min.
+    const saved = store.map.get(cacheKeyFor("u1")) as { clientState: { queries: { state: { dataUpdatedAt: number } }[] } };
+    for (const q of saved.clientState.queries) q.state.dataUpdatedAt -= 60_000;
+
+    const client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity, retry: false, staleTime: 5 * 60_000 } } });
+    await controller(client, store).setUser("u1");
+    const q = client.getQueryCache().find({ queryKey: ["workouts", "u1"] })!;
+    expect(q.state.data).toEqual([{ id: "w1" }]);
+    // Données toutes récentes, cache de 5 min : sans invalidation, l'écran ne
+    // relirait rien et une modification faite entre-temps resterait cachée.
+    expect(q.isStale()).toBe(true);
+    const fresh = await client.fetchQuery({ queryKey: ["workouts", "u1"], queryFn: async () => [{ id: "w2" }], staleTime: 5 * 60_000 });
+    expect(fresh).toEqual([{ id: "w2" }]);
+  });
+
+  it("page rechargée (restoredFreshMs = 0) : même un cache tout récent est relu", async () => {
+    const store = memoryStore();
+    await seed(store, "u1", ["workouts", "u1"], [{ id: "w1" }]);
+    const client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity, retry: false, staleTime: 5 * 60_000 } } });
+    await controller(client, store, { restoredFreshMs: () => 0 }).setUser("u1");
+    expect(client.getQueryCache().find({ queryKey: ["workouts", "u1"] })!.isStale()).toBe(true);
+  });
+
+  it("cache restauré tout récent (moins de 30 s) : pas relu, comme avant", async () => {
+    const store = memoryStore();
+    await seed(store, "u1", ["workouts", "u1"], [{ id: "w1" }]);
+    const client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity, retry: false, staleTime: 5 * 60_000 } } });
+    await controller(client, store).setUser("u1");
+    expect(client.getQueryCache().find({ queryKey: ["workouts", "u1"] })!.isStale()).toBe(false);
+  });
+
   it("jette un cache écrit par une autre version (buster)", async () => {
     const store = memoryStore();
     await seed(store, "u1", ["workouts", "u1"], [1], "ancienne-version");

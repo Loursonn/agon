@@ -2,6 +2,7 @@
  * Adaptateurs React Query du module `src/api/wellness.ts` : aucune requête,
  * aucun calcul ici (score et paliers : `@shared/domain/wellness`).
  */
+import { STALE_MS } from "@/lib/queryCache";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { IsoDay } from "@shared/domain/dates";
 import type { WellnessEntry } from "@shared/domain/wellness";
@@ -20,7 +21,7 @@ export function useWellnessHistory(athleteId: string | null | undefined, range: 
     queryKey: wellnessKeys.history(athleteId ?? "", range),
     queryFn: () => getWellnessHistory(athleteId!, range),
     enabled: !!athleteId,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
   });
 }
 
@@ -30,8 +31,7 @@ export function useWellnessHistories(athleteIds: readonly string[], opts: { enab
     queryKey: wellnessKeys.many(athleteIds),
     queryFn: () => getWellnessHistories(athleteIds),
     enabled: athleteIds.length > 0 && opts.enabled !== false,
-    staleTime: 60_000,
-    refetchOnWindowFocus: true,
+    staleTime: STALE_MS,
   });
 }
 

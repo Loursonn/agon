@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { addDays, type IsoDay } from "@shared/domain/dates";
 import type { Light } from "@shared/domain/wellnessLight";
@@ -20,7 +21,7 @@ export function useWeeklyReview(athleteId: string | null | undefined, weekStart:
     queryKey: weeklyReviewKeys.week(athleteId ?? "", weekStart ?? ""),
     queryFn: () => getWeeklyReview(athleteId!, weekStart!),
     enabled: Boolean(athleteId && weekStart),
-    staleTime: 30_000,
+    staleTime: STALE_MS,
   });
 }
 
@@ -34,7 +35,7 @@ export function useWeeklyReviews(athleteId: string | null | undefined) {
     queryKey: weeklyReviewKeys.list(athleteId ?? ""),
     queryFn: () => listWeeklyReviews(athleteId!),
     enabled: Boolean(athleteId),
-    staleTime: 60_000,
+    staleTime: STALE_MS,
   });
 }
 
@@ -44,7 +45,7 @@ export function useWeekSummary(athleteId: string | null | undefined, weekStart: 
     queryKey: weeklyReviewKeys.summary(athleteId ?? "", weekStart ?? ""),
     queryFn: () => getWeekSummary(athleteId!, weekStart!),
     enabled: enabled && Boolean(athleteId && weekStart),
-    staleTime: 60_000,
+    staleTime: STALE_MS,
   });
 }
 
@@ -54,7 +55,7 @@ export function useWeekPainReports(athleteId: string | null | undefined, weekSta
     queryKey: weeklyReviewKeys.pains(athleteId ?? "", weekStart ?? ""),
     queryFn: () => getWeekPainReports(athleteId!, weekStart!),
     enabled: enabled && Boolean(athleteId && weekStart),
-    staleTime: 60_000,
+    staleTime: STALE_MS,
   });
 }
 
@@ -64,7 +65,7 @@ export function useCoachWeekReviews(athleteIds: readonly string[], weekStart: Is
     queryKey: weeklyReviewKeys.coachWeek(weekStart, athleteIds),
     queryFn: () => listReviewsForWeek(athleteIds, weekStart),
     enabled: athleteIds.length > 0,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
   });
 }
 

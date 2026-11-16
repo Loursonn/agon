@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useQuery } from "@tanstack/react-query"
 import { listWorkoutLogs, workoutKeys } from "@/api/workouts"
 import { listInjuryFollowups, medicalKeys } from "@/api/injuries"
@@ -27,7 +28,7 @@ export function useSessionWeekLogs(
   const { data: rawLogs = [], isLoading } = useQuery({
     queryKey: workoutKeys.session(athleteId ?? "", sessionId),
     enabled: !!athleteId && !!sessionId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     queryFn: () =>
       listWorkoutLogs({ athleteIds: [athleteId!], sessionId, excludeStatuses: ["skipped"], ascending: false }),
   })
@@ -37,7 +38,7 @@ export function useSessionWeekLogs(
   const { data: followups = [] } = useQuery({
     queryKey: medicalKeys.followups(athleteId ?? "", `logs:${logIds.join(",")}`),
     enabled: !!athleteId && logIds.length > 0,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     queryFn: () => listInjuryFollowups(athleteId!, { workoutLogIds: logIds }),
   })
   const painBySession = sessionPainBySession(followups)

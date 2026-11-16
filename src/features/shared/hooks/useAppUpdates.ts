@@ -4,6 +4,7 @@
  * ne stocke que « tel coach a vu telle nouveauté, à telle date ».
  * Adaptateurs de `src/api/appContent.ts`.
  */
+import { STALE_MS } from "@/lib/queryCache";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -69,7 +70,7 @@ export function useAppUpdateStats(enabled: boolean) {
   return useQuery<AppUpdateRead[]>({
     queryKey: appContentKeys.updateStats,
     enabled,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: listAppUpdateStats,
   });
 }

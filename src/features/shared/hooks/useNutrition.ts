@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { IsoDay } from "@shared/domain/dates";
 import {
@@ -12,7 +13,7 @@ export function useNutritionStrategy(athleteId: string | undefined) {
   return useQuery<NutritionStrategy | null>({
     queryKey: nutritionKeys.strategy(athleteId ?? ""),
     enabled: !!athleteId,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => getStrategy(athleteId!),
   });
 }
@@ -22,7 +23,7 @@ export function useNutritionLog(athleteId: string | undefined) {
   return useQuery<Record<IsoDay, NutritionDailyLog>>({
     queryKey: nutritionKeys.log(athleteId ?? ""),
     enabled: !!athleteId,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => getLog(athleteId!),
   });
 }

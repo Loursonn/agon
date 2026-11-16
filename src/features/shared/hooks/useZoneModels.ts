@@ -2,6 +2,7 @@
  * Modèles de zones FC d'un athlète : adaptateurs React Query de
  * `src/api/zoneModels.ts`. Écritures réservées au coach (la base vérifie).
  */
+import { STALE_MS } from "@/lib/queryCache";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   applyZoneModelToPast, decideZoneModel, getBoundsAt, getZoneModels, invalidateZoneModels, saveZoneModel,
@@ -24,7 +25,7 @@ export function useZoneModels(athleteId: string | null | undefined) {
   return useQuery<ZoneModelRow[]>({
     queryKey: zoneModelKeys.list(athleteId ?? ""),
     enabled: !!athleteId,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => getZoneModels(athleteId!),
   });
 }
@@ -34,7 +35,7 @@ export function useZoneBoundsAt(athleteId: string | null | undefined, day: IsoDa
   return useQuery<BoundsAt | null>({
     queryKey: zoneModelKeys.boundsAt(athleteId ?? "", day),
     enabled: !!athleteId,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => getBoundsAt(athleteId!, day),
   });
 }

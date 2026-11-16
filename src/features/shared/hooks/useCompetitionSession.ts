@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { invalidateCompetitions, saveCompetitionSession, type CompetitionSessionInput } from "@/api/competitions";
@@ -21,13 +22,13 @@ export function useCompetitionSession(athleteId: string | null | undefined, comp
   const activities = useQuery({
     queryKey: planLinkKeys.dayActivities(athleteId ?? "none", date),
     enabled: on,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => listRaceActivityCandidates(athleteId!, date),
   });
   const link = useQuery({
     queryKey: planLinkKeys.competition(athleteId ?? "none", competitionId),
     enabled: on,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => getCompetitionLink(competitionId),
   });
   return {

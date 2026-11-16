@@ -4,6 +4,7 @@
  * Références de performance + zones FC ajustables + métriques personnalisées.
  * Route : /coach/athletes/:athleteId/profil-sportif
  */
+import { STALE_MS } from "@/lib/queryCache";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -154,7 +155,7 @@ function useLastWeights(athleteId: string) {
     queryKey: wellnessKeys.history(athleteId, range),
     queryFn: () => getWellnessHistory(athleteId, range),
     select: (history) => recentWeights(history, 3),
-    staleTime: 60_000,
+    staleTime: STALE_MS,
   });
 }
 

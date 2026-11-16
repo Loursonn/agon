@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -12,7 +13,7 @@ export function useProfileItems(athleteId: string) {
     queryKey: profileKeys.items(athleteId),
     queryFn: () => getProfileItems(athleteId),
     enabled: !!athleteId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
   });
 }
 

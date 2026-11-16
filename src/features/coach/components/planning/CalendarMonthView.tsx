@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, eachDayOfInterval, parseISO, differenceInCalendarWeeks } from "date-fns";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -117,7 +118,7 @@ export function CalendarMonthView({
   const { data: allCycles = [] } = useQuery({
     queryKey: cycleKeys.athleteCycles(athleteId),
     enabled: !!athleteId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     // Tous les cycles portant directement l'athlète (autonomes OU rattachés à un
     // méso avec athlete_id renseigné — cycles de l'assistant) + ceux de ses mésos.
     queryFn: () => listAthleteCycles(athleteId),

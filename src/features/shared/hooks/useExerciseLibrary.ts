@@ -1,3 +1,4 @@
+import { STALE_MS, STALE_SLOW_MS } from "@/lib/queryCache";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createExercise,
@@ -17,7 +18,7 @@ export function useExerciseLibrary(enabled = true) {
   return useQuery<LibraryExercise[]>({
     queryKey: exerciseKeys.library,
     enabled,
-    staleTime: 300_000,
+    staleTime: STALE_SLOW_MS, // bibliothèque : change rarement
     queryFn: getExerciseLibrary,
   });
 }
@@ -33,7 +34,7 @@ export function useExerciseSearch(search: string, type: string) {
   const q = useQuery<ExerciseLite[]>({
     queryKey: exerciseKeys.search(term, type),
     enabled: active,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     placeholderData: keepPreviousData,
     queryFn: () => searchExercises({ search: term, type: type || undefined, limit: 10 }),
   });
@@ -62,7 +63,7 @@ export function useCreateExercises() {
 export function useExerciseBankPage(f: ExerciseBankFilters) {
   return useQuery({
     queryKey: [...exerciseKeys.all, "bank-page", f] as const,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     placeholderData: keepPreviousData,
     queryFn: () => getExerciseBankPage(f),
   });

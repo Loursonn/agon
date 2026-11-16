@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useQuery } from "@tanstack/react-query";
 import { computeOccurrences } from "@/lib/sessionOccurrence";
 import { countSessionOccurrence, listSessionOccurrenceLogs } from "@/api/workouts";
@@ -19,7 +20,7 @@ export function useSessionOccurrence(
   return useQuery({
     queryKey: planningKeys.occurrence(athleteId, sessionId, date),
     enabled: !!athleteId && !!sessionId && !!date,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     queryFn: () => countSessionOccurrence(athleteId!, sessionId!, date!),
   });
 }

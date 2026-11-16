@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -10,7 +11,7 @@ export function useMedicalEntries(athleteId: string | undefined) {
   return useQuery<MedicalEntry[]>({
     queryKey: medicalKeys.entries(athleteId ?? ''),
     enabled: !!athleteId,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => listEntries(athleteId!),
   });
 }
@@ -56,7 +57,7 @@ export function useInjuryStageHistory(athleteId: string | undefined) {
   return useQuery<InjuryStageEvent[]>({
     queryKey: medicalKeys.stages(athleteId ?? ''),
     enabled: !!athleteId,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => listStageHistory(athleteId!),
   });
 }

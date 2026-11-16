@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   createLifeEvent,
@@ -13,7 +14,7 @@ export function useLifeEvents(athleteId: string) {
     queryKey: lifeEventKeys.list(athleteId),
     queryFn: () => listLifeEvents(athleteId),
     enabled: !!athleteId,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
   });
 }
 

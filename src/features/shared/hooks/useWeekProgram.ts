@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
@@ -71,7 +72,7 @@ export function useWeekProgram(weekStart: string | null): DayProgram[] {
   const { data: workoutLogs = [] } = useQuery({
     queryKey: planningKeys.week(athleteId ?? "", mondayISO),
     enabled: !!athleteId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     queryFn: () => getWeekWorkouts(athleteId!, mondayISO, sundayISO),
   });
 

@@ -38,6 +38,51 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-16-fix-moins-de-requetes",
+    date: "2026-11-16",
+    kind: "fix",
+    title: "Ouverture plus rapide, serveur moins sollicité",
+    summary:
+      "L'accueil de l'athlète et la fiche athlète demandent beaucoup moins de choses au serveur à l'ouverture : l'app s'affiche plus vite et reste plus stable aux heures chargées.",
+    sections: [
+      {
+        title: "Ce qui change pour vous",
+        points: [
+          "Les données de l'athlète arrivent en quelques requêtes groupées au lieu de plusieurs dizaines.",
+          "Revenir sur l'onglet de l'app ne recharge plus tout : seules les données de plus de 5 minutes sont relues.",
+          "Une modification faite par votre athlète peut mettre jusqu'à 5 minutes à apparaître chez vous (et inversement). Pour la voir tout de suite : rechargez la page.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-16-hyrox-verdict-carte-partage",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "HYROX : le verdict de chaque course, et une carte à partager pour l'athlète",
+    summary:
+      "En haut de l'analyse d'une course : le niveau de l'athlète dans toute sa catégorie, ses points forts et ses freins, et le temps encore à gagner. L'athlète peut en faire une image pour ses réseaux.",
+    sections: [
+      {
+        title: "Le verdict",
+        points: [
+          "Niveau : « top X % » de toute la catégorie sur le chrono (arrondi vers le haut), avec un palier (Élite, Très haut niveau, Avancé, Confirmé, En progression), la place et l'objectif du jour.",
+          "Profil : une phrase qui résume la course (par exemple « Profil ergo : très forte sur les machines, freinée par les charges lourdes »), puis les points forts et les freins, station par station.",
+          "Marge : le chrono possible avec les leviers de la course, qui n'est pas une prédiction.",
+          "Pas de rang pour une simulation ni pour une catégorie sans données de référence : le verdict parle alors seulement de l'objectif.",
+        ],
+      },
+      {
+        title: "La carte à partager (athlète)",
+        points: [
+          "Format post ou story, avec le chrono, le « top X % », le radar des stations, les points forts et le frein.",
+          "L'athlète choisit d'afficher ou non son nom, sa place et le chrono possible ; le frein et la source du classement restent toujours sur la carte.",
+          "Seul l'athlète crée sa carte, sur son téléphone : rien n'est envoyé.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-16-competition-courbe-fc",
     date: "2026-11-16",
     kind: "feature",

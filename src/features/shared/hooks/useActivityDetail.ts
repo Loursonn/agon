@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   activityDetailKeys,
@@ -22,7 +23,7 @@ export function useActivityDetail(athleteId: string | undefined, activityId: str
   return useQuery({
     queryKey: activityDetailKeys.detail(athleteId ?? "none", activityId ?? "none"),
     enabled: !!athleteId && !!activityId,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     // Série seconde par seconde : lourde, on ne la garde pas en cache hors ligne longtemps.
     gcTime: 5 * 60_000,
     queryFn: () => getActivityDetail(activityId!),

@@ -27,6 +27,9 @@ import {
  *   sur le réseau.
  */
 
+/** Cache restauré plus vieux que ça : relu dès qu'un écran le demande. */
+export const RESTORED_FRESH_MS = 30_000;
+
 export interface OfflineStore {
   get(key: string): Promise<unknown>;
   set(key: string, value: unknown): Promise<void>;
@@ -48,6 +51,12 @@ export interface PersistenceControllerOptions {
    * l'erreur réseau et renvoie `[]` ne peut pas écraser les vraies données.
    */
   canPersist?: () => boolean;
+  /**
+   * Âge à partir duquel une donnée restaurée est relue (défaut 30 s). 0 =
+   * tout relire : rechargement explicite de la page (geste « je veux voir
+   * l'état du serveur »).
+   */
+  restoredFreshMs?: () => number;
   onError?: (err: unknown) => void;
 }
 
@@ -96,6 +105,7 @@ export function createPersistenceController(opts: PersistenceControllerOptions):
     throttleMs = OFFLINE_PERSIST_THROTTLE_MS,
     restoreTimeoutMs = OFFLINE_RESTORE_TIMEOUT_MS,
     canPersist = () => true,
+    restoredFreshMs = () => RESTORED_FRESH_MS,
     onError,
   } = opts;
 
@@ -202,6 +212,18 @@ export function createPersistenceController(opts: PersistenceControllerOptions):
         report(err);
       }
       if (gen !== generation) return;
+      // Données restaurées = état du dernier passage : affichées tout de suite,
+      // mais relues dès que l'écran les demande (en ligne) : toutes après un
+      // rechargement de la page, celles de plus de 30 s à une simple
+      // réouverture (comme avant l'allongement du cache). Sans ça, rouvrir ou
+      // recharger l'app peu après ne montrerait pas une modification faite
+      // entre-temps par le coach / l'athlète.
+      const restoredAt = Date.now();
+      const freshMs = restoredFreshMs();
+      void queryClient.invalidateQueries({
+        refetchType: "none",
+        predicate: (q) => restoredAt - q.state.dataUpdatedAt >= freshMs,
+      });
       setRestoring(false);
       subscribe();
       schedule();

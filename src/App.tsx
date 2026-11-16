@@ -24,6 +24,7 @@ const ResetPassword     = lazy(() => import("./pages/ResetPassword.tsx"));
 const StaffInviteAccept = lazy(() => import("./features/staff/pages/StaffInviteAccept.tsx"));
 const ClaimAthlete      = lazy(() => import("./pages/ClaimAthlete.tsx"));
 import PhoneOr from "./features/coach/phone/PhoneOr.tsx";
+import { STALE_MS, refetchOnFocusIfOld } from "@/lib/queryCache";
 
 // Pages légales publiques (lazy — rarement ouvertes, mais doivent rester
 // accessibles sans authentification : les programmes partenaires Garmin et
@@ -143,8 +144,11 @@ const CoachPhoneProgrammation = lazy(() => import("./features/coach/phone/CoachP
 const CoachPhoneFiches   = lazy(() => import("./features/coach/phone/CoachPhoneFiches.tsx"));
 const CoachPhoneBanque   = lazy(() => import("./features/coach/phone/CoachPhoneBanque.tsx"));
 
-// staleTime : une donnée lue il y a moins de 30 s n'est pas re-téléchargée à
-// chaque ouverture de page (les mutations invalident explicitement leurs clés).
+// staleTime : une donnée lue il y a moins de 5 min n'est pas re-téléchargée à
+// chaque ouverture de page (les mutations invalident explicitement leurs clés ;
+// durées et contrepartie : src/lib/queryCache.ts). Retour sur l'onglet : seules
+// les données de plus de 5 min sont relues. Rechargement de la page : tout est
+// relu (cache restauré marqué périmé, persistenceController).
 // Hors ligne (src/lib/offline) :
 // - gcTime = durée du cache persisté (7 j) : une requête inactive doit rester
 //   en mémoire pour être recopiée dans IndexedDB ;
@@ -168,8 +172,8 @@ const noPendingWrites = () => pendingWrites() === 0;
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30_000, gcTime: OFFLINE_CACHE_MAX_AGE_MS, networkMode: "online",
-      refetchOnReconnect: noPendingWrites, refetchOnWindowFocus: noPendingWrites, refetchOnMount: noPendingWrites,
+      staleTime: STALE_MS, gcTime: OFFLINE_CACHE_MAX_AGE_MS, networkMode: "online",
+      refetchOnReconnect: noPendingWrites, refetchOnWindowFocus: refetchOnFocusIfOld(noPendingWrites), refetchOnMount: noPendingWrites,
     },
     mutations: { networkMode: "always" },
   },

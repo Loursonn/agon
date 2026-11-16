@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { QK } from '@/lib/queryKeys';
@@ -29,7 +30,7 @@ export function useMeasurementLogs(athleteId: string) {
     queryKey: profileKeys.measurements(athleteId),
     queryFn: (): Promise<MeasurementLog[]> => getMeasurementLogs(athleteId),
     enabled: !!athleteId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
   });
 }
 

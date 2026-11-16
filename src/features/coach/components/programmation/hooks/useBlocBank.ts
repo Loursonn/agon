@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { getBlocBank, programKeys, saveBlocBank } from "@/api/program"
@@ -8,7 +9,7 @@ export function useBlocBank(coachId: string | undefined) {
   return useQuery<Bloc[]>({
     queryKey: programKeys.blocBank(coachId ?? ""),
     enabled: !!coachId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     queryFn: () => getBlocBank(coachId!),
   })
 }

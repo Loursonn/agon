@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useQuery } from '@tanstack/react-query';
 import { getArticularProfile, profileKeys } from '@/api/profile';
 
@@ -9,6 +10,6 @@ export function useArticularProfile(athleteId: string) {
     queryKey: profileKeys.articular(athleteId),
     queryFn: () => getArticularProfile(athleteId),
     enabled: !!athleteId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
   });
 }

@@ -2,6 +2,7 @@
  * Hooks React Query pour la banque de blocs spécifiques (src/api/specific.ts).
  * Banque privée par coach (RLS).
  */
+import { STALE_MS } from "@/lib/queryCache";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -19,7 +20,7 @@ const KEY = specificKeys.blocks;
 export function useSpecificBlocks() {
   return useQuery<SpecificBlockRow[]>({
     queryKey: KEY,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: listSpecificBlocks,
   });
 }

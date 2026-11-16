@@ -3,6 +3,7 @@
  * affichée de l'athlète. Adaptateur de `getActivePlan` (src/api/planning.ts).
  */
 
+import { STALE_MS } from "@/lib/queryCache";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { getActivePlan, planningKeys } from "@/api/planning";
 
@@ -15,7 +16,7 @@ export function useActivePlan(athleteId: string, weekOffset = 0) {
   return useQuery({
     queryKey: planningKeys.activePlan(athleteId, weekOffset),
     enabled: !!athleteId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     placeholderData: keepPreviousData,
     queryFn: () => getActivePlan(athleteId, weekOffset),
   });

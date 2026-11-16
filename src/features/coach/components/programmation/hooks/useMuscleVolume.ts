@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { listWorkoutLogs, workoutKeys, type WorkoutListParams } from "@/api/workouts"
@@ -27,7 +28,7 @@ export function useMuscleVolume(athleteId: string | undefined, startISO: string 
   const { data: logs = [], isLoading: l3 } = useQuery<PlannedLog[]>({
     queryKey: workoutKeys.list(params),
     enabled: !!athleteId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     queryFn: () => listWorkoutLogs(params),
   })
 
