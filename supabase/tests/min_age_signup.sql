@@ -59,11 +59,13 @@ SELECT pg_temp.as_user(u_ok) FROM t;
 SET LOCAL ROLE authenticated;
 DO $$ DECLARE i record; BEGIN
   SELECT * INTO i FROM t;
+  PERFORM set_config('agon.signup', 'on', true);  -- comme register_athlete (inscription fermée, 20261116200000)
   BEGIN INSERT INTO profiles (id, role, full_name, birth_date) VALUES (i.u_ok, 'athlete', 'Test Adulte', date '1995-03-10');
         INSERT INTO r(phase,k,ok,detail) VALUES (i.phase, 'S1 athlète adulte : inscription acceptée', true, 'insérée');
   EXCEPTION WHEN OTHERS THEN INSERT INTO r(phase,k,ok,detail) VALUES (i.phase, 'S1 athlète adulte : inscription acceptée', false, SQLERRM); END;
 END $$;
 RESET ROLE;
+SELECT set_config('agon.signup', 'off', true);
 
 SELECT pg_temp.as_user(u_young) FROM t;
 SET LOCAL ROLE authenticated;
@@ -81,12 +83,14 @@ SELECT pg_temp.as_user(u_exact) FROM t;
 SET LOCAL ROLE authenticated;
 DO $$ DECLARE i record; BEGIN
   SELECT * INTO i FROM t;
+  PERFORM set_config('agon.signup', 'on', true);  -- comme register_coach
   BEGIN INSERT INTO profiles (id, role, full_name, birth_date)
           VALUES (i.u_exact, 'coach', 'Test Pile', (i.today - interval '15 years')::date);
         INSERT INTO r(phase,k,ok,detail) VALUES (i.phase, 'S3 coach qui a 15 ans aujourd''hui : accepté', true, 'insérée');
   EXCEPTION WHEN OTHERS THEN INSERT INTO r(phase,k,ok,detail) VALUES (i.phase, 'S3 coach qui a 15 ans aujourd''hui : accepté', false, SQLERRM); END;
 END $$;
 RESET ROLE;
+SELECT set_config('agon.signup', 'off', true);
 
 SELECT pg_temp.as_user(u_future) FROM t;
 SET LOCAL ROLE authenticated;

@@ -2113,6 +2113,11 @@ BEGIN
   END IF;
 
   IF TG_OP = 'INSERT' THEN
+    -- Inscription fermée (Hugo, 15/11/2026) : un profil ne naît que par register_coach,
+    -- register_athlete ou register_staff, qui posent agon.signup.
+    IF coalesce(current_setting('agon.signup', true), '') <> 'on' THEN
+      RAISE EXCEPTION 'Inscription : passe par ton lien d''invitation ou le code de ton coach' USING ERRCODE = '42501';
+    END IF;
     NEW.is_admin := false;
     NEW.is_certified_coach := false;
     IF NEW.role IS NULL OR NEW.role NOT IN ('athlete', 'coach', 'coach_athlete', 'staff') THEN

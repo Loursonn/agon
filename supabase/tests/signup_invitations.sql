@@ -1,4 +1,5 @@
--- Test à blanc : inscription sur invitation (migration 20261116170000_signup_invitations, temps 1).
+-- Test à blanc : inscription sur invitation (migrations 20261116170000_signup_invitations, temps 1,
+-- et 20261116200000_signup_lock, temps 2).
 -- Base de TEST : supabase db query --linked -f supabase/tests/signup_invitations.sql
 -- Tout est annulé (ROLLBACK). Comptes fictifs @example.invalid créés dans la transaction.
 BEGIN;
@@ -7,6 +8,7 @@ DECLARE
   coach uuid; plain_coach uuid; code text;
   u_coach uuid := gen_random_uuid(); u_other uuid := gen_random_uuid();
   u_ath uuid := gen_random_uuid(); u_staff uuid := gen_random_uuid();
+  u_direct uuid := gen_random_uuid(); u_svc uuid := gen_random_uuid();
   inv record; tok text; n int; ok int := 0; m record; r text; rid uuid; staff_tok text; ath_of_coach uuid;
 BEGIN
   SELECT id, coach_code INTO coach, code FROM profiles
@@ -22,7 +24,8 @@ BEGIN
   SELECT '00000000-0000-0000-0000-000000000000', x.id, 'authenticated', 'authenticated', x.email, '', now(),
          '{"provider":"email","providers":["email"]}', '{}', now(), now()
     FROM (VALUES (u_coach, 'nouveau-coach@example.invalid'), (u_other, 'intrus@example.invalid'),
-                 (u_ath, 'nouvel-athlete@example.invalid'), (u_staff, 'nouveau-kine@example.invalid')) AS x(id, email);
+                 (u_ath, 'nouvel-athlete@example.invalid'), (u_staff, 'nouveau-kine@example.invalid'),
+                 (u_direct, 'direct@example.invalid'), (u_svc, 'par-service@example.invalid')) AS x(id, email);
 
   -- 1. Un coach non certifié n'invite pas.
   PERFORM set_config('request.jwt.claims', json_build_object('sub', plain_coach, 'role', 'authenticated')::text, true);
@@ -180,7 +183,32 @@ BEGIN
     RAISE EXCEPTION '11. droits inattendus'; END IF;
   ok := ok + 1;
 
-  RAISE NOTICE 'signup_invitations : % / 11', ok;
-  IF ok <> 11 THEN RAISE EXCEPTION 'signup_invitations : % / 11', ok; END IF;
+  -- 12. Temps 2 : un compte connecté ne crée pas son profil à la main, quel que soit le rôle.
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', u_direct, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+  BEGIN
+    INSERT INTO profiles (id, role, full_name, birth_date) VALUES (u_direct, 'coach', 'Coach Direct', '1990-01-01');
+    RAISE EXCEPTION '12. profil coach créé sans invitation';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  BEGIN
+    INSERT INTO profiles (id, role, full_name, birth_date) VALUES (u_direct, 'athlete', 'Athlète Direct', '2000-01-01');
+    RAISE EXCEPTION '12. profil athlète créé sans code';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  RESET ROLE;
+  SELECT count(*) INTO n FROM profiles WHERE id = u_direct;
+  IF n <> 0 THEN RAISE EXCEPTION '12. profil direct présent'; END IF;
+  ok := ok + 1;
+
+  -- 13. Le serveur (service_role, Edge Functions : pas d'utilisateur) crée toujours un profil.
+  PERFORM set_config('request.jwt.claims', '', true);
+  INSERT INTO profiles (id, role, full_name, birth_date) VALUES (u_svc, 'athlete', 'Par Service', '2000-01-01');
+  SELECT count(*) INTO n FROM profiles WHERE id = u_svc;
+  IF n <> 1 THEN RAISE EXCEPTION '13. insertion serveur refusée'; END IF;
+  ok := ok + 1;
+
+  RAISE NOTICE 'signup_invitations : % / 13', ok;
+  IF ok <> 13 THEN RAISE EXCEPTION 'signup_invitations : % / 13', ok; END IF;
 END $$;
 ROLLBACK;
