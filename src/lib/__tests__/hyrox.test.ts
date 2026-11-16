@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { parseMmSs, formatMmSs, formatDelta } from "@/lib/time";
 import {
   runTotal, stationsTotal, roxzoneTotal, shares, runStats,
-  percentile, alerts, stationPriorities, typology, bracketOf,
+  percentile, alerts, typology, bracketOf,
   generatePlan, planVsActual, estimateFromTests,
   type RefLookup,
 } from "@/lib/hyrox/calc";
@@ -191,25 +191,6 @@ describe("alerts", () => {
   it("late_fade : runs 5 à 7 nettement plus lents que 2 à 4", () => {
     const al = alerts(sampleRace({ run_5_s: 360, run_6_s: 355, run_7_s: 360 }));
     expect(al.find(a => a.code === "late_fade")?.message).toBe("Runs 5 à 7 en moyenne 40 s plus lents que les runs 2 à 4");
-  });
-});
-
-// ══════════════════════════════════════════════════════════════════════════════
-// stationPriorities
-// ══════════════════════════════════════════════════════════════════════════════
-
-describe("stationPriorities", () => {
-  it("returns sorted by score descending", () => {
-    const prios = stationPriorities(sampleRace(), pickRef);
-    expect(prios.length).toBeGreaterThan(0);
-    for (let i = 1; i < prios.length; i++) {
-      expect(prios[i].score).toBeLessThanOrEqual(prios[i - 1].score);
-    }
-  });
-
-  it("roxzone included", () => {
-    const prios = stationPriorities(sampleRace(), pickRef);
-    expect(prios.some(p => p.key === "roxzone")).toBe(true);
   });
 });
 

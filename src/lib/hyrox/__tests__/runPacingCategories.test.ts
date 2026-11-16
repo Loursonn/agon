@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { HyroxReferenceSegment, HyroxResult } from "@/features/shared/types/hyrox";
-import { POSITION_BRACKET, percentile, standing, timeAtPercentile, type RefLookup } from "@/lib/hyrox/calc";
+import { POSITION_BRACKET, percentile, timeAtPercentile, type RefLookup } from "@/lib/hyrox/calc";
 import { cruisePace, cruiseSpread, excessLevel, levelRunPattern, stationRunCosts } from "@/lib/hyrox/runPacing";
 import { categoryOptions, crossFormatNote, raceCategory, raceFormat } from "@/lib/hyrox/categories";
-import { segmentPositions } from "@/lib/hyrox/raceEvolution";
 
 const runs = (v: number[]) => (k: string) => {
   const i = Number(k.replace("run_", "")) - 1;
@@ -69,21 +68,8 @@ describe("calibrage : position dans toute la catégorie, seuils nets", () => {
     const all = percentile(255, lookup("men", "ski", POSITION_BRACKET)!)!;
     const tranche = percentile(255, lookup("men", "ski", "sub70")!)!;
     expect(all).toBeLessThanOrEqual(35);
-    expect(standing(all)).toBe("fort");
     // Dans la seule tranche < 1:10, le même temps passerait au-dessus de la médiane.
     expect(tranche).toBeGreaterThan(50);
-  });
-
-  it("seuils : top 35 % fort, 35 % les plus lents faible, sinon dans la norme", () => {
-    expect(standing(35)).toBe("fort");
-    expect(standing(50)).toBe("norme");
-    expect(standing(65)).toBe("faible");
-    expect(standing(null)).toBeNull();
-  });
-
-  it("positions de l'Évolution : toute la catégorie", () => {
-    const rows = segmentPositions([race()], lookup);
-    expect(rows.find((r) => r.key === "ski")!.latestPct).toBe(percentile(255, lookup("men", "ski", "all")!));
   });
 
   it("percentile ↔ temps : aller-retour", () => {

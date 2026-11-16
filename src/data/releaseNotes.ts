@@ -38,6 +38,39 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-16-hyrox-ma-saison-profil-effort",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "HYROX : Ma saison refaite, et le profil d'effort de chaque course",
+    summary:
+      "L'athlète suit sa saison course après course contre ses objectifs. Un radar montre, station par station, son rang parmi toute sa catégorie et son niveau contre l'objectif de la course.",
+    sections: [
+      {
+        title: "Ma saison (athlète)",
+        points: [
+          "Choix de la saison en haut de page, avec les objectifs de saison que tu as fixés.",
+          "Dernière course, chrono saison après saison, écart à l'objectif par station et par course, et la meilleure stratégie de la dernière course.",
+          "Leviers de la saison : le temps à gagner en moyenne par course ; un levier qui revient sur 2 courses sur 3 est marqué « récurrent ».",
+        ],
+      },
+      {
+        title: "Profil d'effort",
+        points: [
+          "Radar à deux toiles, chacune masquable : le rang de l'athlète parmi toute sa catégorie, et son niveau contre l'objectif de la course.",
+          "Tableau par station : son temps, le temps des 1 % les plus rapides de la catégorie, son rang et son niveau.",
+          "Dans Ma saison côté athlète, et dans l'onglet Radar de la fiche HYROX côté coach.",
+        ],
+      },
+      {
+        title: "Vues coach",
+        points: [
+          "Stations : chaque station de la dernière course contre son objectif (en % et en secondes), avec les leviers de la saison.",
+          "Évolution : l'écart à l'objectif de chaque station, course après course, avec ce qui progresse et ce qui stagne.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-16-fix-affichages-telephone",
     date: "2026-11-16",
     kind: "fix",

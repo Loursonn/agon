@@ -241,19 +241,6 @@ export function timeAtPercentile(ref: PercentileRef, pct: number): number | null
  */
 export const POSITION_BRACKET = "all";
 
-/** Point fort : top 35 % de la catégorie ; point faible : les 35 % les plus lents. Entre les deux : dans la norme. */
-export const STRONG_MAX_PCT = 35;
-export const WEAK_MIN_PCT = 65;
-
-export type Standing = "fort" | "norme" | "faible";
-
-export function standing(pct: number | null): Standing | null {
-  if (pct == null) return null;
-  if (pct <= STRONG_MAX_PCT) return "fort";
-  if (pct >= WEAK_MIN_PCT) return "faible";
-  return "norme";
-}
-
 // ── Alerts ───────────────────────────────────────────────────────────────────
 
 /**
@@ -302,66 +289,6 @@ export function alerts(r: HyroxResult): HyroxAlert[] {
 
 export type RefLookup = (division: string, segment: string, bracket: string) => HyroxReferenceSegment | undefined;
 
-export type PriorityRow = {
-  key: StationKey | 'roxzone';
-  athlete_s: number;
-  ref_s: number;       // p50
-  top1_s: number | null; // p1
-  gain_s: number;      // max(0, athlete − p50)
-  gap_top1_s: number;  // max(0, athlete − p1)
-  weight: number;
-  score: number;
-};
-
-/**
- * Station priority scoring.
- * score = (0.6 × gain_vs_median + 0.4 × gap_vs_top1) × weight
- *
- * - gain_vs_median: seconds slower than p50 (0 if faster)
- * - gap_vs_top1:    seconds slower than p1 (always ≥ 0)
- * - weight:         station discriminant (wall_balls=1.0 … ski=0.15)
- *
- * Stations where athlete is far from both median and top 1% bubble up.
- * Athletes already faster than median still get scored via top 1% gap.
- */
-export function stationPriorities(
-  r: HyroxResult,
-  pickRef: RefLookup,
-): PriorityRow[] {
-  const refDiv = raceCategory(r);
-  const bracket = bracketOf(r.total_s);
-  const result: PriorityRow[] = [];
-
-  for (const k of STATION_KEYS) {
-    const athlete_s = getSegment(r, k);
-    if (athlete_s == null) continue;
-    const ref = pickRef(refDiv, k, bracket);
-    if (!ref) continue;
-    const gain_s = Math.max(0, athlete_s - ref.p50_s);
-    const top1_s = ref.p1_s ?? null;
-    const gap_top1_s = top1_s != null ? Math.max(0, athlete_s - top1_s) : gain_s;
-    const weight = STATION_META[k].weight;
-    const score = (0.6 * gain_s + 0.4 * gap_top1_s) * weight;
-    result.push({ key: k, athlete_s, ref_s: ref.p50_s, top1_s, gain_s, gap_top1_s, weight, score });
-  }
-
-  // Roxzone
-  const rox = roxzoneTotal(r);
-  if (rox != null) {
-    const ref = pickRef(refDiv, 'roxzone_total', bracket);
-    if (ref) {
-      const gain_s = Math.max(0, rox - ref.p50_s);
-      const top1_s = ref.p1_s ?? null;
-      const gap_top1_s = top1_s != null ? Math.max(0, rox - top1_s) : gain_s;
-      const score = (0.6 * gain_s + 0.4 * gap_top1_s) * ROXZONE_WEIGHT;
-      result.push({ key: 'roxzone', athlete_s: rox, ref_s: ref.p50_s, top1_s, gain_s, gap_top1_s, weight: ROXZONE_WEIGHT, score });
-    }
-  }
-
-  result.sort((a, b) => b.score - a.score);
-  return result;
-}
-
 // ── Typology ─────────────────────────────────────────────────────────────────
 
 export function typology(pctRun: number | null, pctStations: number | null): HyroxProfile | null {
@@ -369,52 +296,6 @@ export function typology(pctRun: number | null, pctStations: number | null): Hyr
   if (pctStations - pctRun >= 20) return 'runner';
   if (pctRun - pctStations >= 20) return 'powerhouse';
   return 'hybrid';
-}
-
-// ── Radar axes ───────────────────────────────────────────────────────────────
-
-export function radarAxes(
-  r: HyroxResult,
-  pickRef: RefLookup,
-): { key: string; label: string; value: number | null }[] {
-  const refDiv = raceCategory(r);
-  const bracket = POSITION_BRACKET;
-  const axes: { key: string; label: string; value: number | null }[] = [];
-
-  // Run avg
-  const rt = runTotal(r);
-  const runRef = pickRef(refDiv, 'run_total', bracket);
-  if (runRef && rt != null) {
-    const pct = percentile(rt, runRef);
-    axes.push({ key: 'run_avg', label: 'Course', value: pct != null ? 100 - pct : null });
-  } else {
-    axes.push({ key: 'run_avg', label: 'Course', value: null });
-  }
-
-  // Roxzone
-  const rox = roxzoneTotal(r);
-  const roxRef = pickRef(refDiv, 'roxzone_total', bracket);
-  if (roxRef && rox != null) {
-    const pct = percentile(rox, roxRef);
-    axes.push({ key: 'roxzone_total', label: 'Roxzone', value: pct != null ? 100 - pct : null });
-  } else {
-    axes.push({ key: 'roxzone_total', label: 'Roxzone', value: null });
-  }
-
-  // 8 stations in race order
-  const stationOrder: StationKey[] = ['ski', 'sled_push', 'sled_pull', 'bbj', 'row', 'farmers', 'lunges', 'wall_balls'];
-  for (const k of stationOrder) {
-    const v = getSegment(r, k);
-    const ref = pickRef(refDiv, k, bracket);
-    if (ref && v != null) {
-      const pct = percentile(v, ref);
-      axes.push({ key: k, label: STATION_META[k].short, value: pct != null ? 100 - pct : null });
-    } else {
-      axes.push({ key: k, label: STATION_META[k].short, value: null });
-    }
-  }
-
-  return axes;
 }
 
 // ── Bracket ──────────────────────────────────────────────────────────────────
