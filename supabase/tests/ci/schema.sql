@@ -3603,10 +3603,13 @@ ALTER FUNCTION "public"."performance_logs_normalize_name"() OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."plan_family_accepts"("p_planned" "text", "p_activity" "text") RETURNS boolean
     LANGUAGE "sql" IMMUTABLE
     AS $$
-  SELECT p_planned IS NOT NULL AND p_activity IS NOT NULL AND CASE p_planned
-    WHEN 'hyrox' THEN p_activity IN ('hyrox', 'run', 'strength', 'row')
-    WHEN 'strength' THEN p_activity IN ('strength', 'hyrox')
-    ELSE p_activity = p_planned
+  SELECT CASE
+    WHEN p_planned = 'any' THEN true
+    ELSE p_planned IS NOT NULL AND p_activity IS NOT NULL AND CASE p_planned
+      WHEN 'hyrox' THEN p_activity IN ('hyrox', 'run', 'strength', 'row')
+      WHEN 'strength' THEN p_activity IN ('strength', 'hyrox')
+      ELSE p_activity = p_planned
+    END
   END;
 $$;
 
@@ -3658,7 +3661,27 @@ CREATE OR REPLACE FUNCTION "public"."planned_sessions_of_day"("p_athlete" "uuid"
   UNION ALL
   SELECT 'test', t.id, CASE WHEN t.type = 'endurance' THEN 'run' ELSE 'strength' END, NULL::real, NULL::real
     FROM public.test_sessions t
-   WHERE t.athlete_id = p_athlete AND t.date = p_day;
+   WHERE t.athlete_id = p_athlete AND t.date = p_day
+  UNION ALL
+  -- Compétition ou match maintenu : la course est l'activité la plus proche du
+  -- chrono HYROX saisi, sinon la plus longue du jour parmi les sports acceptés
+  -- (l'échauffement est plus court). HYROX (nom ou résultat saisi) : activités
+  -- HYROX, course, renfo ou rameur seulement ; sinon tout sport.
+  SELECT 'competition', c.id, f.family, NULL::real,
+         coalesce(
+           (SELECT max(h.total_s) FROM public.hyrox_results h WHERE h.competition_id = c.id AND h.total_s > 0),
+           (SELECT max(pa.duration_s) FROM public.provider_activities pa
+             WHERE pa.athlete_id = p_athlete AND pa.local_date = p_day
+               AND public.plan_family_accepts(f.family, public.activity_sport_family(pa.sport)))
+         )::real
+    FROM public.competitions c
+    CROSS JOIN LATERAL (
+      SELECT CASE WHEN c.name ILIKE '%hyrox%'
+                    OR EXISTS (SELECT 1 FROM public.hyrox_results h WHERE h.competition_id = c.id)
+                  THEN 'hyrox' ELSE 'any' END AS family
+    ) f
+   WHERE c.athlete_id = p_athlete AND c.date = p_day AND c.cancelled_at IS NULL
+     AND c.type IN ('competition', 'match');
 $$;
 
 
@@ -5202,7 +5225,7 @@ CREATE TABLE IF NOT EXISTS "public"."weekly_reviews" (
     CONSTRAINT "weekly_reviews_check" CHECK ((("status" = 'submitted'::"text") = ("submitted_at" IS NOT NULL))),
     CONSTRAINT "weekly_reviews_light_check" CHECK (("light" = ANY (ARRAY['green'::"text", 'orange'::"text", 'red'::"text"]))),
     CONSTRAINT "weekly_reviews_status_check" CHECK (("status" = ANY (ARRAY['draft'::"text", 'submitted'::"text"]))),
-    CONSTRAINT "weekly_reviews_week_start_check" CHECK ((EXTRACT(isodow FROM "week_start") = (1)::numeric))
+    CONSTRAINT "weekly_reviews_week_start_check" CHECK ((EXTRACT("isodow" FROM "week_start") = (1)::numeric))
 );
 
 
@@ -6521,6 +6544,31 @@ $$;
 
 
 ALTER FUNCTION "public"."tg_plan_links_relink"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."tg_plan_links_relink_hyrox"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT DISTINCT c.athlete_id, c.date FROM public.competitions c
+     WHERE c.id IN (CASE WHEN TG_OP <> 'INSERT' THEN OLD.competition_id END,
+                    CASE WHEN TG_OP <> 'DELETE' THEN NEW.competition_id END)
+  LOOP
+    PERFORM public.auto_link_day(r.athlete_id, r.date);
+  END LOOP;
+  RETURN NULL;
+EXCEPTION WHEN OTHERS THEN
+  RAISE WARNING 'rapprochement planning non recalculé : %', SQLERRM;
+  RETURN NULL;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."tg_plan_links_relink_hyrox"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."tg_test_values_propose_zones"() RETURNS "trigger"
@@ -11192,6 +11240,10 @@ CREATE OR REPLACE TRIGGER "hr_zone_models_refresh" AFTER INSERT OR UPDATE OF "st
 
 
 
+CREATE OR REPLACE TRIGGER "hyrox_results_plan_links" AFTER INSERT OR DELETE OR UPDATE OF "total_s", "competition_id" ON "public"."hyrox_results" FOR EACH ROW EXECUTE FUNCTION "public"."tg_plan_links_relink_hyrox"();
+
+
+
 CREATE OR REPLACE TRIGGER "medical_entries_log_stage" AFTER INSERT OR UPDATE OF "recovery_stage", "status" ON "public"."medical_entries" FOR EACH ROW EXECUTE FUNCTION "public"."medical_entries_log_stage"();
 
 
@@ -14228,14 +14280,7 @@ CREATE POLICY "wr_coach_all" ON "public"."weekly_retours" TO "authenticated" USI
 ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
 
 
-
-
-
-
 ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."citation_stats";
-
-
-
 
 
 
@@ -22726,6 +22771,11 @@ GRANT ALL ON FUNCTION "public"."tg_hr_zone_models_refresh"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."tg_plan_links_relink"() TO "anon";
 GRANT ALL ON FUNCTION "public"."tg_plan_links_relink"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."tg_plan_links_relink"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."tg_plan_links_relink_hyrox"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."tg_plan_links_relink_hyrox"() TO "service_role";
 
 
 

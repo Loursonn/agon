@@ -1,11 +1,11 @@
--- Tests de 20261116190000_competition_session.sql (compétition = séance à remplir, partie A :
--- champs, lien choisi à la main, douleur). La partie B (proposition automatique) attend dans
--- supabase/pending/ avec sa version de ce test.
+-- Tests de la compétition = séance à remplir, parties A et B
+-- (20261116190000_competition_session.sql + 20261116190500_competition_auto_link.sql).
+-- Version B : remplace supabase/tests/competition_session.sql le jour où la partie B est appliquée.
 -- Toujours annulé. Données fictives uniquement (jour 2031-05-10, sans rien en base).
 --
--- Avant application :
---   (echo 'BEGIN;'; cat supabase/migrations/20261116190000_competition_session.sql; \
---    sed -e '/^BEGIN;$/d' supabase/tests/competition_session.sql) > "$TMPDIR/cs.sql"
+-- Avant application de B :
+--   (echo 'BEGIN;'; cat supabase/pending/20261116190500_competition_auto_link.sql; \
+--    sed -e '/^BEGIN;$/d' supabase/pending/tests/competition_session.sql) > "$TMPDIR/cs.sql"
 --   supabase db query --linked -f "$TMPDIR/cs.sql"
 
 BEGIN;
@@ -59,6 +59,30 @@ UPDATE t_ids SET match_long = (SELECT id FROM a);
 INSERT INTO t_res (name, ok, detail)
 SELECT 'fixtures', athlete IS NOT NULL AND other_coach IS NOT NULL AND comp IS NOT NULL AND race IS NOT NULL, '' FROM t_ids;
 
+INSERT INTO t_res (name, ok, detail)
+SELECT 'auto HYROX : la plus longue des activités compatibles (pas le vélo), échauffement libre, stage jamais lié',
+       count(*) = 1 AND bool_and(l.status = 'auto' AND l.planned_kind = 'competition'
+                                 AND l.planned_id = i.comp AND l.activity_id = i.race),
+       string_agg(l.planned_kind || ':' || l.status, ',')
+  FROM activity_plan_links l JOIN t_ids i ON l.athlete_id = i.athlete AND l.local_date = '2031-05-10';
+INSERT INTO t_res (name, ok, detail)
+SELECT 'auto match : tout sport, la plus longue (le match, pas l''échauffement)',
+       (SELECT l.activity_id FROM activity_plan_links l, t_ids i
+         WHERE l.planned_kind = 'competition' AND l.planned_id = i.match AND l.status = 'auto') = (SELECT match_long FROM t_ids), '';
+
+-- Chrono HYROX saisi (21 min, absurde mais net) : la plus proche du chrono gagne.
+WITH h AS (INSERT INTO hyrox_results (athlete_id, date, event_name, division, total_s, competition_id)
+           SELECT athlete, '2031-05-10', 'test HYROX Paris', 'men', 1260, comp FROM t_ids RETURNING id)
+UPDATE t_ids SET hyrox = (SELECT id FROM h);
+INSERT INTO t_res (name, ok, detail)
+SELECT 'chrono HYROX : activité la plus proche du chrono proposée',
+       (SELECT l.activity_id FROM activity_plan_links l, t_ids i
+         WHERE l.planned_kind = 'competition' AND l.planned_id = i.comp AND l.status <> 'rejected') = (SELECT warmup FROM t_ids), '';
+UPDATE hyrox_results SET total_s = 4440 WHERE id = (SELECT hyrox FROM t_ids);
+INSERT INTO t_res (name, ok, detail)
+SELECT 'chrono corrigé : la course redevient la proposition',
+       (SELECT l.activity_id FROM activity_plan_links l, t_ids i
+         WHERE l.planned_kind = 'competition' AND l.planned_id = i.comp AND l.status <> 'rejected') = (SELECT race FROM t_ids), '';
 
 -- ---------- Autre coach : rien ----------
 SELECT set_config('request.jwt.claims', json_build_object('sub', other_coach, 'role', 'authenticated')::text, true) FROM t_ids;
@@ -135,7 +159,7 @@ END $$;
 -- Annulée : le lien confirmé reste (rien n'est perdu), plus de proposition automatique.
 UPDATE competitions SET cancelled_at = now() WHERE id = (SELECT comp FROM t_ids);
 INSERT INTO t_res (name, ok, detail)
-SELECT 'annulée : confirmé gardé, aucun lien auto',
+SELECT 'annulée : confirmé gardé, aucune proposition auto',
        EXISTS (SELECT 1 FROM activity_plan_links l, t_ids i WHERE l.planned_id = i.comp AND l.status = 'confirmed')
        AND NOT EXISTS (SELECT 1 FROM activity_plan_links l, t_ids i
                         WHERE l.athlete_id = i.athlete AND l.local_date = '2031-05-10' AND l.status = 'auto'), '';
@@ -153,6 +177,11 @@ INSERT INTO t_res (name, ok, detail)
 SELECT 'signature : appels muscu / énergie inchangés',
        EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'report_session_pain' AND pronargs = 5)
        AND NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'report_session_pain' AND pronargs = 4), '';
+INSERT INTO t_res (name, ok, detail)
+SELECT 'familles : any accepte tout, le reste inchangé',
+       public.plan_family_accepts('any', NULL) AND public.plan_family_accepts('any', 'bike')
+       AND public.plan_family_accepts('hyrox', 'run') AND NOT public.plan_family_accepts('run', 'bike')
+       AND NOT public.plan_family_accepts(NULL, 'run'), '';
 
 SELECT n, ok, name, detail FROM t_res ORDER BY ok, n;
 
