@@ -95,10 +95,13 @@ export type Database = {
           end_s: number
           exercise_id: string | null
           id: string
+          lap_type: string | null
           load_kg: number | null
+          manual_duration_s: number | null
           name: string | null
           needs_review: boolean
           origin: string
+          overrides: Json | null
           planned_block_ref: string | null
           position: number
           reps: number | null
@@ -117,10 +120,13 @@ export type Database = {
           end_s: number
           exercise_id?: string | null
           id?: string
+          lap_type?: string | null
           load_kg?: number | null
+          manual_duration_s?: number | null
           name?: string | null
           needs_review?: boolean
           origin: string
+          overrides?: Json | null
           planned_block_ref?: string | null
           position: number
           reps?: number | null
@@ -139,10 +145,13 @@ export type Database = {
           end_s?: number
           exercise_id?: string | null
           id?: string
+          lap_type?: string | null
           load_kg?: number | null
+          manual_duration_s?: number | null
           name?: string | null
           needs_review?: boolean
           origin?: string
+          overrides?: Json | null
           planned_block_ref?: string | null
           position?: number
           reps?: number | null
@@ -6150,6 +6159,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      activity_lap_overrides: { Args: { p: Json }; Returns: Json }
       activity_laps_editor: { Args: { p_athlete: string }; Returns: boolean }
       activity_sport_family: { Args: { p_sport: string }; Returns: string }
       activity_zone_seconds: {

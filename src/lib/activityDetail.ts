@@ -14,6 +14,7 @@ import {
   type MetricsContext,
 } from "@shared/domain/lapMetrics";
 import { downsampleStream, DISPLAY_MAX_POINTS } from "./streamDisplay";
+import { applyOverrides, isManualLap, manualLapMetrics, type LapOverrides, type LapPhase, type OriginalValues } from "./lapEdits";
 
 /**
  * Détail d'une séance de montre, assemblé à partir des lignes lues en base
@@ -38,10 +39,18 @@ export interface DetailLap {
   needsReview: boolean;
   /** Mot de l'athlète ou du coach sur ce tour / cette station (« Poignées glissantes… »). */
   comment?: string | null;
+  /** Échauffement · Effort · Récupération · Retour au calme (« Modifier tours »). */
+  lapType?: LapPhase | null;
+  /** Tour tapé à la main hors courbe : posé à un instant (`startS = endS`), durée ici. */
+  manualDurationS?: number | null;
+  /** Valeurs corrigées à la main (jamais la FC). */
+  overrides?: LapOverrides | null;
 }
 
 export interface DetailLapWithMetrics extends DetailLap {
   metrics: LapMetrics;
+  /** Valeurs d'avant correction (montre ou calcul), pour le survol des cases corrigées. */
+  original?: OriginalValues;
 }
 
 export interface ActivitySummaryInput {
@@ -142,19 +151,20 @@ export function lapsWithMetrics(
   if (!stream) return [];
   const kindOf = new Map((blocks ?? []).map((b) => [b.ref, b.kind]));
   const full: MetricsContext = { ...ctx, smoothedAlt: ctx.smoothedAlt ?? smoothedAltitude(stream) };
-  return laps.map((l) => ({
-    ...l,
-    metrics: lapMetrics(
-      stream,
-      {
-        startS: l.startS,
-        endS: l.endS,
-        distanceOverrideM: l.distanceOverrideM,
-        isStation: l.plannedBlockRef ? kindOf.get(l.plannedBlockRef) === "station" : false,
-      },
-      full,
-    ),
-  }));
+  return laps.map((l) => {
+    if (isManualLap(l)) return { ...l, ...applyOverrides(manualLapMetrics(l), l.overrides) };
+    const isStation = l.plannedBlockRef ? kindOf.get(l.plannedBlockRef) === "station" : false;
+    const range = { startS: l.startS, endS: l.endS, distanceOverrideM: l.distanceOverrideM, isStation };
+    const base = lapMetrics(stream, range, full);
+    const { metrics, original } = applyOverrides(base, l.overrides);
+    // Distance tapée (hors station HYROX) : la valeur d'avant reste lisible au survol.
+    if (!isStation && l.distanceOverrideM != null) {
+      const raw = lapMetrics(stream, { ...range, distanceOverrideM: null }, full);
+      original.distanceM = raw.distanceM;
+      original.avgPaceSPerKm = raw.avgPaceSPerKm;
+    }
+    return { ...l, metrics, original };
+  });
 }
 
 export function buildActivityDetail(input: ActivityDetailInput): ActivityDetail {

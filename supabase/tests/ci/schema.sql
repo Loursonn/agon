@@ -652,6 +652,22 @@ $$;
 ALTER FUNCTION "public"."activity_from_garmin_device"("p_source" "public"."data_source", "p_raw" "jsonb", "p_device" "text", "p_sources" "text"[]) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."activity_lap_overrides"("p" "jsonb") RETURNS "jsonb"
+    LANGUAGE "sql" IMMUTABLE
+    SET "search_path" TO 'public'
+    AS $$
+  SELECT nullif(coalesce(jsonb_object_agg(k, v), '{}'::jsonb), '{}'::jsonb)
+    FROM jsonb_each(CASE WHEN jsonb_typeof(p) = 'object' THEN p ELSE '{}'::jsonb END) AS x(k, v)
+   WHERE k IN ('maxPaceSPerKm', 'avgCadence', 'maxCadence', 'ascentM', 'descentM', 'avgPower', 'maxPower')
+     AND jsonb_typeof(v) = 'number'
+     AND (v #>> '{}')::numeric >= 0
+     AND (v #>> '{}')::numeric <= 100000;
+$$;
+
+
+ALTER FUNCTION "public"."activity_lap_overrides"("p" "jsonb") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."activity_laps_editor"("p_athlete" "uuid") RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -4977,13 +4993,14 @@ CREATE OR REPLACE FUNCTION "public"."save_activity_laps"("p_activity" "uuid", "p
     SET "search_path" TO 'public'
     AS $$
 DECLARE
-  v_s     record;
-  v_end   integer;
-  v_prev  integer := 0;
-  v_e     jsonb;
-  v_start integer;
-  v_stop  integer;
-  v_n     integer;
+  v_s      record;
+  v_end    integer;
+  v_prev   integer := 0;
+  v_e      jsonb;
+  v_start  integer;
+  v_stop   integer;
+  v_manual integer;
+  v_n      integer;
 BEGIN
   SELECT s.activity_id, s.athlete_id, s.source, s.laps_version, s.t INTO v_s
     FROM public.activity_streams s WHERE s.activity_id = p_activity FOR UPDATE;
@@ -5002,19 +5019,30 @@ BEGIN
   END IF;
 
   -- Bornes : dans la séance, croissantes, sans chevauchement (des trous sont permis).
+  -- Un tour manuel (durée tapée, hors courbe) est posé à un instant : start_s = end_s.
   v_end := coalesce(v_s.t[array_length(v_s.t, 1)], 0) + 1;
   FOR v_e IN SELECT e FROM jsonb_array_elements(p_laps) WITH ORDINALITY x(e, o) ORDER BY o LOOP
     v_start := (v_e->>'start_s')::integer;
     v_stop := (v_e->>'end_s')::integer;
-    IF v_start IS NULL OR v_stop IS NULL OR v_start < v_prev OR v_stop <= v_start OR v_stop > v_end THEN
+    v_manual := (v_e->>'manual_duration_s')::integer;
+    IF v_manual IS NOT NULL AND (v_manual <= 0 OR v_manual > 86400) THEN
+      RAISE EXCEPTION 'save_activity_laps : durée de tour manuel invalide (%)', v_manual USING ERRCODE = '22023';
+    END IF;
+    IF v_start IS NULL OR v_stop IS NULL OR v_start < v_prev OR v_stop > v_end
+       OR (v_manual IS NULL AND v_stop <= v_start)
+       OR (v_manual IS NOT NULL AND v_stop <> v_start) THEN
       RAISE EXCEPTION 'save_activity_laps : bornes de tour invalides (% → %)', v_start, v_stop USING ERRCODE = '22023';
+    END IF;
+    IF v_e->>'lap_type' IS NOT NULL AND v_e->>'lap_type' NOT IN ('warmup', 'work', 'recovery', 'cooldown') THEN
+      RAISE EXCEPTION 'save_activity_laps : type de tour inconnu (%)', v_e->>'lap_type' USING ERRCODE = '22023';
     END IF;
     v_prev := v_stop;
   END LOOP;
 
   DELETE FROM public.activity_laps WHERE activity_id = p_activity;
   INSERT INTO public.activity_laps (activity_id, athlete_id, source, position, start_s, end_s, name, exercise_id,
-                                    planned_block_ref, distance_override_m, reps, load_kg, origin, status, needs_review, comment)
+                                    planned_block_ref, distance_override_m, reps, load_kg, origin, status, needs_review, comment,
+                                    lap_type, manual_duration_s, overrides)
   SELECT p_activity, v_s.athlete_id, v_s.source, o::integer,
          (e->>'start_s')::integer, (e->>'end_s')::integer,
          nullif(btrim(e->>'name'), ''),
@@ -5026,7 +5054,10 @@ BEGIN
          coalesce(e->>'origin', 'manual'),
          coalesce(e->>'status', 'validated'),
          coalesce((e->>'needs_review')::boolean, false),
-         left(nullif(btrim(e->>'comment'), ''), 500)
+         left(nullif(btrim(e->>'comment'), ''), 500),
+         e->>'lap_type',
+         (e->>'manual_duration_s')::integer,
+         public.activity_lap_overrides(e->'overrides')
     FROM jsonb_array_elements(p_laps) WITH ORDINALITY x(e, o);
   GET DIAGNOSTICS v_n = ROW_COUNT;
 
@@ -7311,12 +7342,18 @@ CREATE TABLE IF NOT EXISTS "public"."activity_laps" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "comment" "text",
+    "lap_type" "text",
+    "manual_duration_s" integer,
+    "overrides" "jsonb",
     CONSTRAINT "activity_laps_bounds" CHECK (("end_s" >= "start_s")),
     CONSTRAINT "activity_laps_comment_check" CHECK ((("comment" IS NULL) OR ("length"("comment") <= 500))),
     CONSTRAINT "activity_laps_distance_override_m_check" CHECK ((("distance_override_m" IS NULL) OR ("distance_override_m" >= (0)::double precision))),
+    CONSTRAINT "activity_laps_lap_type_check" CHECK ((("lap_type" IS NULL) OR ("lap_type" = ANY (ARRAY['warmup'::"text", 'work'::"text", 'recovery'::"text", 'cooldown'::"text"])))),
     CONSTRAINT "activity_laps_load_kg_check" CHECK ((("load_kg" IS NULL) OR ("load_kg" >= (0)::double precision))),
+    CONSTRAINT "activity_laps_manual_duration_s_check" CHECK ((("manual_duration_s" IS NULL) OR (("manual_duration_s" > 0) AND ("manual_duration_s" <= 86400)))),
     CONSTRAINT "activity_laps_name_check" CHECK ((("name" IS NULL) OR ("length"("name") <= 120))),
     CONSTRAINT "activity_laps_origin_check" CHECK (("origin" = ANY (ARRAY['watch'::"text", 'agon_proposal'::"text", 'manual'::"text"]))),
+    CONSTRAINT "activity_laps_overrides_check" CHECK ((("overrides" IS NULL) OR (("jsonb_typeof"("overrides") = 'object'::"text") AND ("length"(("overrides")::"text") <= 1000)))),
     CONSTRAINT "activity_laps_planned_block_ref_check" CHECK ((("planned_block_ref" IS NULL) OR ("length"("planned_block_ref") <= 120))),
     CONSTRAINT "activity_laps_position_check" CHECK (("position" >= 1)),
     CONSTRAINT "activity_laps_reps_check" CHECK ((("reps" IS NULL) OR ("reps" >= 0))),
@@ -15950,6 +15987,12 @@ GRANT ALL ON FUNCTION "public"."activity_detail_visible"("p_athlete" "uuid", "p_
 GRANT ALL ON FUNCTION "public"."activity_from_garmin_device"("p_source" "public"."data_source", "p_raw" "jsonb", "p_device" "text", "p_sources" "text"[]) TO "anon";
 GRANT ALL ON FUNCTION "public"."activity_from_garmin_device"("p_source" "public"."data_source", "p_raw" "jsonb", "p_device" "text", "p_sources" "text"[]) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."activity_from_garmin_device"("p_source" "public"."data_source", "p_raw" "jsonb", "p_device" "text", "p_sources" "text"[]) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."activity_lap_overrides"("p" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."activity_lap_overrides"("p" "jsonb") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."activity_lap_overrides"("p" "jsonb") TO "service_role";
 
 
 

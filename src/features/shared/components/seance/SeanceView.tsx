@@ -8,6 +8,9 @@ import {
   cutLapAt, displayLapNames, fmtDayLong, lapIndexAt, lapKind, mergeWithNext, moveBoundary, setLapBounds,
   sportFamily, summarizeBlocks,
 } from "@/lib/seance";
+import {
+  applyCellEdit, canDeleteLap, canSetDuration, deleteLap, hasValueEdit, insertManualLap, totalFromLaps, type CellEdit,
+} from "@/lib/lapEdits";
 import { useActivityDetail, useSaveLaps, useSaveSeanceFeedback } from "@/features/shared/hooks/useActivityDetail";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SeanceHeader } from "./SeanceHeader";
@@ -45,7 +48,9 @@ const sameLaps = (a: readonly DetailLap[], b: readonly DetailLap[]) =>
   a.length === b.length && a.every((l, i) => {
     const o = b[i];
     return l.startS === o.startS && l.endS === o.endS && l.name === o.name && l.exerciseId === o.exerciseId
-      && l.reps === o.reps && l.loadKg === o.loadKg && l.distanceOverrideM === o.distanceOverrideM && l.status === o.status && (l.comment ?? null) === (o.comment ?? null);
+      && l.reps === o.reps && l.loadKg === o.loadKg && l.distanceOverrideM === o.distanceOverrideM && l.status === o.status && (l.comment ?? null) === (o.comment ?? null)
+      && (l.lapType ?? null) === (o.lapType ?? null) && (l.manualDurationS ?? null) === (o.manualDurationS ?? null)
+      && JSON.stringify(l.overrides ?? null) === JSON.stringify(o.overrides ?? null);
   });
 
 const stripMetrics = (l: DetailLap | DetailLapWithMetrics): DetailLap => {
@@ -120,7 +125,9 @@ export function SeanceView({ athleteId, activityId, role, athleteFirstName, back
   const noGps = hasStream && !detail.stream!.lat?.some((v) => v != null);
   const noAlt = hasStream && !detail.stream!.alt?.some((v) => v != null);
   const syncing = !hasStream && (a.source === "garmin" || a.source === "coros") && Date.now() - Date.parse(a.importedAt ?? a.startedAt) < SYNC_WINDOW_MS;
-  const figures = seanceFigures(detail, lapsM, kinds, { noGps: noGps && noAlt });
+  // Tours corrigés (distance, valeurs, tour tapé à la main) : le total et les chiffres clés suivent les tours (décision d'Hugo, 16/11).
+  const total = !hyrox && shown.some(hasValueEdit) ? totalFromLaps(lapsM, detail.total) : detail.total;
+  const figures = seanceFigures({ ...detail, total }, lapsM, kinds, { noGps: noGps && noAlt });
   const backCurrent = role === "coach" ? title : fmtDayLong(a.localDate);
   const showBanner = !draft && !!blocks?.length && shown.some((l) => l.status === "proposed");
   const review = shown.map((l, i) => (l.needsReview ? i + 1 : 0)).filter(Boolean);
@@ -181,6 +188,28 @@ export function SeanceView({ athleteId, activityId, role, athleteFirstName, back
     },
     onApplyExercise: (name: string, exerciseId: string | null, _type: LapType) =>
       draft && setDraft(draft.map((l, i) => (i === selected ? markManual({ ...l, name, exerciseId }) : l))),
+    onDelete: (i = selected) => {
+      if (!draft || !canDeleteLap(draft, i)) return;
+      const next = deleteLap(draft, i);
+      setDraft(next);
+      setSelected(Math.max(0, Math.min(i > 0 ? i - 1 : 0, next.length - 1)));
+      setCutAtS(null);
+    },
+    onAddManual: (after = selected) => {
+      if (!draft) return;
+      setDraft(insertManualLap(draft, after, (at) => ({
+        startS: at, endS: at, name: null, exerciseId: null, plannedBlockRef: null, distanceOverrideM: null, reps: null, loadKg: null,
+        origin: "manual", status: "validated", needsReview: false, comment: null, lapType: null, manualDurationS: 300, overrides: null,
+      })));
+      setSelected(after + 1);
+      setCutAtS(null);
+    },
+    onCell: (i: number, edit: CellEdit) => {
+      if (!draft || !detail.stream) return;
+      setDraft(applyCellEdit(draft, i, edit, detail.stream).map((l, k) => (k === i ? markManual(l) : l)));
+    },
+    canDelete: (i = selected) => !!draft && canDeleteLap(draft, i),
+    canSetDuration: (i = selected) => !!draft && canSetDuration(draft, i),
   };
 
   const editorProps = {
@@ -438,7 +467,7 @@ export function SeanceView({ athleteId, activityId, role, athleteFirstName, back
           />
           <div>
             <div style={{ overflowX: "auto" }}>
-              <div style={{ minWidth: hyrox ? 900 : 960 }}>
+              <div style={{ minWidth: hyrox ? 900 : editing ? 1180 : 960 }}>
                 {hyrox ? (
                   <HyroxLapsTable
                     laps={lapsM} names={names} kinds={kinds} blocks={blocks} zonesN={zonesN}
@@ -449,9 +478,16 @@ export function SeanceView({ athleteId, activityId, role, athleteFirstName, back
                   />
                 ) : (
                   <SeanceLapsTable
-                    laps={lapsM} names={names} total={detail.total} zonesN={zonesN} speed={bike}
+                    laps={lapsM} names={names} total={total} zonesN={zonesN} speed={bike}
                     active={editing ? selected : activeLap}
                     onSelect={(i) => (editing ? setSelected(i) : (setActiveLap(i), setZoomLap(i)))}
+                    edit={editing ? {
+                      onCell: editActions.onCell,
+                      onDelete: (i) => editActions.onDelete(i),
+                      onAddAfter: (i) => editActions.onAddManual(i),
+                      canDelete: (i) => editActions.canDelete(i),
+                      canSetDuration: (i) => editActions.canSetDuration(i),
+                    } : undefined}
                   />
                 )}
               </div>

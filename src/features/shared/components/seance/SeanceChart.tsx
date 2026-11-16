@@ -5,12 +5,14 @@ import { smoothSeries } from "@shared/domain/lapMetrics";
 import type { ExpectedBlock } from "@shared/domain/hyroxLaps";
 import { downsampleStream, DISPLAY_MAX_POINTS } from "@/lib/streamDisplay";
 import {
-  areaPath, displayLapNames, DASH, fmtClock, fmtInt, fmtKm, fmtPace, lapIndexAt, lapKind, linePath,
+  areaPath, displayLapNames, DASH, fmtClock, fmtInt, fmtKm, fmtPace, hasBoundaryAfter, lapIndexAt, lapKind, linePath,
   nearestIndex, niceTicks, paceSeries, robustDomain, SERIES_COLORS, sliceStream, xAxisValues, zoneColor, zoneRuns,
 } from "@/lib/seance";
 import { C, alpha } from "@/lib/theme";
 import type { DetailLap } from "@/lib/activityDetail";
-import { MONO } from "./seanceUi";
+import { isManualLap } from "@/lib/lapEdits";
+import { panWindow, wheelFactor, windowFromSelection, zoomAround } from "@/lib/chartZoom";
+import { capturePointer, MONO } from "./seanceUi";
 import { StationIcon } from "./StationIcon";
 
 export type SeriesKey = "pace" | "hr" | "alt" | "cadence";
@@ -27,6 +29,10 @@ export interface SeanceChartProps {
   visible: Record<SeriesKey, boolean>;
   /** Fenêtre affichée (secondes), `null` = toute la séance. */
   zoom: { startS: number; endS: number } | null;
+  /**
+   * Zoom libre : pincement (téléphone), molette et sélection à la souris
+   * (ordinateur ; en lecture, la molette zoome avec ⌘ / Ctrl ou au pincement du pavé).
+   */
   onZoomChange?: (z: { startS: number; endS: number } | null) => void;
   /** Tour surligné. */
   activeLap: number | null;
@@ -176,12 +182,41 @@ export function SeanceChart(props: SeanceChartProps) {
   const [drag, setDrag] = useState<number | null>(null);
   const pointers = useRef(new Map<number, number>());
   const pinch = useRef<{ d0: number; z0: { startS: number; endS: number }; mid: number } | null>(null);
+  // Sélection d'une plage à la souris (ordinateur) : zoom au relâcher.
+  const selStart = useRef<number | null>(null);
+  const [sel, setSel] = useState<{ a: number; b: number } | null>(null);
 
   const localX = (e: ReactPointerEvent) => {
     const r = wrapRef.current?.getBoundingClientRect();
     return r ? e.clientX - r.left : 0;
   };
   const clampPx = (px: number) => Math.min(m.l + plotW, Math.max(m.l, px));
+  const fullWin = { startS: display.t[0] ?? 0, endS: display.t[display.t.length - 1] ?? 1 };
+  const tAtPx = (px: number) => tOfX(invX(clampPx(px)));
+
+  // Molette : listener non passif (empêcher le défilement de la page pendant le zoom).
+  const live = useRef({ zoom, fullWin, editing, onZoomChange: props.onZoomChange, tAtPx, spanPerPx: 0 });
+  live.current = {
+    zoom, fullWin, editing, onZoomChange: props.onZoomChange, tAtPx,
+    spanPerPx: ((zoom ? zoom.endS - zoom.startS : fullWin.endS - fullWin.startS) / Math.max(1, plotW)),
+  };
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el || touch) return;
+    const onWheel = (e: WheelEvent) => {
+      const L = live.current;
+      if (!L.onZoomChange || (!L.editing && !e.ctrlKey && !e.metaKey)) return;
+      e.preventDefault();
+      const r = el.getBoundingClientRect();
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+        L.onZoomChange(panWindow(L.zoom, L.fullWin, e.deltaX * L.spanPerPx));
+        return;
+      }
+      L.onZoomChange(zoomAround(L.zoom, L.fullWin, wheelFactor(e.deltaY), L.tAtPx(e.clientX - r.left)));
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [touch]);
 
   const onDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     const px = localX(e);
@@ -195,16 +230,20 @@ export function SeanceChart(props: SeanceChartProps) {
     }
     if (editing) {
       // Poignée dorée sous le doigt / la souris ?
-      const hit = laps.slice(0, -1).findIndex((l) => Math.abs(sx(xOfT(l.endS)) - px) < (touch ? 16 : 8));
+      const hit = laps.findIndex((l, i) => hasBoundaryAfter(laps, i) && Math.abs(sx(xOfT(l.endS)) - px) < (touch ? 16 : 10));
       if (hit >= 0) {
         setDrag(hit);
-        (e.target as Element).setPointerCapture?.(e.pointerId);
+        capturePointer(e);
         return;
       }
     }
+    if (!touch && props.onZoomChange && px >= m.l && px <= m.l + plotW) {
+      selStart.current = px;
+      capturePointer(e);
+    }
     if (touch) {
       setCursorX(clampPx(px));
-      (e.target as Element).setPointerCapture?.(e.pointerId);
+      capturePointer(e);
     }
   };
 
@@ -228,6 +267,11 @@ export function SeanceChart(props: SeanceChartProps) {
       props.onMoveBoundary?.(drag, tOfX(invX(clampPx(px))));
       return;
     }
+    if (selStart.current !== null && (sel || Math.abs(px - selStart.current) > 5)) {
+      setSel({ a: selStart.current, b: clampPx(px) });
+      setCursorX(null);
+      return;
+    }
     if (!touch || pointers.current.has(e.pointerId)) setCursorX(px >= m.l && px <= m.l + plotW ? px : null);
   };
 
@@ -237,6 +281,13 @@ export function SeanceChart(props: SeanceChartProps) {
     if (pointers.current.size < 2) pinch.current = null;
     if (drag !== null) {
       setDrag(null);
+      return;
+    }
+    const start = selStart.current;
+    selStart.current = null;
+    if (sel && start !== null) {
+      setSel(null);
+      props.onZoomChange?.(windowFromSelection(tAtPx(sel.a), tAtPx(sel.b), fullWin));
       return;
     }
     if (wasPinch) return;
@@ -279,7 +330,7 @@ export function SeanceChart(props: SeanceChartProps) {
   return (
     <div
       ref={wrapRef}
-      style={{ position: "relative", width: "100%", height, touchAction: touch ? "pan-y" : "auto", userSelect: "none", cursor: editing ? "crosshair" : "default" }}
+      style={{ position: "relative", width: "100%", height, touchAction: touch ? "pan-y" : "auto", userSelect: "none", cursor: editing || props.onZoomChange ? "crosshair" : "default" }}
       onPointerDown={onDown}
       onPointerMove={onMove}
       onPointerUp={onUp}
@@ -368,7 +419,8 @@ export function SeanceChart(props: SeanceChartProps) {
           ))}
 
           {/* Mode « Modifier les tours » : poignées et coupe */}
-          {editing && laps.slice(0, -1).map((l, i) => {
+          {editing && laps.map((l, i) => {
+            if (!hasBoundaryAfter(laps, i)) return null;
             const x = sx(xOfT(l.endS));
             if (x < m.l || x > m.l + plotW) return null;
             return (
@@ -389,6 +441,28 @@ export function SeanceChart(props: SeanceChartProps) {
               </g>
             );
           })()}
+
+          {/* Tours tapés à la main (hors courbe) : repère à leur place */}
+          {laps.map((l, i) => {
+            if (!isManualLap(l)) return null;
+            const x = sx(xOfT(l.startS));
+            if (x < m.l - 1 || x > m.l + plotW + 1) return null;
+            // Étiquette gardée dans le tracé (un tour ajouté en fin de séance ne chevauche pas l'axe FC).
+            const lx = Math.min(m.l + plotW - 10, Math.max(m.l + 10, x));
+            return (
+              <g key={`man-${i}`} pointerEvents="none">
+                <line x1={x} x2={x} y1={plotTop} y2={plotTop + plotH} stroke={C.ac} strokeDasharray="2 3" opacity={0.7} />
+                <rect x={lx - 9} y={plotTop + 2} width={18} height={14} rx={3} fill={activeLap === i ? C.ac : C.s2} stroke={C.ac} />
+                <text x={lx} y={plotTop + 12.5} fontSize={9} textAnchor="middle" fill={activeLap === i ? C.bg : C.ac} style={MONO}>{i + 1}</text>
+              </g>
+            );
+          })}
+
+          {/* Plage sélectionnée (zoom au relâcher) */}
+          {sel && (
+            <rect x={Math.min(sel.a, sel.b)} y={plotTop} width={Math.abs(sel.b - sel.a)} height={plotH}
+              fill={alpha(C.ac, 0.14)} stroke={C.ac} strokeDasharray="4 3" pointerEvents="none" />
+          )}
 
           {/* Curseur */}
           {ci >= 0 && (

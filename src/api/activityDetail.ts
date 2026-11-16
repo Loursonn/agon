@@ -11,6 +11,7 @@ import {
   type LapStatus,
   type PlanLinkInfo,
 } from "@/lib/activityDetail";
+import { cleanOverrides, isLapPhase, type LapOverrides, type LapPhase } from "@/lib/lapEdits";
 import { ApiError, db, unwrap, unwrapRows } from "./client";
 import { getBoundsAt } from "./zoneModels";
 
@@ -50,6 +51,9 @@ export interface LapDraft {
   status: LapStatus;
   needsReview?: boolean;
   comment?: string | null;
+  lapType?: LapPhase | null;
+  manualDurationS?: number | null;
+  overrides?: LapOverrides | null;
 }
 
 export class LapsConflictError extends ApiError {
@@ -72,6 +76,9 @@ const toRow = (l: LapDraft) => ({
   status: l.status,
   needs_review: l.needsReview ?? false,
   comment: l.comment?.trim() || null,
+  lap_type: l.lapType ?? null,
+  manual_duration_s: l.manualDurationS != null && l.manualDurationS > 0 ? Math.round(l.manualDurationS) : null,
+  overrides: cleanOverrides(l.overrides),
 });
 
 function raiseConflict(res: { error: { message: string; code?: string } | null }): void {
@@ -134,6 +141,9 @@ type LapRow = {
   start_s: number; end_s: number; name: string | null; exercise_id: string | null; planned_block_ref: string | null;
   distance_override_m: unknown; reps: number | null; load_kg: unknown; origin: string; status: string; needs_review: boolean | null;
   comment?: string | null;
+  lap_type?: string | null;
+  manual_duration_s?: number | null;
+  overrides?: unknown;
 };
 
 const fromLapRow = (r: LapRow): DetailLap => ({
@@ -149,6 +159,9 @@ const fromLapRow = (r: LapRow): DetailLap => ({
   status: r.status as LapStatus,
   needsReview: r.needs_review ?? false,
   comment: r.comment ?? null,
+  lapType: isLapPhase(r.lap_type) ? r.lap_type : null,
+  manualDurationS: num(r.manual_duration_s),
+  overrides: cleanOverrides(r.overrides),
 });
 
 type SetRow = {
@@ -229,7 +242,7 @@ export async function getActivityDetail(activityId: string): Promise<ActivityDet
     db().from("activity_streams").select("*").eq("activity_id", activityId).maybeSingle()
       .then((r) => unwrap(r, "série de la séance")),
     db().from("activity_laps")
-      .select("start_s, end_s, name, exercise_id, planned_block_ref, distance_override_m, reps, load_kg, origin, status, needs_review, comment")
+      .select("*")
       .eq("activity_id", activityId).order("position", { ascending: true })
       .then((r) => unwrapRows(r, "tours")),
     db().from("activity_sets")

@@ -38,6 +38,41 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-16-modifier-tours-tableau",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "Modifier les tours : tout le tableau se corrige, et le graphique se zoome",
+    summary:
+      "Sur une séance de montre (course, vélo, rameur…), « Modifier les tours » rend chaque case du tableau modifiable, sauf la FC. On ajoute, supprime ou découpe des tours, et on zoome sur la courbe pour placer une limite à la seconde près.",
+    sections: [
+      {
+        title: "Le tableau des tours",
+        points: [
+          "Nom, type (Échauffement, Effort, Récupération, Retour au calme), durée, distance, allure, allure max, cadence, D+ et D− se tapent directement dans le tableau.",
+          "Une allure tapée recalcule la distance du tour ; une durée tapée déplace la limite du tour sur la courbe, le tour suivant suit.",
+          "La FC reste celle de la montre (cadenas). Une case corrigée porte un point doré ; au survol, la valeur d'avant.",
+          "La ligne Total et les chiffres clés de la séance suivent les tours corrigés. Le volume de la semaine et la charge gardent les données de la montre.",
+        ],
+      },
+      {
+        title: "Ajouter, supprimer, découper",
+        points: [
+          "« Tour à la main » ajoute un tour sans montre (montre oubliée ou arrêtée) : durée, distance et type tapés, sans FC.",
+          "« Supprimer » rend le temps du tour au tour précédent.",
+          "Couper et fusionner fonctionnent comme avant ; « Revenir aux tours de la montre » annule tout, les données de la montre ne sont jamais effacées.",
+        ],
+      },
+      {
+        title: "Zoomer sur le graphique",
+        points: [
+          "Ordinateur : glisser sur la courbe, ou la molette en mode modification (⌘ / Ctrl + molette en lecture). Boutons + / − et « Toute la séance ».",
+          "Téléphone : pincer, ou les boutons + / −. La vue d'ensemble sous le graphique se glisse pour se déplacer.",
+          "Votre athlète et vous (ou le co-coach) pouvez modifier les tours.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-16-fix-ajouter-exercice-seance",
     date: "2026-11-16",
     kind: "fix",

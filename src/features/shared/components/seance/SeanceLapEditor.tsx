@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Check, GitMerge, Pencil, RotateCcw, Scissors, X } from "lucide-react";
+import { Check, GitMerge, Pencil, Plus, RotateCcw, Scissors, Trash2, X } from "lucide-react";
 import { C, alpha } from "@/lib/theme";
 import { fmtClock, fmtMeters, parseClock } from "@/lib/seance";
 import type { DetailLap } from "@/lib/activityDetail";
+import { isManualLap, type CellEdit } from "@/lib/lapEdits";
 import type { LapType } from "./LapExercisePicker";
 import { MONO, buttonStyle } from "./seanceUi";
 
@@ -17,6 +18,14 @@ export interface LapEditorActions {
   onSetBounds: (startS: number, endS: number) => void;
   onCutAtChange: (s: number) => void;
   onApplyExercise?: (name: string, exerciseId: string | null, type: LapType) => void;
+  /** Supprime le tour (son temps rejoint le voisin). Défaut : le tour choisi. */
+  onDelete: (i?: number) => void;
+  /** Ajoute un tour tapé à la main (hors courbe) après le tour donné. Défaut : le tour choisi. */
+  onAddManual: (after?: number) => void;
+  /** Une case du tableau modifiée (jamais la FC). */
+  onCell: (i: number, edit: CellEdit) => void;
+  canDelete: (i?: number) => boolean;
+  canSetDuration: (i?: number) => boolean;
 }
 
 interface Props extends LapEditorActions {
@@ -50,6 +59,17 @@ export function SeanceLapEditor(p: Props) {
         <button type="button" style={buttonStyle("ghost", p.cutAtS == null)} onClick={p.onCut} disabled={p.cutAtS == null}><Scissors size={14} />{p.hyrox ? "Couper" : "Couper ici"}</button>
         <button type="button" style={buttonStyle("ghost", p.selected >= p.laps.length - 1)} onClick={p.onMerge} disabled={p.selected >= p.laps.length - 1}><GitMerge size={14} />{p.hyrox ? "Fusionner" : "Fusionner avec le suivant"}</button>
         <button type="button" style={buttonStyle()} onClick={() => setRenaming(true)}><Pencil size={14} />Renommer</button>
+        {!p.hyrox && (
+          <>
+            <button type="button" style={buttonStyle()} onClick={() => p.onAddManual()} title="Tour sans montre (montre oubliée ou arrêtée) : durée, distance et type tapés à la main">
+              <Plus size={14} />Tour à la main
+            </button>
+            <button type="button" style={buttonStyle("ghost", !p.canDelete())} onClick={() => p.onDelete()} disabled={!p.canDelete()}
+              title="Le temps du tour rejoint le tour précédent">
+              <Trash2 size={14} />Supprimer
+            </button>
+          </>
+        )}
         {!p.hyrox && <button type="button" style={buttonStyle()} onClick={p.onResetWatch}><RotateCcw size={14} />Revenir aux tours de la montre</button>}
         <span style={{ flex: 1 }} />
         <button type="button" style={buttonStyle()} onClick={p.onCancel}><X size={14} />Annuler</button>
@@ -58,7 +78,7 @@ export function SeanceLapEditor(p: Props) {
       {showDetail && <div style={{ fontSize: 12, color: C.tx2 }}>
         {p.hyrox
           ? "Clique sur la courbe pour placer une coupe. Glisse une poignée dorée pour caler une limite (fin du sled sur la reprise de FC), ou tape le temps ci-dessous."
-          : "Clique sur la courbe pour couper le tour à cet endroit. Glisse une poignée dorée pour déplacer une limite."}
+          : "Clique sur la courbe pour couper le tour à cet endroit, glisse une poignée dorée pour déplacer une limite. Molette ou glisser sur la courbe pour zoomer. Toutes les cases du tableau s’écrivent, sauf la FC (montre)."}
       </div>}
 
       {showDetail && lap && (
@@ -80,8 +100,14 @@ export function SeanceLapEditor(p: Props) {
           ) : (
             <span style={{ fontSize: 13, fontWeight: 500 }}>{p.names[p.selected]}</span>
           )}
-          <TimeField label="Début" value={lap.startS} disabled={p.selected === 0} onCommit={(v) => p.onSetBounds(v, lap.endS)} />
-          <TimeField label="Fin" value={lap.endS} disabled={p.selected === p.laps.length - 1} onCommit={(v) => p.onSetBounds(lap.startS, v)} />
+          {isManualLap(lap) ? (
+            <span style={{ fontSize: 12, color: C.tx2 }}>Tour tapé à la main, hors courbe : durée, distance et type se règlent dans le tableau.</span>
+          ) : (
+            <>
+              <TimeField label="Début" value={lap.startS} disabled={p.selected === 0} onCommit={(v) => p.onSetBounds(v, lap.endS)} />
+              <TimeField label="Fin" value={lap.endS} disabled={p.selected === p.laps.length - 1} onCommit={(v) => p.onSetBounds(lap.startS, v)} />
+            </>
+          )}
           {p.hyrox ? (
             <>
               <Static label="Durée" value={fmtClock(lap.endS - lap.startS)} />
