@@ -68,20 +68,31 @@ Fichiers :
 - `tests/competition_session.sql` : version A + B du test, à substituer à
   `supabase/tests/competition_session.sql` le même jour.
 
-Testée sur agon-test le 2026-11-16 : 18/18.
+Testée sur agon-test le 2026-11-16 (18/18), puis retirée pour qu'agon-test reste identique à la
+prod (elle sert de source à `schema.sql` et aux types). Règle du 16/11 : rien d'autre que la
+migration, une requête de contrôle et `migration repair` en prod ; pas de test à blanc, de dump ni
+de génération de types sur la prod (`supabase/tests/ci/README.md`).
 
-Application, depuis un dossier sur `dev` à jour :
+Application, depuis un dossier sur `dev` à jour (`<dépôt>` = ce dossier) :
 
 ```bash
-PROD="$HOME/Library/Application Support/Claude/side-session-notes/local_5c6d5043-2ee4-41cb-b34d-5a8b413ac928/prod.sh"
-(echo 'BEGIN;'; cat supabase/pending/20261116190500_competition_auto_link.sql; \
- sed -e '/^BEGIN;$/d' supabase/pending/tests/competition_session.sql) > "$TMPDIR/cs.sql"
-"$PROD" supabase db query --linked -f "$TMPDIR/cs.sql"          # à blanc : 18/18 attendu
+# 1. agon-test d'abord : migration, puis test (18/18 attendu)
+cd ~/agon-test-cli
+supabase db query --linked -f <dépôt>/supabase/pending/20261116190500_competition_auto_link.sql
+supabase db query --linked -f <dépôt>/supabase/pending/tests/competition_session.sql
+
+# 2. Fichiers à leur place
+cd <dépôt>
 git mv supabase/pending/20261116190500_competition_auto_link.sql supabase/migrations/
 git mv -f supabase/pending/tests/competition_session.sql supabase/tests/competition_session.sql
+
+# 3. Prod (accord d'Hugo), via le verrou
+PROD="$HOME/Library/Application Support/Claude/side-session-notes/local_5c6d5043-2ee4-41cb-b34d-5a8b413ac928/prod.sh"
 "$PROD" supabase db query --linked -f supabase/migrations/20261116190500_competition_auto_link.sql
+"$PROD" supabase db query --linked "SELECT count(*) FROM pg_trigger WHERE tgname = 'hyrox_results_plan_links'"   # 1 attendu
 "$PROD" supabase migration repair --status applied 20261116190500 --linked
 "$PROD" supabase db push --dry-run --linked                     # « Remote database is up to date »
 ```
 
-Puis rafraîchir `supabase/tests/ci/schema.sql` (voir `supabase/tests/ci/README.md`).
+Puis `schema.sql` et les types depuis `~/agon-test-cli` (`supabase/tests/ci/README.md`), jamais
+depuis la prod.
