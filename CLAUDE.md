@@ -122,6 +122,7 @@ Ne jamais montrer, capturer ni exporter de vrais athlètes. Pour les captures et
 
 - `main` = production (Vercel). On n'y committe jamais directement.
 - `dev` = branche de travail partagée par Hugo et Tito. Pas de feature branches.
+- **Au plus 3 chantiers qui écrivent en même temps** (décision 2026-11-16, après la 3ᵉ panne de prod) : chacun dans son propre worktree, jamais dans le dossier principal partagé ; une 4ᵉ demande attend qu'un chantier finisse. Les sessions qui ne font que lire ne comptent pas.
 
 **Début de session** :
 ```bash
