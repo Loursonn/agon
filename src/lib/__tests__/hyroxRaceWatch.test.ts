@@ -36,6 +36,23 @@ describe("raceTimeline", () => {
     expect(tl.roxzoneEstimated).toBe(true);
     const sum = 2655 + 2010 + 450;
     expect(tl.segments.at(-1)!.endS).toBeCloseTo(sum, 6);
+    expect(tl.gapS).toBe(0);
+  });
+
+  it("finit au chrono officiel : l'écart d'arrondi va dans la roxzone, runs et stations intacts", () => {
+    const sum = 2655 + 2010 + 450;
+    const tl = raceTimeline(result({ total_s: sum - 7 }))!;
+    expect(tl.gapS).toBe(-7);
+    expect(tl.segments.at(-1)!.endS).toBeCloseTo(sum - 7, 6);
+    const run3 = tl.segments.find((s) => s.key === "run_3")!;
+    expect(run3.endS - run3.startS).toBeCloseTo(320, 6);
+    const rox = tl.segments.filter((s) => s.kind === "roxzone").reduce((a, s) => a + s.endS - s.startS, 0);
+    expect(rox).toBeCloseTo(443, 6);
+  });
+
+  it("met tout à l'échelle si la roxzone ne suffit pas à absorber l'écart", () => {
+    const tl = raceTimeline(result({ roxzone_total_s: 0, total_s: 4600 }))!;
+    expect(tl.segments.at(-1)!.endS).toBeCloseTo(4600, 6);
   });
 
   it("temps de passage roxzone détaillés : utilisés tels quels", () => {
@@ -160,7 +177,7 @@ describe("constats complémentaires", () => {
     const lvl: Record<string, number> = { run_2: 300, run_3: 310, run_4: 300, run_5: 320, run_6: 320, run_7: 325, run_8: 340 };
     const withLevel = athleteFindings({ analysis: a, above: null, gains: null, sv2: null, levelP50: (k) => lvl[k] ?? null });
     expect(withLevel[0].text).toBe("Après sled pull, ton run a ralenti de 5 s/km par rapport à ta croisière (runs 2 à 7), contre −15 d'habitude à ton niveau.");
-    expect(f[2].text).toBe("Roxzone : 7 min 30 s, soit 46 s de plus que la médiane de ton niveau.");
+    expect(f[2].text).toBe("Roxzone : 7 min 30 s, soit 46 s de plus que l'objectif.");
   });
 
   it("activité de la course : durée la plus proche du chrono, au moins 80 %", () => {

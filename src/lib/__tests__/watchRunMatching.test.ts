@@ -288,3 +288,46 @@ describe("watchRunMeasure — attribution Garmin", () => {
     expect(watchRunMeasure({ ...base, activitySource: "coros", activityDevice: null })).toMatch(/montre$/);
   });
 });
+
+describe("sorties détaillées (liste de la semaine)", () => {
+  it("une ligne par km compté, nommée et avec la provenance Garmin [modèle]", () => {
+    const l = buildRunLedger({
+      activities: [
+        act({ id: "g1", source: "garmin", deviceName: "Forerunner 265", elevationGainM: 42, durationS: 3000, distanceM: 10_000 }),
+        act({ id: "velo", sport: "cycling", startedAt: "2026-11-03T17:00:00Z", distanceM: 40_000 }),
+      ],
+      planned: [planned({ id: "p1", label: "VMA 10×400" })],
+      free: [{ id: "f1", name: "Footing du soir", date: "2026-11-04", sport: "course", km: 6, durationMin: 36 }],
+      strength: [{ date: "2026-11-05", km: 2 }],
+    });
+    expect(l.outings).toHaveLength(l.entries.length);
+    const [montre, libre, muscu] = l.outings;
+    expect(montre).toMatchObject({
+      key: "g1", activityId: "g1", label: "VMA 10×400", provider: "garmin", device: "Forerunner 265",
+      km: 10, durationS: 3000, elevationGainM: 42, paceSPerKm: 300, origin: "activity",
+    });
+    expect(libre).toMatchObject({ origin: "free", label: "Footing du soir", activityId: null, durationS: 2160, paceSPerKm: 360 });
+    expect(muscu).toMatchObject({ origin: "strength", label: null, durationS: null, paceSPerKm: null });
+    // Le vélo est listé à part, jamais compté
+    expect(l.others.map((a) => a.id)).toEqual(["velo"]);
+    expect(summarizeKm(l.entries, "2026-11-02", "2026-11-08").km).toBe(18);
+  });
+
+  it("le titre de la sortie l'emporte sur le nom de la séance prévue", () => {
+    const l = buildRunLedger({
+      activities: [act({ id: "a", title: "Bord de Loire" })],
+      planned: [planned({ id: "p", label: "Footing" })],
+    });
+    expect(l.outings[0].label).toBe("Bord de Loire");
+  });
+
+  it("saisie sans montre : pas de lien de détail, durée saisie", () => {
+    const l = buildRunLedger({
+      activities: [],
+      planned: [planned({ id: "p", activityType: "course", manualKm: 8, manualDurationMin: 40 })],
+    });
+    expect(l.outings).toEqual([
+      expect.objectContaining({ key: "planned:p", activityId: null, source: "manual", km: 8, durationS: 2400, paceSPerKm: 300, label: "Footing" }),
+    ]);
+  });
+});

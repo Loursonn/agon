@@ -6,6 +6,10 @@ import { ROUGE } from "@/lib/peps";
 import { priorityLabel, competitionDayLabel } from "@/types/planning";
 import { competitionCountdown } from "@/lib/competitionCountdown";
 import { useUpdateCompetitionComment } from "@/features/shared/hooks/retoursComments.mutations";
+import { CompetitionSessionSheet } from "@/features/athlete/components/competition/CompetitionSessionSheet";
+import {
+  COMPETITION_SESSION_TYPES, competitionSessionFilled, competitionSessionSummary, competitionSessionToFill,
+} from "@/lib/competitionSession";
 
 export interface CompetitionDayCardData {
   id: string;
@@ -15,6 +19,11 @@ export interface CompetitionDayCardData {
   location: string | null;
   priority: "A" | "B" | "C" | null;
   athlete_comment: string | null;
+  /** Séance du jour J (compétition, match) : il faut l'athlète pour lire ses activités. */
+  athlete_id?: string;
+  result_text?: string | null;
+  result_url?: string | null;
+  rpe_score?: number | null;
 }
 
 function localISO(d = new Date()): string {
@@ -23,8 +32,10 @@ function localISO(d = new Date()): string {
 
 /**
  * Jour de compétition côté athlète — affiché en tête du jour (semaine,
- * Programme, Aujourd'hui). Le bilan se remplit dès le jour J ; tant qu'il
- * est vide, la compétition reste « à commenter ».
+ * Programme, Aujourd'hui). Dès le jour J, une compétition ou un match se
+ * remplit comme une séance (résultat, lien, RPE, bilan, douleur, activité de
+ * la montre : `CompetitionSessionSheet`) ; tant qu'elle est vide, elle reste
+ * « à remplir ». Stage, off, autre : un bilan écrit seulement.
  */
 export function CompetitionDayCard({
   competition,
@@ -43,6 +54,7 @@ export function CompetitionDayCard({
   compact?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
+  const [sessionOpen, setSessionOpen] = useState(false);
   const [text, setText] = useState(competition.athlete_comment ?? "");
   const update = useUpdateCompetitionComment();
 
@@ -50,6 +62,17 @@ export function CompetitionDayCard({
   const canReview = competition.date <= today;
   // Jour passé sans bilan : reste « à commenter » jusqu'à ce qu'il soit rempli
   const toComment = competition.date < today && !competition.athlete_comment;
+  // Compétition ou match : une séance à remplir (feuille), pas un simple bilan.
+  const asSession = COMPETITION_SESSION_TYPES.has(competition.type) && !!competition.athlete_id;
+  const filled = competitionSessionFilled(competition);
+  const toFill = competitionSessionToFill(competition, today);
+  const summary = competitionSessionSummary(competition);
+  const sheet = sessionOpen && competition.athlete_id ? (
+    <CompetitionSessionSheet
+      competition={{ ...competition, athlete_id: competition.athlete_id }}
+      onClose={() => setSessionOpen(false)}
+    />
+  ) : null;
 
   const save = () => {
     if (!text.trim()) return;
@@ -104,7 +127,23 @@ export function CompetitionDayCard({
             </span>
           )}
         </div>
-        {canReview && !editing && (competition.athlete_comment || !viewOnly) && (
+        {asSession && canReview && (filled || !viewOnly) && (
+          <button
+            type="button"
+            onClick={() => !viewOnly && setSessionOpen(true)}
+            disabled={viewOnly}
+            title={summary ?? undefined}
+            style={{
+              height: 30, borderRadius: 8, border: "1px solid " + alpha(ROUGE, 0.55), background: filled ? "transparent" : ROUGE,
+              color: filled ? C.tx2 : C.bg, fontSize: 12, fontWeight: 600,
+              cursor: viewOnly ? "default" : "pointer", fontFamily: "inherit", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+            }}
+          >
+            {filled ? "Ma séance ✓" : toFill ? "Séance à remplir" : "Remplir ma séance"}
+          </button>
+        )}
+        {sheet}
+        {!asSession && canReview && !editing && (competition.athlete_comment || !viewOnly) && (
           <button
             type="button"
             onClick={() => !viewOnly && setEditing(true)}
@@ -118,7 +157,7 @@ export function CompetitionDayCard({
             {competition.athlete_comment ? "Mon bilan ✓" : toComment ? "Bilan à remplir" : "Mon bilan"}
           </button>
         )}
-        {canReview && editing && (
+        {!asSession && canReview && editing && (
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <textarea
               autoFocus
@@ -187,8 +226,48 @@ export function CompetitionDayCard({
         )}
       </div>
 
-      {/* Bilan : disponible dès le jour J */}
-      {canReview && (
+      {/* Séance du jour J (compétition, match) */}
+      {asSession && canReview && (
+        <>
+          {filled && (
+            <div style={{ background: C.s1, borderRadius: 4, padding: "8px 10px", display: "flex", flexDirection: "column", gap: 4 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                <span style={{ fontSize: 9, fontWeight: 700, color: C.tx3, textTransform: "uppercase", letterSpacing: "0.4px" }}>Ma séance</span>
+                {!viewOnly && (
+                  <button onClick={() => setSessionOpen(true)} style={{ background: "none", border: "none", color: C.tx3, fontSize: 11, cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
+                    Modifier
+                  </button>
+                )}
+              </div>
+              {summary && <div style={{ ...MONO, fontSize: 12.5, color: C.tx }}>{summary}</div>}
+              {competition.athlete_comment && (
+                <div style={{ fontSize: 12, color: C.tx2, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{competition.athlete_comment}</div>
+              )}
+              {competition.result_url && (
+                <a href={competition.result_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: C.ac, overflowWrap: "anywhere" }}>
+                  Voir les résultats ↗
+                </a>
+              )}
+            </div>
+          )}
+          {!filled && !viewOnly && (
+            <button
+              onClick={() => setSessionOpen(true)}
+              style={{
+                width: "100%", padding: "9px 0", borderRadius: 6, border: "none", background: C.r,
+                color: C.tx, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+              }}
+            >
+              {toFill ? "Séance à remplir — résultat, RPE, montre" : "Remplir ma séance : résultat, RPE, montre"}
+            </button>
+          )}
+          {!filled && viewOnly && <div style={{ fontSize: 11, color: C.tx3, fontStyle: "italic" }}>Séance à remplir</div>}
+          {sheet}
+        </>
+      )}
+
+      {/* Bilan : disponible dès le jour J (stage, off, autre) */}
+      {!asSession && canReview && (
         editing ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <textarea

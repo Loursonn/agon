@@ -6,9 +6,10 @@ const specs = [
   ["energy_sessions", "created_by IS NULL AND athlete_id IS NULL"],
   ["hyrox_test_grid_versions", "true"], ["hyrox_test_grids", "true"], ["hyrox_reference_segments", "true"],
   ["hyrox_work_axes_rules", "true"], ["hyrox_axes_params", "true"], ["hyrox_test_params", "true"], ["data_source_policies", "true"],
+  ["hyrox_objective_versions", "true"], ["hyrox_objective_grid", "true"],
 ];
 const out = [
-  `-- Données de référence (bibliothèques : aucune donnée d'athlète ni de coach), exportées de la prod le ${new Date().toISOString().slice(0, 10)}.`,
+  `-- Données de référence (bibliothèques : aucune donnée d'athlète ni de coach), exportées de la base de test (agon-test, au niveau de la prod) le ${new Date().toISOString().slice(0, 10)}.`,
   "-- created_by remis à NULL. Régénérer : voir supabase/tests/ci/README.md.",
   "SET session_replication_role = replica;", "",
 ];

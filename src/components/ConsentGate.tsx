@@ -356,9 +356,10 @@ function AiProgrammingStep({ isUpdate }: { isUpdate: boolean }) {
       intro={
         isUpdate ? (
           <>
-            Le texte de l'accord sur l'intelligence artificielle a changé : il nomme maintenant
-            Claude (Anthropic), utilisé par Agon et par l'assistant de ton coach. Ta réponse
-            précédente portait sur l'ancien texte, la question t'est donc reposée.
+            Le texte de l'accord sur l'intelligence artificielle a changé : l'assistant Claude de
+            ton coach peut maintenant lire aussi ta douleur et ta maladie du matin et ton bilan de
+            la semaine (tes notes et tes choix, jamais tes phrases). Ta réponse précédente portait
+            sur l'ancien texte, la question t'est donc reposée.
           </>
         ) : (
           <>

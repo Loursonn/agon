@@ -175,6 +175,29 @@ $$;
 ALTER FUNCTION "public"."_energy_assignment_for_write"("p_assignment" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."_new_coach_code"() RETURNS "text"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  chars constant text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  v text;
+BEGIN
+  LOOP
+    v := '';
+    FOR i IN 1..6 LOOP
+      v := v || substr(chars, 1 + floor(random() * length(chars))::int, 1);
+    END LOOP;
+    EXIT WHEN NOT EXISTS (SELECT 1 FROM public.profiles WHERE coach_code = v);
+  END LOOP;
+  RETURN v;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."_new_coach_code"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."_session_pain_clean"("p_levels" "jsonb", "p_note" "text", OUT "levels" "jsonb", OUT "note" "text") RETURNS "record"
     LANGUAGE "plpgsql" IMMUTABLE
     SET "search_path" TO 'public'
@@ -213,6 +236,45 @@ $$;
 
 
 ALTER FUNCTION "public"."_session_pain_clean"("p_levels" "jsonb", "p_note" "text", OUT "levels" "jsonb", OUT "note" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."_signup_guard"() RETURNS "uuid"
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_me uuid := auth.uid();
+BEGIN
+  IF v_me IS NULL THEN
+    RAISE EXCEPTION 'Connexion requise' USING ERRCODE = '42501';
+  END IF;
+  IF EXISTS (SELECT 1 FROM public.profiles WHERE id = v_me) THEN
+    RAISE EXCEPTION 'Ce compte a déjà un profil' USING ERRCODE = '23505';
+  END IF;
+  RETURN v_me;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."_signup_guard"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."_signup_name"("p_full_name" "text") RETURNS "text"
+    LANGUAGE "plpgsql" IMMUTABLE
+    SET "search_path" TO ''
+    AS $$
+DECLARE
+  v text := btrim(regexp_replace(coalesce(p_full_name, ''), '\s+', ' ', 'g'));
+BEGIN
+  IF length(v) < 2 OR length(v) > 80 THEN
+    RAISE EXCEPTION 'Indique ton nom (2 à 80 caractères)' USING ERRCODE = '22023';
+  END IF;
+  RETURN v;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."_signup_name"("p_full_name" "text") OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."workout_logs" (
@@ -1375,6 +1437,47 @@ COMMENT ON FUNCTION "public"."consume_oauth_state"("p_state" "text") IS 'Lit et 
 
 
 
+CREATE OR REPLACE FUNCTION "public"."create_coach_invitation"("p_email" "text") RETURNS TABLE("id" "uuid", "token" "text", "email" "text", "expires_at" timestamp with time zone)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $_$
+#variable_conflict use_column
+DECLARE
+  v_me    uuid := auth.uid();
+  v_email text := lower(btrim(coalesce(p_email, '')));
+  v_ok    boolean;
+BEGIN
+  IF v_me IS NULL THEN
+    RAISE EXCEPTION 'Connexion requise' USING ERRCODE = '42501';
+  END IF;
+  SELECT public.current_user_is_admin()
+      OR (p.is_certified_coach AND p.role IN ('coach', 'coach_athlete'))
+    INTO v_ok FROM public.profiles p WHERE p.id = v_me;
+  IF NOT coalesce(v_ok, false) THEN
+    RAISE EXCEPTION 'Réservé à l''admin et aux coachs certifiés' USING ERRCODE = '42501';
+  END IF;
+  IF length(v_email) > 254 OR v_email !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' THEN
+    RAISE EXCEPTION 'Adresse e-mail invalide' USING ERRCODE = '22023';
+  END IF;
+  IF EXISTS (SELECT 1 FROM auth.users u JOIN public.profiles p ON p.id = u.id WHERE lower(u.email) = v_email) THEN
+    RAISE EXCEPTION 'Un compte existe déjà avec cet e-mail' USING ERRCODE = '23505';
+  END IF;
+  IF (SELECT count(*) FROM public.coach_invitations c
+       WHERE c.invited_by = v_me AND c.used_at IS NULL AND c.revoked_at IS NULL AND c.expires_at > now()) >= 20 THEN
+    RAISE EXCEPTION 'Trop d''invitations en cours (20) : révoque celles qui ne servent plus' USING ERRCODE = '54000';
+  END IF;
+
+  RETURN QUERY
+    INSERT INTO public.coach_invitations AS c (email, invited_by)
+    VALUES (v_email, v_me)
+    RETURNING c.id, c.token, c.email, c.expires_at;
+END;
+$_$;
+
+
+ALTER FUNCTION "public"."create_coach_invitation"("p_email" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."create_cycle"("p_athlete" "uuid", "p_name" "text", "p_start" "date", "p_end" "date", "p_mesocycle" "uuid" DEFAULT NULL::"uuid", "p_deload_week" integer DEFAULT NULL::integer, "p_sessions" "jsonb" DEFAULT '[]'::"jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -1750,6 +1853,25 @@ $$;
 
 
 ALTER FUNCTION "public"."get_claim_info"("p_token" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_coach_invitation"("p_token" "text") RETURNS TABLE("email" "text", "inviter_name" "text", "status" "text")
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  SELECT c.email,
+         p.full_name,
+         CASE WHEN c.used_at IS NOT NULL THEN 'utilisee'
+              WHEN c.revoked_at IS NOT NULL THEN 'revoquee'
+              WHEN c.expires_at <= now() THEN 'expiree'
+              ELSE 'valide' END
+    FROM public.coach_invitations c
+    LEFT JOIN public.profiles p ON p.id = c.invited_by
+   WHERE c.token = p_token AND length(coalesce(p_token, '')) >= 32;
+$$;
+
+
+ALTER FUNCTION "public"."get_coach_invitation"("p_token" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."get_coach_overview"("coach_uuid" "uuid") RETURNS "jsonb"
@@ -2799,6 +2921,7 @@ BEGIN
     WHEN 'energy' THEN (SELECT athlete_id FROM public.energy_session_assignments WHERE id = p_planned)
     WHEN 'workout' THEN (SELECT athlete_id FROM public.workout_logs WHERE id = p_planned)
     WHEN 'test' THEN (SELECT athlete_id FROM public.test_sessions WHERE id = p_planned)
+    WHEN 'competition' THEN (SELECT athlete_id FROM public.competitions WHERE id = p_planned)
   END;
   IF v_owner IS DISTINCT FROM v_act.athlete_id THEN
     RAISE EXCEPTION 'link_activity_to_plan : séance prévue introuvable pour cet athlète' USING ERRCODE = '22023';
@@ -2986,6 +3109,31 @@ $$;
 ALTER FUNCTION "public"."mark_onboarded"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."medical_entries_log_stage"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    INSERT INTO public.injury_stage_history (entry_id, athlete_id, stage, changed_at, changed_by)
+    VALUES (NEW.id, NEW.athlete_id, NEW.recovery_stage,
+            least(coalesce(NEW.date::timestamptz, now()), now()), auth.uid());
+  ELSIF NEW.recovery_stage IS DISTINCT FROM OLD.recovery_stage THEN
+    INSERT INTO public.injury_stage_history (entry_id, athlete_id, stage, changed_by)
+    VALUES (NEW.id, NEW.athlete_id, NEW.recovery_stage, auth.uid());
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."medical_entries_log_stage"() OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."medical_entries_log_stage"() IS 'Écrit injury_stage_history à chaque étape atteinte (15/11/2026).';
+
+
+
 CREATE OR REPLACE FUNCTION "public"."medical_entries_sans_soins"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO ''
@@ -3001,6 +3149,32 @@ ALTER FUNCTION "public"."medical_entries_sans_soins"() OWNER TO "postgres";
 
 
 COMMENT ON FUNCTION "public"."medical_entries_sans_soins"() IS 'Hors HDS (2026-11-13) : toute entrée est une blessure sportive. Diagnostic, traitement et « vu par » supprimés au temps 2.';
+
+
+
+CREATE OR REPLACE FUNCTION "public"."medical_entries_sync_stage"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    SET "search_path" TO ''
+    AS $$
+BEGIN
+  IF TG_OP = 'UPDATE'
+     AND NEW.recovery_stage IS NOT DISTINCT FROM OLD.recovery_stage
+     AND NEW.status IS DISTINCT FROM OLD.status THEN
+    NEW.recovery_stage := CASE WHEN NEW.status = 'gueri' THEN 'gueri' ELSE 'blesse' END;
+  END IF;
+  IF NEW.recovery_stage IS NULL THEN
+    NEW.recovery_stage := CASE WHEN NEW.status = 'gueri' THEN 'gueri' ELSE 'blesse' END;
+  END IF;
+  NEW.status := CASE WHEN NEW.recovery_stage = 'gueri' THEN 'gueri' ELSE 'en_cours' END;
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."medical_entries_sync_stage"() OWNER TO "postgres";
+
+
+COMMENT ON FUNCTION "public"."medical_entries_sync_stage"() IS 'Garde recovery_stage et status d''accord (Guéri ⇔ gueri, sinon en_cours), 15/11/2026.';
 
 
 
@@ -4270,6 +4444,104 @@ $$;
 ALTER FUNCTION "public"."refresh_athlete_zone_summaries"("p_athlete" "uuid", "p_from" "date") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."register_athlete"("p_coach_code" "text", "p_full_name" "text", "p_birth_date" "date") RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_me    uuid := public._signup_guard();
+  v_name  text := public._signup_name(p_full_name);
+  v_coach uuid;
+BEGIN
+  SELECT id INTO v_coach FROM public.profiles
+   WHERE coach_code = upper(btrim(coalesce(p_coach_code, ''))) AND role IN ('coach', 'coach_athlete');
+  IF v_coach IS NULL THEN
+    RAISE EXCEPTION 'Code coach invalide — vérifie auprès de ton coach' USING ERRCODE = 'P0002';
+  END IF;
+
+  PERFORM set_config('agon.signup', 'on', true);
+  PERFORM set_config('agon.coach_link', 'on', true);
+  INSERT INTO public.profiles (id, role, full_name, birth_date, coach_id)
+  VALUES (v_me, 'athlete', v_name, p_birth_date, v_coach);
+  PERFORM set_config('agon.coach_link', 'off', true);
+  PERFORM set_config('agon.signup', 'off', true);
+  RETURN v_coach;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."register_athlete"("p_coach_code" "text", "p_full_name" "text", "p_birth_date" "date") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."register_coach"("p_token" "text", "p_full_name" "text", "p_birth_date" "date", "p_coach_athlete" boolean DEFAULT false) RETURNS "text"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_me    uuid := public._signup_guard();
+  v_name  text := public._signup_name(p_full_name);
+  v_inv   public.coach_invitations%ROWTYPE;
+  v_email text;
+  v_code  text := public._new_coach_code();
+BEGIN
+  SELECT * INTO v_inv FROM public.coach_invitations WHERE token = p_token FOR UPDATE;
+  IF NOT FOUND OR length(coalesce(p_token, '')) < 32 THEN
+    RAISE EXCEPTION 'L''inscription coach se fait sur invitation' USING ERRCODE = '42501';
+  END IF;
+  IF v_inv.used_at IS NOT NULL THEN
+    RAISE EXCEPTION 'Cette invitation a déjà été utilisée' USING ERRCODE = '22023';
+  END IF;
+  IF v_inv.revoked_at IS NOT NULL THEN
+    RAISE EXCEPTION 'Cette invitation a été révoquée' USING ERRCODE = '22023';
+  END IF;
+  IF v_inv.expires_at <= now() THEN
+    RAISE EXCEPTION 'Cette invitation a expiré : demande-en une nouvelle' USING ERRCODE = '22023';
+  END IF;
+  SELECT lower(email) INTO v_email FROM auth.users WHERE id = v_me;
+  IF v_email IS DISTINCT FROM v_inv.email THEN
+    RAISE EXCEPTION 'Cette invitation est liée à une autre adresse e-mail' USING ERRCODE = '42501';
+  END IF;
+
+  PERFORM set_config('agon.signup', 'on', true);
+  INSERT INTO public.profiles (id, role, full_name, birth_date, coach_code, coach_id)
+  VALUES (v_me, CASE WHEN p_coach_athlete THEN 'coach_athlete' ELSE 'coach' END, v_name, p_birth_date, v_code,
+          CASE WHEN p_coach_athlete THEN v_me END);
+  PERFORM set_config('agon.signup', 'off', true);
+
+  UPDATE public.coach_invitations SET used_at = now(), used_by = v_me WHERE id = v_inv.id;
+  RETURN v_code;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."register_coach"("p_token" "text", "p_full_name" "text", "p_birth_date" "date", "p_coach_athlete" boolean) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."register_staff"("p_token" "text", "p_full_name" "text", "p_birth_date" "date", "p_profession" "text") RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_me   uuid := public._signup_guard();
+  v_name text := public._signup_name(p_full_name);
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM public.staff_invitations
+                  WHERE token = p_token AND used_at IS NULL AND expires_at > now()) THEN
+    RAISE EXCEPTION 'Invitation staff introuvable ou expirée' USING ERRCODE = '42501';
+  END IF;
+
+  PERFORM set_config('agon.signup', 'on', true);
+  INSERT INTO public.profiles (id, role, full_name, birth_date, profession)
+  VALUES (v_me, 'staff', v_name, p_birth_date, p_profession);
+  PERFORM set_config('agon.signup', 'off', true);
+  RETURN v_me;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."register_staff"("p_token" "text", "p_full_name" "text", "p_birth_date" "date", "p_profession" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."remove_co_coach"("p_athlete" "uuid") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -4415,7 +4687,7 @@ $$;
 ALTER FUNCTION "public"."report_client_build"("p_build" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."report_session_pain"("p_workout_log" "uuid" DEFAULT NULL::"uuid", "p_energy_assignment" "uuid" DEFAULT NULL::"uuid", "p_levels" "jsonb" DEFAULT '{}'::"jsonb", "p_note" "text" DEFAULT NULL::"text") RETURNS "jsonb"
+CREATE OR REPLACE FUNCTION "public"."report_session_pain"("p_workout_log" "uuid" DEFAULT NULL::"uuid", "p_energy_assignment" "uuid" DEFAULT NULL::"uuid", "p_levels" "jsonb" DEFAULT '{}'::"jsonb", "p_note" "text" DEFAULT NULL::"text", "p_competition" "uuid" DEFAULT NULL::"uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
@@ -4430,13 +4702,24 @@ DECLARE
   v_created boolean;
   v_out     jsonb := '[]'::jsonb;
 BEGIN
-  IF num_nonnulls(p_workout_log, p_energy_assignment) <> 1 THEN
+  IF num_nonnulls(p_workout_log, p_energy_assignment, p_competition) <> 1 THEN
     RAISE EXCEPTION 'Une séance attendue' USING ERRCODE = '22023';
   END IF;
   IF p_workout_log IS NOT NULL THEN
     SELECT w.athlete_id, w.scheduled_date INTO v_athlete, v_day FROM public._workout_log_for_write(p_workout_log) w;
-  ELSE
+  ELSIF p_energy_assignment IS NOT NULL THEN
     SELECT a.athlete_id, a.scheduled_date INTO v_athlete, v_day FROM public._energy_assignment_for_write(p_energy_assignment) a;
+  ELSE
+    IF v_me IS NULL THEN
+      RAISE EXCEPTION 'Non connecté' USING ERRCODE = '42501';
+    END IF;
+    SELECT co.athlete_id, co.date INTO v_athlete, v_day FROM public.competitions co WHERE co.id = p_competition;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Séance introuvable' USING ERRCODE = 'P0002';
+    END IF;
+    IF NOT (v_athlete = v_me OR public.is_coach_of(v_athlete) OR public.current_user_is_admin()) THEN
+      RAISE EXCEPTION 'Accès refusé' USING ERRCODE = '42501';
+    END IF;
   END IF;
   c := public._session_pain_clean(p_levels, p_note);
   -- Deux envois simultanés pour le même athlète ne créent pas deux blessures.
@@ -4460,7 +4743,8 @@ BEGIN
       INSERT INTO public.medical_entries
         (athlete_id, kind, title, zone, date, status, notes, pain_level, context, declared_by, created_by)
       VALUES
-        (v_athlete, 'blessure', 'Douleur en séance', k, v_day, 'en_cours', c.note, v_level, 'entrainement',
+        (v_athlete, 'blessure', 'Douleur en séance', k, v_day, 'en_cours', c.note, v_level,
+         CASE WHEN p_competition IS NOT NULL THEN 'competition' ELSE 'entrainement' END,
          CASE WHEN v_me = v_athlete THEN 'athlete' ELSE 'coach' END, v_me)
       RETURNING id INTO v_entry;
     ELSE
@@ -4472,10 +4756,15 @@ BEGIN
       VALUES (v_entry, v_athlete, v_day, v_level, c.note, p_workout_log, v_me)
       ON CONFLICT (entry_id, workout_log_id) WHERE workout_log_id IS NOT NULL
       DO UPDATE SET pain_level = EXCLUDED.pain_level, note = EXCLUDED.note, day = EXCLUDED.day;
-    ELSE
+    ELSIF p_energy_assignment IS NOT NULL THEN
       INSERT INTO public.injury_followups (entry_id, athlete_id, day, pain_level, note, energy_assignment_id, created_by)
       VALUES (v_entry, v_athlete, v_day, v_level, c.note, p_energy_assignment, v_me)
       ON CONFLICT (entry_id, energy_assignment_id) WHERE energy_assignment_id IS NOT NULL
+      DO UPDATE SET pain_level = EXCLUDED.pain_level, note = EXCLUDED.note, day = EXCLUDED.day;
+    ELSE
+      INSERT INTO public.injury_followups (entry_id, athlete_id, day, pain_level, note, competition_id, created_by)
+      VALUES (v_entry, v_athlete, v_day, v_level, c.note, p_competition, v_me)
+      ON CONFLICT (entry_id, competition_id) WHERE competition_id IS NOT NULL
       DO UPDATE SET pain_level = EXCLUDED.pain_level, note = EXCLUDED.note, day = EXCLUDED.day;
     END IF;
 
@@ -4486,7 +4775,7 @@ END;
 $$;
 
 
-ALTER FUNCTION "public"."report_session_pain"("p_workout_log" "uuid", "p_energy_assignment" "uuid", "p_levels" "jsonb", "p_note" "text") OWNER TO "postgres";
+ALTER FUNCTION "public"."report_session_pain"("p_workout_log" "uuid", "p_energy_assignment" "uuid", "p_levels" "jsonb", "p_note" "text", "p_competition" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."require_sync_consent"() RETURNS "trigger"
@@ -4591,6 +4880,29 @@ $$;
 
 
 ALTER FUNCTION "public"."review_performance_notification"("p_notification" "uuid", "p_log" "uuid", "p_approve" boolean) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."revoke_coach_invitation"("p_id" "uuid") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_me uuid := auth.uid();
+BEGIN
+  IF v_me IS NULL THEN
+    RAISE EXCEPTION 'Connexion requise' USING ERRCODE = '42501';
+  END IF;
+  UPDATE public.coach_invitations c SET revoked_at = now()
+   WHERE c.id = p_id AND c.used_at IS NULL AND c.revoked_at IS NULL
+     AND (c.invited_by = v_me OR public.current_user_is_admin());
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Invitation introuvable ou déjà utilisée' USING ERRCODE = 'P0002';
+  END IF;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."revoke_coach_invitation"("p_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."rls_linked_to"("p_athlete" "uuid") RETURNS boolean
@@ -6171,12 +6483,13 @@ DECLARE
   v_new_day date;
   v_kind text := CASE TG_TABLE_NAME WHEN 'energy_session_assignments' THEN 'energy'
                                     WHEN 'workout_logs' THEN 'workout'
-                                    WHEN 'test_sessions' THEN 'test' END;
+                                    WHEN 'test_sessions' THEN 'test'
+                                    WHEN 'competitions' THEN 'competition' END;
 BEGIN
   IF TG_TABLE_NAME = 'provider_activities' THEN
     IF TG_OP <> 'INSERT' THEN v_old_day := OLD.local_date; END IF;
     IF TG_OP <> 'DELETE' THEN v_new_day := NEW.local_date; END IF;
-  ELSIF TG_TABLE_NAME = 'test_sessions' THEN
+  ELSIF TG_TABLE_NAME IN ('test_sessions', 'competitions') THEN
     IF TG_OP <> 'INSERT' THEN v_old_day := OLD.date; END IF;
     IF TG_OP <> 'DELETE' THEN v_new_day := NEW.date; END IF;
   ELSE
@@ -6977,7 +7290,7 @@ CREATE TABLE IF NOT EXISTS "public"."activity_plan_links" (
     "ai_allowed" boolean DEFAULT false NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "activity_plan_links_planned_kind_check" CHECK (("planned_kind" = ANY (ARRAY['energy'::"text", 'workout'::"text", 'test'::"text"]))),
+    CONSTRAINT "activity_plan_links_planned_kind_check" CHECK (("planned_kind" = ANY (ARRAY['energy'::"text", 'workout'::"text", 'test'::"text", 'competition'::"text"]))),
     CONSTRAINT "activity_plan_links_status_check" CHECK (("status" = ANY (ARRAY['auto'::"text", 'confirmed'::"text", 'rejected'::"text"])))
 );
 
@@ -7645,6 +7958,27 @@ CREATE TABLE IF NOT EXISTS "public"."coach_api_rate" (
 ALTER TABLE "public"."coach_api_rate" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."coach_invitations" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "token" "text" DEFAULT ("replace"(("gen_random_uuid"())::"text", '-'::"text", ''::"text") || "replace"(("gen_random_uuid"())::"text", '-'::"text", ''::"text")) NOT NULL,
+    "email" "text" NOT NULL,
+    "invited_by" "uuid",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "expires_at" timestamp with time zone DEFAULT ("now"() + '7 days'::interval) NOT NULL,
+    "used_at" timestamp with time zone,
+    "used_by" "uuid",
+    "revoked_at" timestamp with time zone,
+    CONSTRAINT "coach_invitations_email_check" CHECK ((("email" = "lower"("btrim"("email"))) AND (("length"("email") >= 3) AND ("length"("email") <= 254))))
+);
+
+
+ALTER TABLE "public"."coach_invitations" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."coach_invitations" IS 'Invitations à s''inscrire comme coach (15/11/2026) : lien lié à un e-mail, 7 jours, usage unique, révocable. Écriture par RPC seulement.';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."competitions" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "coach_id" "uuid" NOT NULL,
@@ -7663,7 +7997,13 @@ CREATE TABLE IF NOT EXISTS "public"."competitions" (
     "date_end" "date",
     "cancelled_at" timestamp with time zone,
     "cancelled_by" "uuid",
-    CONSTRAINT "competitions_date_end_check" CHECK ((("date_end" IS NULL) OR ("date_end" >= "date")))
+    "result_text" "text",
+    "result_url" "text",
+    "rpe_score" smallint,
+    CONSTRAINT "competitions_date_end_check" CHECK ((("date_end" IS NULL) OR ("date_end" >= "date"))),
+    CONSTRAINT "competitions_result_text_check" CHECK ((("result_text" IS NULL) OR ("length"("result_text") <= 200))),
+    CONSTRAINT "competitions_result_url_check" CHECK ((("result_url" IS NULL) OR (("length"("result_url") <= 500) AND ("result_url" ~* '^https?://[^[:space:]]+$'::"text")))),
+    CONSTRAINT "competitions_rpe_score_check" CHECK ((("rpe_score" IS NULL) OR (("rpe_score" >= 1) AND ("rpe_score" <= 10))))
 );
 
 
@@ -7683,6 +8023,18 @@ COMMENT ON COLUMN "public"."competitions"."cancelled_at" IS 'Annulée le (null =
 
 
 COMMENT ON COLUMN "public"."competitions"."cancelled_by" IS 'Qui a annulé (coach, co-coach ou athlète). Posé par le trigger, null si rétablie.';
+
+
+
+COMMENT ON COLUMN "public"."competitions"."result_text" IS 'Résultat saisi le jour J, texte libre (« 3-1 », « 12e / 80 »…).';
+
+
+
+COMMENT ON COLUMN "public"."competitions"."result_url" IS 'Lien vers les résultats officiels ou une activité en ligne.';
+
+
+
+COMMENT ON COLUMN "public"."competitions"."rpe_score" IS 'RPE de la compétition (1-10), saisi le jour J.';
 
 
 
@@ -8071,6 +8423,60 @@ COMMENT ON TABLE "public"."hyrox_axes_params" IS 'Paramètres du plan de bloc : 
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."hyrox_objective_grid" (
+    "version" "text" NOT NULL,
+    "division" "text" NOT NULL,
+    "run_avg_s" integer NOT NULL,
+    "ski_s" integer NOT NULL,
+    "sled_push_s" integer NOT NULL,
+    "sled_pull_s" integer NOT NULL,
+    "bbj_s" integer NOT NULL,
+    "row_s" integer NOT NULL,
+    "farmers_s" integer NOT NULL,
+    "lunges_s" integer NOT NULL,
+    "wall_balls_s" integer NOT NULL,
+    "roxzone_s" integer NOT NULL,
+    "run_shape" numeric[] NOT NULL,
+    "source" "text" NOT NULL,
+    "is_estimate" boolean DEFAULT false NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "hyrox_objective_grid_bbj_s_check" CHECK (("bbj_s" > 0)),
+    CONSTRAINT "hyrox_objective_grid_division_check" CHECK (("division" = ANY (ARRAY['men'::"text", 'women'::"text", 'men_pro'::"text", 'women_pro'::"text", 'doubles_men'::"text", 'doubles_women'::"text", 'doubles_mixed'::"text"]))),
+    CONSTRAINT "hyrox_objective_grid_farmers_s_check" CHECK (("farmers_s" > 0)),
+    CONSTRAINT "hyrox_objective_grid_lunges_s_check" CHECK (("lunges_s" > 0)),
+    CONSTRAINT "hyrox_objective_grid_row_s_check" CHECK (("row_s" > 0)),
+    CONSTRAINT "hyrox_objective_grid_roxzone_s_check" CHECK (("roxzone_s" > 0)),
+    CONSTRAINT "hyrox_objective_grid_run_avg_s_check" CHECK ((("run_avg_s" >= 150) AND ("run_avg_s" <= 900))),
+    CONSTRAINT "hyrox_objective_grid_run_shape_check" CHECK (("array_length"("run_shape", 1) = 8)),
+    CONSTRAINT "hyrox_objective_grid_ski_s_check" CHECK (("ski_s" > 0)),
+    CONSTRAINT "hyrox_objective_grid_sled_pull_s_check" CHECK (("sled_pull_s" > 0)),
+    CONSTRAINT "hyrox_objective_grid_sled_push_s_check" CHECK (("sled_push_s" > 0)),
+    CONSTRAINT "hyrox_objective_grid_wall_balls_s_check" CHECK (("wall_balls_s" > 0))
+);
+
+
+ALTER TABLE "public"."hyrox_objective_grid" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."hyrox_objective_grid" IS 'Objectif HYROX : à chaque run moyen (s/km, hors Roxzone), temps médians des 8 stations et de la Roxzone et forme des 8 runs (coefficients, moyenne 1). En doubles, stations de la paire.';
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."hyrox_objective_versions" (
+    "version" "text" NOT NULL,
+    "active" boolean DEFAULT false NOT NULL,
+    "notes" "text",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."hyrox_objective_versions" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."hyrox_objective_versions" IS 'Versions de la grille de l''objectif HYROX ; une seule active.';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."hyrox_race_plans" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "athlete_id" "uuid" NOT NULL,
@@ -8088,12 +8494,28 @@ CREATE TABLE IF NOT EXISTS "public"."hyrox_race_plans" (
     "notes" "text",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "run_avg_s" integer,
+    "model_version" "text",
+    "locked_total" boolean DEFAULT true NOT NULL,
     CONSTRAINT "hyrox_race_plans_profile_check" CHECK (("profile" = ANY (ARRAY['runner'::"text", 'hybrid'::"text", 'powerhouse'::"text"]))),
+    CONSTRAINT "hyrox_race_plans_run_avg_s_check" CHECK ((("run_avg_s" IS NULL) OR (("run_avg_s" >= 150) AND ("run_avg_s" <= 900)))),
     CONSTRAINT "hyrox_race_plans_target_total_s_check" CHECK (("target_total_s" > 0))
 );
 
 
 ALTER TABLE "public"."hyrox_race_plans" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."hyrox_race_plans"."run_avg_s" IS 'Run moyen de l''objectif (s/km, hors Roxzone). NULL : plan ancien, réparti depuis un chrono.';
+
+
+
+COMMENT ON COLUMN "public"."hyrox_race_plans"."model_version" IS 'Version de la grille qui a construit les cibles (ex. obj@1).';
+
+
+
+COMMENT ON COLUMN "public"."hyrox_race_plans"."locked_total" IS 'Chrono verrouillé : modifier une cible redistribue la différence sur les autres.';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."hyrox_reference_segments" (
@@ -8202,7 +8624,7 @@ COMMENT ON COLUMN "public"."hyrox_results"."watch_activity_id" IS 'Activité de 
 
 
 
-COMMENT ON COLUMN "public"."hyrox_results"."wall_balls_no_rep_depth" IS 'No reps aux wall balls : squat pas sous la parallèle. NULL : non renseigné.';
+COMMENT ON COLUMN "public"."hyrox_results"."watch_offset_s" IS 'Seconde de l''enregistrement de la montre où la course commence (négatif : montre lancée après le départ). NULL : recalage automatique.';
 
 
 
@@ -8210,7 +8632,30 @@ COMMENT ON COLUMN "public"."hyrox_results"."wall_balls_no_rep_target" IS 'No rep
 
 
 
-COMMENT ON COLUMN "public"."hyrox_results"."watch_offset_s" IS 'Seconde de l''enregistrement de la montre où la course commence (négatif : montre lancée après le départ). NULL : recalage automatique.';
+COMMENT ON COLUMN "public"."hyrox_results"."wall_balls_no_rep_depth" IS 'No reps aux wall balls : squat pas sous la parallèle. NULL : non renseigné.';
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."hyrox_season_goals" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "athlete_id" "uuid" NOT NULL,
+    "season" "text" NOT NULL,
+    "division" "text" NOT NULL,
+    "run_avg_s" integer NOT NULL,
+    "note" "text",
+    "created_by" "uuid",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "hyrox_season_goals_note_check" CHECK ((("note" IS NULL) OR ("char_length"("note") <= 500))),
+    CONSTRAINT "hyrox_season_goals_run_avg_s_check" CHECK ((("run_avg_s" >= 150) AND ("run_avg_s" <= 900))),
+    CONSTRAINT "hyrox_season_goals_season_check" CHECK (("season" ~ '^[0-9]{4}-[0-9]{2}$'::"text"))
+);
+
+
+ALTER TABLE "public"."hyrox_season_goals" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."hyrox_season_goals" IS 'Run moyen visé par un athlète pour une saison HYROX (15 août → 14 août) et une division. Pré-remplit l''objectif des courses sans plan.';
 
 
 
@@ -8363,8 +8808,9 @@ CREATE TABLE IF NOT EXISTS "public"."injury_followups" (
     "energy_assignment_id" "uuid",
     "created_by" "uuid",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "competition_id" "uuid",
     CONSTRAINT "injury_followups_note_check" CHECK ((("note" IS NULL) OR ("length"("note") <= 500))),
-    CONSTRAINT "injury_followups_one_session" CHECK (("num_nonnulls"("workout_log_id", "energy_assignment_id") <= 1)),
+    CONSTRAINT "injury_followups_one_session" CHECK (("num_nonnulls"("workout_log_id", "energy_assignment_id", "competition_id") <= 1)),
     CONSTRAINT "injury_followups_pain_level_check" CHECK ((("pain_level" >= 1) AND ("pain_level" <= 10)))
 );
 
@@ -8373,6 +8819,24 @@ ALTER TABLE "public"."injury_followups" OWNER TO "postgres";
 
 
 COMMENT ON TABLE "public"."injury_followups" IS 'Suivis d''une blessure déclarée : douleur 0-10 d''un jour, commentaire de l''athlète, séance d''origine (question de fin de séance, 15/11/2026). Écriture par report_session_pain.';
+
+
+
+CREATE TABLE IF NOT EXISTS "public"."injury_stage_history" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "entry_id" "uuid" NOT NULL,
+    "athlete_id" "uuid" NOT NULL,
+    "stage" "text" NOT NULL,
+    "changed_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "changed_by" "uuid",
+    CONSTRAINT "injury_stage_history_stage_check" CHECK (("stage" = ANY (ARRAY['blesse'::"text", 'rehabilitation'::"text", 'rehab_fin'::"text", 'reathletisation'::"text", 'gueri'::"text"])))
+);
+
+
+ALTER TABLE "public"."injury_stage_history" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."injury_stage_history" IS 'Étapes de résolution d''une blessure, datées (15/11/2026). Écrite par le déclencheur medical_entries_log_stage seulement.';
 
 
 
@@ -8452,6 +8916,7 @@ COMMENT ON COLUMN "public"."measurement_logs"."shank_length_cm" IS 'Longueur de 
 COMMENT ON COLUMN "public"."measurement_logs"."arm_length_cm" IS 'Longueur de bras : acromion → coude (épicondyle), bras le long du corps (cm)';
 
 
+
 CREATE TABLE IF NOT EXISTS "public"."medical_entries" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "athlete_id" "uuid" NOT NULL,
@@ -8472,6 +8937,7 @@ CREATE TABLE IF NOT EXISTS "public"."medical_entries" (
     "days_off" integer,
     "return_date" "date",
     "declared_by" "text",
+    "recovery_stage" "text",
     CONSTRAINT "medical_entries_context_check" CHECK ((("context" IS NULL) OR ("context" = ANY (ARRAY['entrainement'::"text", 'competition'::"text", 'hors_sport'::"text"])))),
     CONSTRAINT "medical_entries_days_off_check" CHECK ((("days_off" IS NULL) OR ("days_off" >= 0))),
     CONSTRAINT "medical_entries_declared_by_check" CHECK ((("declared_by" IS NULL) OR ("declared_by" = ANY (ARRAY['athlete'::"text", 'coach'::"text", 'staff'::"text"])))),
@@ -8479,6 +8945,7 @@ CREATE TABLE IF NOT EXISTS "public"."medical_entries" (
     CONSTRAINT "medical_entries_kind_check" CHECK (("kind" = 'blessure'::"text")),
     CONSTRAINT "medical_entries_mechanism_check" CHECK ((("mechanism" IS NULL) OR ("mechanism" = ANY (ARRAY['contact'::"text", 'sans_contact'::"text", 'chute'::"text", 'geste_repete'::"text", 'inconnu'::"text"])))),
     CONSTRAINT "medical_entries_pain_level_check" CHECK ((("pain_level" IS NULL) OR (("pain_level" >= 0) AND ("pain_level" <= 10)))),
+    CONSTRAINT "medical_entries_recovery_stage_check" CHECK ((("recovery_stage" IS NULL) OR ("recovery_stage" = ANY (ARRAY['blesse'::"text", 'rehabilitation'::"text", 'rehab_fin'::"text", 'reathletisation'::"text", 'gueri'::"text"])))),
     CONSTRAINT "medical_entries_status_check" CHECK (("status" = ANY (ARRAY['gueri'::"text", 'en_cours'::"text"]))),
     CONSTRAINT "medical_entries_training_impact_check" CHECK ((("training_impact" IS NULL) OR ("training_impact" = ANY (ARRAY['aucun'::"text", 'adapte'::"text", 'arret_partiel'::"text", 'arret_total'::"text"]))))
 );
@@ -8516,6 +8983,10 @@ COMMENT ON COLUMN "public"."medical_entries"."return_date" IS 'Retour prévu ou 
 
 
 COMMENT ON COLUMN "public"."medical_entries"."declared_by" IS 'athlete | coach — côté d''où vient la déclaration';
+
+
+
+COMMENT ON COLUMN "public"."medical_entries"."recovery_stage" IS 'Étape de résolution : blesse | rehabilitation | rehab_fin | reathletisation | gueri. Tenue d''accord avec status par medical_entries_sync_stage.';
 
 
 
@@ -9349,6 +9820,16 @@ ALTER TABLE ONLY "public"."coach_api_rate"
 
 
 
+ALTER TABLE ONLY "public"."coach_invitations"
+    ADD CONSTRAINT "coach_invitations_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."coach_invitations"
+    ADD CONSTRAINT "coach_invitations_token_key" UNIQUE ("token");
+
+
+
 ALTER TABLE ONLY "public"."competitions"
     ADD CONSTRAINT "competitions_pkey" PRIMARY KEY ("id");
 
@@ -9459,6 +9940,16 @@ ALTER TABLE ONLY "public"."hyrox_axes_params"
 
 
 
+ALTER TABLE ONLY "public"."hyrox_objective_grid"
+    ADD CONSTRAINT "hyrox_objective_grid_pkey" PRIMARY KEY ("version", "division", "run_avg_s");
+
+
+
+ALTER TABLE ONLY "public"."hyrox_objective_versions"
+    ADD CONSTRAINT "hyrox_objective_versions_pkey" PRIMARY KEY ("version");
+
+
+
 ALTER TABLE ONLY "public"."hyrox_race_plans"
     ADD CONSTRAINT "hyrox_race_plans_pkey" PRIMARY KEY ("id");
 
@@ -9476,6 +9967,16 @@ ALTER TABLE ONLY "public"."hyrox_reference_segments"
 
 ALTER TABLE ONLY "public"."hyrox_results"
     ADD CONSTRAINT "hyrox_results_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."hyrox_season_goals"
+    ADD CONSTRAINT "hyrox_season_goals_athlete_id_season_division_key" UNIQUE ("athlete_id", "season", "division");
+
+
+
+ALTER TABLE ONLY "public"."hyrox_season_goals"
+    ADD CONSTRAINT "hyrox_season_goals_pkey" PRIMARY KEY ("id");
 
 
 
@@ -9516,6 +10017,11 @@ ALTER TABLE ONLY "public"."hyrox_work_axes_rules"
 
 ALTER TABLE ONLY "public"."injury_followups"
     ADD CONSTRAINT "injury_followups_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."injury_stage_history"
+    ADD CONSTRAINT "injury_stage_history_pkey" PRIMARY KEY ("id");
 
 
 
@@ -9910,6 +10416,18 @@ CREATE INDEX "coach_api_keys_coach_idx" ON "public"."coach_api_keys" USING "btre
 
 
 
+CREATE INDEX "coach_invitations_email_idx" ON "public"."coach_invitations" USING "btree" ("email");
+
+
+
+CREATE INDEX "coach_invitations_invited_by_idx" ON "public"."coach_invitations" USING "btree" ("invited_by", "created_at" DESC);
+
+
+
+CREATE INDEX "coach_invitations_used_by_idx" ON "public"."coach_invitations" USING "btree" ("used_by") WHERE ("used_by" IS NOT NULL);
+
+
+
 CREATE INDEX "competitions_cancelled_by_fk_idx" ON "public"."competitions" USING "btree" ("cancelled_by");
 
 
@@ -10014,6 +10532,10 @@ CREATE INDEX "hr_zone_models_test_result_id_fk_idx" ON "public"."hr_zone_models"
 
 
 
+CREATE UNIQUE INDEX "hyrox_objective_versions_one_active" ON "public"."hyrox_objective_versions" USING "btree" ("active") WHERE "active";
+
+
+
 CREATE INDEX "hyrox_race_plans_athlete_id_fk_idx" ON "public"."hyrox_race_plans" USING "btree" ("athlete_id");
 
 
@@ -10039,6 +10561,10 @@ CREATE INDEX "hyrox_results_created_by_fk_idx" ON "public"."hyrox_results" USING
 
 
 CREATE INDEX "hyrox_results_watch_activity_id_fk_idx" ON "public"."hyrox_results" USING "btree" ("watch_activity_id");
+
+
+
+CREATE INDEX "hyrox_season_goals_created_by_fk_idx" ON "public"."hyrox_season_goals" USING "btree" ("created_by");
 
 
 
@@ -10358,11 +10884,19 @@ CREATE INDEX "injury_followups_athlete_day_idx" ON "public"."injury_followups" U
 
 
 
+CREATE INDEX "injury_followups_competition_idx" ON "public"."injury_followups" USING "btree" ("competition_id") WHERE ("competition_id" IS NOT NULL);
+
+
+
 CREATE INDEX "injury_followups_created_by_idx" ON "public"."injury_followups" USING "btree" ("created_by");
 
 
 
 CREATE INDEX "injury_followups_energy_idx" ON "public"."injury_followups" USING "btree" ("energy_assignment_id") WHERE ("energy_assignment_id" IS NOT NULL);
+
+
+
+CREATE UNIQUE INDEX "injury_followups_entry_competition_key" ON "public"."injury_followups" USING "btree" ("entry_id", "competition_id") WHERE ("competition_id" IS NOT NULL);
 
 
 
@@ -10377,7 +10911,20 @@ CREATE INDEX "injury_followups_entry_idx" ON "public"."injury_followups" USING "
 CREATE UNIQUE INDEX "injury_followups_entry_workout_key" ON "public"."injury_followups" USING "btree" ("entry_id", "workout_log_id") WHERE ("workout_log_id" IS NOT NULL);
 
 
+
 CREATE INDEX "injury_followups_workout_idx" ON "public"."injury_followups" USING "btree" ("workout_log_id") WHERE ("workout_log_id" IS NOT NULL);
+
+
+
+CREATE INDEX "injury_stage_history_athlete_idx" ON "public"."injury_stage_history" USING "btree" ("athlete_id");
+
+
+
+CREATE INDEX "injury_stage_history_changed_by_idx" ON "public"."injury_stage_history" USING "btree" ("changed_by") WHERE ("changed_by" IS NOT NULL);
+
+
+
+CREATE INDEX "injury_stage_history_entry_idx" ON "public"."injury_stage_history" USING "btree" ("entry_id", "changed_at");
 
 
 
@@ -10617,6 +11164,10 @@ CREATE OR REPLACE TRIGGER "citation_likes_sync" AFTER INSERT OR DELETE ON "publi
 
 
 
+CREATE OR REPLACE TRIGGER "competitions_plan_links" AFTER INSERT OR DELETE OR UPDATE OF "date", "type", "cancelled_at" ON "public"."competitions" FOR EACH ROW EXECUTE FUNCTION "public"."tg_plan_links_relink"();
+
+
+
 CREATE OR REPLACE TRIGGER "competitions_stamp_cancel" BEFORE INSERT OR UPDATE OF "cancelled_at", "cancelled_by" ON "public"."competitions" FOR EACH ROW EXECUTE FUNCTION "public"."competitions_stamp_cancel"();
 
 
@@ -10641,7 +11192,15 @@ CREATE OR REPLACE TRIGGER "hr_zone_models_refresh" AFTER INSERT OR UPDATE OF "st
 
 
 
+CREATE OR REPLACE TRIGGER "medical_entries_log_stage" AFTER INSERT OR UPDATE OF "recovery_stage", "status" ON "public"."medical_entries" FOR EACH ROW EXECUTE FUNCTION "public"."medical_entries_log_stage"();
+
+
+
 CREATE OR REPLACE TRIGGER "medical_entries_sans_soins" BEFORE INSERT OR UPDATE ON "public"."medical_entries" FOR EACH ROW EXECUTE FUNCTION "public"."medical_entries_sans_soins"();
+
+
+
+CREATE OR REPLACE TRIGGER "medical_entries_sync_stage" BEFORE INSERT OR UPDATE ON "public"."medical_entries" FOR EACH ROW EXECUTE FUNCTION "public"."medical_entries_sync_stage"();
 
 
 
@@ -10794,6 +11353,10 @@ CREATE OR REPLACE TRIGGER "trg_hyrox_race_plans_updated_at" BEFORE UPDATE ON "pu
 
 
 CREATE OR REPLACE TRIGGER "trg_hyrox_results_updated_at" BEFORE UPDATE ON "public"."hyrox_results" FOR EACH ROW EXECUTE FUNCTION "public"."set_updated_at"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_hyrox_season_goals_updated_at" BEFORE UPDATE ON "public"."hyrox_season_goals" FOR EACH ROW EXECUTE FUNCTION "public"."set_updated_at"();
 
 
 
@@ -11060,6 +11623,16 @@ ALTER TABLE ONLY "public"."coach_api_rate"
 
 
 
+ALTER TABLE ONLY "public"."coach_invitations"
+    ADD CONSTRAINT "coach_invitations_invited_by_fkey" FOREIGN KEY ("invited_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."coach_invitations"
+    ADD CONSTRAINT "coach_invitations_used_by_fkey" FOREIGN KEY ("used_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
 ALTER TABLE ONLY "public"."competitions"
     ADD CONSTRAINT "competitions_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
@@ -11285,6 +11858,11 @@ ALTER TABLE ONLY "public"."hyrox_axes_params"
 
 
 
+ALTER TABLE ONLY "public"."hyrox_objective_grid"
+    ADD CONSTRAINT "hyrox_objective_grid_version_fkey" FOREIGN KEY ("version") REFERENCES "public"."hyrox_objective_versions"("version") ON UPDATE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."hyrox_race_plans"
     ADD CONSTRAINT "hyrox_race_plans_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
@@ -11322,6 +11900,16 @@ ALTER TABLE ONLY "public"."hyrox_results"
 
 ALTER TABLE ONLY "public"."hyrox_results"
     ADD CONSTRAINT "hyrox_results_watch_activity_id_fkey" FOREIGN KEY ("watch_activity_id") REFERENCES "public"."provider_activities"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."hyrox_season_goals"
+    ADD CONSTRAINT "hyrox_season_goals_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."hyrox_season_goals"
+    ADD CONSTRAINT "hyrox_season_goals_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
 
 
 
@@ -11386,6 +11974,11 @@ ALTER TABLE ONLY "public"."injury_followups"
 
 
 ALTER TABLE ONLY "public"."injury_followups"
+    ADD CONSTRAINT "injury_followups_competition_id_fkey" FOREIGN KEY ("competition_id") REFERENCES "public"."competitions"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."injury_followups"
     ADD CONSTRAINT "injury_followups_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
 
 
@@ -11402,6 +11995,21 @@ ALTER TABLE ONLY "public"."injury_followups"
 
 ALTER TABLE ONLY "public"."injury_followups"
     ADD CONSTRAINT "injury_followups_workout_log_id_fkey" FOREIGN KEY ("workout_log_id") REFERENCES "public"."workout_logs"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."injury_stage_history"
+    ADD CONSTRAINT "injury_stage_history_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."injury_stage_history"
+    ADD CONSTRAINT "injury_stage_history_changed_by_fkey" FOREIGN KEY ("changed_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."injury_stage_history"
+    ADD CONSTRAINT "injury_stage_history_entry_id_fkey" FOREIGN KEY ("entry_id") REFERENCES "public"."medical_entries"("id") ON DELETE CASCADE;
 
 
 
@@ -12073,6 +12681,13 @@ CREATE POLICY "coach_insert_athlete_prs" ON "public"."exercise_pr_logs" FOR INSE
 
 
 
+ALTER TABLE "public"."coach_invitations" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "coach_invitations_read" ON "public"."coach_invitations" FOR SELECT TO "authenticated" USING ((("invited_by" = ( SELECT "auth"."uid"() AS "uid")) OR ( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin")));
+
+
+
 CREATE POLICY "coach_read_athlete_rpe" ON "public"."workout_rpe" FOR SELECT USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")));
 
 
@@ -12463,6 +13078,22 @@ CREATE POLICY "hrs_update" ON "public"."hyrox_reference_segments" FOR UPDATE USI
 
 
 
+CREATE POLICY "hsg_delete" ON "public"."hyrox_season_goals" FOR DELETE TO "authenticated" USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR ( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin")));
+
+
+
+CREATE POLICY "hsg_insert" ON "public"."hyrox_season_goals" FOR INSERT TO "authenticated" WITH CHECK ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR ( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin")));
+
+
+
+CREATE POLICY "hsg_select" ON "public"."hyrox_season_goals" FOR SELECT TO "authenticated" USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR ( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin")));
+
+
+
+CREATE POLICY "hsg_update" ON "public"."hyrox_season_goals" FOR UPDATE TO "authenticated" USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR ( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin"))) WITH CHECK ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR ( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin")));
+
+
+
 CREATE POLICY "hta_delete" ON "public"."hyrox_test_analyses" FOR DELETE USING (((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
    FROM "public"."profiles"
   WHERE (("profiles"."id" = ( SELECT "auth"."uid"() AS "uid")) AND "profiles"."is_admin")))));
@@ -12524,6 +13155,44 @@ CREATE POLICY "hyrox_axes_params_update" ON "public"."hyrox_axes_params" FOR UPD
 
 
 
+ALTER TABLE "public"."hyrox_objective_grid" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "hyrox_objective_grid_delete" ON "public"."hyrox_objective_grid" FOR DELETE TO "authenticated" USING (( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin"));
+
+
+
+CREATE POLICY "hyrox_objective_grid_insert" ON "public"."hyrox_objective_grid" FOR INSERT TO "authenticated" WITH CHECK (( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin"));
+
+
+
+CREATE POLICY "hyrox_objective_grid_select" ON "public"."hyrox_objective_grid" FOR SELECT TO "authenticated" USING (true);
+
+
+
+CREATE POLICY "hyrox_objective_grid_update" ON "public"."hyrox_objective_grid" FOR UPDATE TO "authenticated" USING (( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin")) WITH CHECK (( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin"));
+
+
+
+ALTER TABLE "public"."hyrox_objective_versions" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "hyrox_objective_versions_delete" ON "public"."hyrox_objective_versions" FOR DELETE TO "authenticated" USING (( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin"));
+
+
+
+CREATE POLICY "hyrox_objective_versions_insert" ON "public"."hyrox_objective_versions" FOR INSERT TO "authenticated" WITH CHECK (( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin"));
+
+
+
+CREATE POLICY "hyrox_objective_versions_select" ON "public"."hyrox_objective_versions" FOR SELECT TO "authenticated" USING (true);
+
+
+
+CREATE POLICY "hyrox_objective_versions_update" ON "public"."hyrox_objective_versions" FOR UPDATE TO "authenticated" USING (( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin")) WITH CHECK (( SELECT "public"."current_user_is_admin"() AS "current_user_is_admin"));
+
+
+
 ALTER TABLE "public"."hyrox_race_plans" ENABLE ROW LEVEL SECURITY;
 
 
@@ -12531,6 +13200,9 @@ ALTER TABLE "public"."hyrox_reference_segments" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."hyrox_results" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."hyrox_season_goals" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."hyrox_test_analyses" ENABLE ROW LEVEL SECURITY;
@@ -12643,6 +13315,13 @@ ALTER TABLE "public"."injury_followups" ENABLE ROW LEVEL SECURITY;
 
 
 CREATE POLICY "injury_followups_read" ON "public"."injury_followups" FOR SELECT TO "authenticated" USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id"))));
+
+
+
+ALTER TABLE "public"."injury_stage_history" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "injury_stage_history_read" ON "public"."injury_stage_history" FOR SELECT TO "authenticated" USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id"))));
 
 
 
@@ -13187,6 +13866,10 @@ CREATE POLICY "staff_habits_read" ON "public"."habits" FOR SELECT TO "authentica
 
 
 CREATE POLICY "staff_injury_followups_read" ON "public"."injury_followups" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'medical'::"text", 'read'::"text")));
+
+
+
+CREATE POLICY "staff_injury_stage_history_read" ON "public"."injury_stage_history" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_staff"() AS "i_am_staff") AND "public"."staff_can"("athlete_id", 'medical'::"text", 'read'::"text")));
 
 
 
@@ -14707,6 +15390,11 @@ GRANT ALL ON FUNCTION "public"."_missing"(character, "name", "name"[]) TO "servi
 
 
 
+REVOKE ALL ON FUNCTION "public"."_new_coach_code"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."_new_coach_code"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."_nosuch"("name", "name", "name"[]) TO "postgres";
 GRANT ALL ON FUNCTION "public"."_nosuch"("name", "name", "name"[]) TO "anon";
 GRANT ALL ON FUNCTION "public"."_nosuch"("name", "name", "name"[]) TO "authenticated";
@@ -14982,6 +15670,16 @@ GRANT ALL ON FUNCTION "public"."_set"("text", integer, "text") TO "postgres";
 GRANT ALL ON FUNCTION "public"."_set"("text", integer, "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."_set"("text", integer, "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."_set"("text", integer, "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."_signup_guard"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."_signup_guard"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."_signup_name"("p_full_name" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."_signup_name"("p_full_name" "text") TO "service_role";
 
 
 
@@ -16123,6 +16821,12 @@ GRANT ALL ON FUNCTION "public"."consume_oauth_state"("p_state" "text") TO "servi
 
 
 
+REVOKE ALL ON FUNCTION "public"."create_coach_invitation"("p_email" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."create_coach_invitation"("p_email" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."create_coach_invitation"("p_email" "text") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."create_cycle"("p_athlete" "uuid", "p_name" "text", "p_start" "date", "p_end" "date", "p_mesocycle" "uuid", "p_deload_week" integer, "p_sessions" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."create_cycle"("p_athlete" "uuid", "p_name" "text", "p_start" "date", "p_end" "date", "p_mesocycle" "uuid", "p_deload_week" integer, "p_sessions" "jsonb") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."create_cycle"("p_athlete" "uuid", "p_name" "text", "p_start" "date", "p_end" "date", "p_mesocycle" "uuid", "p_deload_week" integer, "p_sessions" "jsonb") TO "service_role";
@@ -16906,6 +17610,13 @@ GRANT ALL ON FUNCTION "public"."get_app_update_reads"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."get_claim_info"("p_token" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_claim_info"("p_token" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_claim_info"("p_token" "text") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."get_coach_invitation"("p_token" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."get_coach_invitation"("p_token" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_coach_invitation"("p_token" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_coach_invitation"("p_token" "text") TO "service_role";
 
 
 
@@ -20364,9 +21075,19 @@ GRANT ALL ON FUNCTION "public"."materialized_views_are"("name", "name"[], "text"
 
 
 
+REVOKE ALL ON FUNCTION "public"."medical_entries_log_stage"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."medical_entries_log_stage"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."medical_entries_sans_soins"() TO "anon";
 GRANT ALL ON FUNCTION "public"."medical_entries_sans_soins"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."medical_entries_sans_soins"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."medical_entries_sync_stage"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."medical_entries_sync_stage"() TO "service_role";
 
 
 
@@ -20911,6 +21632,24 @@ GRANT ALL ON FUNCTION "public"."refresh_athlete_zone_summaries"("p_athlete" "uui
 
 
 
+REVOKE ALL ON FUNCTION "public"."register_athlete"("p_coach_code" "text", "p_full_name" "text", "p_birth_date" "date") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."register_athlete"("p_coach_code" "text", "p_full_name" "text", "p_birth_date" "date") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."register_athlete"("p_coach_code" "text", "p_full_name" "text", "p_birth_date" "date") TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."register_coach"("p_token" "text", "p_full_name" "text", "p_birth_date" "date", "p_coach_athlete" boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."register_coach"("p_token" "text", "p_full_name" "text", "p_birth_date" "date", "p_coach_athlete" boolean) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."register_coach"("p_token" "text", "p_full_name" "text", "p_birth_date" "date", "p_coach_athlete" boolean) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."register_staff"("p_token" "text", "p_full_name" "text", "p_birth_date" "date", "p_profession" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."register_staff"("p_token" "text", "p_full_name" "text", "p_birth_date" "date", "p_profession" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."register_staff"("p_token" "text", "p_full_name" "text", "p_birth_date" "date", "p_profession" "text") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."relation_owner_is"("name", "name") TO "postgres";
 GRANT ALL ON FUNCTION "public"."relation_owner_is"("name", "name") TO "anon";
 GRANT ALL ON FUNCTION "public"."relation_owner_is"("name", "name") TO "authenticated";
@@ -20969,9 +21708,9 @@ GRANT ALL ON FUNCTION "public"."report_client_build"("p_build" "text") TO "servi
 
 
 
-REVOKE ALL ON FUNCTION "public"."report_session_pain"("p_workout_log" "uuid", "p_energy_assignment" "uuid", "p_levels" "jsonb", "p_note" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."report_session_pain"("p_workout_log" "uuid", "p_energy_assignment" "uuid", "p_levels" "jsonb", "p_note" "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."report_session_pain"("p_workout_log" "uuid", "p_energy_assignment" "uuid", "p_levels" "jsonb", "p_note" "text") TO "service_role";
+REVOKE ALL ON FUNCTION "public"."report_session_pain"("p_workout_log" "uuid", "p_energy_assignment" "uuid", "p_levels" "jsonb", "p_note" "text", "p_competition" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."report_session_pain"("p_workout_log" "uuid", "p_energy_assignment" "uuid", "p_levels" "jsonb", "p_note" "text", "p_competition" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."report_session_pain"("p_workout_log" "uuid", "p_energy_assignment" "uuid", "p_levels" "jsonb", "p_note" "text", "p_competition" "uuid") TO "service_role";
 
 
 
@@ -21158,6 +21897,12 @@ GRANT ALL ON FUNCTION "public"."results_ne"("text", "text", "text") TO "service_
 REVOKE ALL ON FUNCTION "public"."review_performance_notification"("p_notification" "uuid", "p_log" "uuid", "p_approve" boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."review_performance_notification"("p_notification" "uuid", "p_log" "uuid", "p_approve" boolean) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."review_performance_notification"("p_notification" "uuid", "p_log" "uuid", "p_approve" boolean) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."revoke_coach_invitation"("p_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."revoke_coach_invitation"("p_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."revoke_coach_invitation"("p_id" "uuid") TO "service_role";
 
 
 
@@ -22709,6 +23454,11 @@ GRANT ALL ON TABLE "public"."coach_api_rate" TO "service_role";
 
 
 
+GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."coach_invitations" TO "authenticated";
+GRANT ALL ON TABLE "public"."coach_invitations" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."competitions" TO "anon";
 GRANT ALL ON TABLE "public"."competitions" TO "authenticated";
 GRANT ALL ON TABLE "public"."competitions" TO "service_role";
@@ -22815,6 +23565,18 @@ GRANT ALL ON TABLE "public"."hyrox_axes_params" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."hyrox_objective_grid" TO "anon";
+GRANT ALL ON TABLE "public"."hyrox_objective_grid" TO "authenticated";
+GRANT ALL ON TABLE "public"."hyrox_objective_grid" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."hyrox_objective_versions" TO "anon";
+GRANT ALL ON TABLE "public"."hyrox_objective_versions" TO "authenticated";
+GRANT ALL ON TABLE "public"."hyrox_objective_versions" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."hyrox_race_plans" TO "anon";
 GRANT ALL ON TABLE "public"."hyrox_race_plans" TO "authenticated";
 GRANT ALL ON TABLE "public"."hyrox_race_plans" TO "service_role";
@@ -22830,6 +23592,12 @@ GRANT ALL ON TABLE "public"."hyrox_reference_segments" TO "service_role";
 GRANT ALL ON TABLE "public"."hyrox_results" TO "anon";
 GRANT ALL ON TABLE "public"."hyrox_results" TO "authenticated";
 GRANT ALL ON TABLE "public"."hyrox_results" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."hyrox_season_goals" TO "anon";
+GRANT ALL ON TABLE "public"."hyrox_season_goals" TO "authenticated";
+GRANT ALL ON TABLE "public"."hyrox_season_goals" TO "service_role";
 
 
 
@@ -22872,6 +23640,12 @@ GRANT ALL ON TABLE "public"."hyrox_work_axes_rules" TO "service_role";
 GRANT ALL ON TABLE "public"."injury_followups" TO "anon";
 GRANT ALL ON TABLE "public"."injury_followups" TO "authenticated";
 GRANT ALL ON TABLE "public"."injury_followups" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."injury_stage_history" TO "anon";
+GRANT ALL ON TABLE "public"."injury_stage_history" TO "authenticated";
+GRANT ALL ON TABLE "public"."injury_stage_history" TO "service_role";
 
 
 

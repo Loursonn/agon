@@ -15,8 +15,9 @@ vi.mock("@/features/shared/hooks/hyrox/useRaceWatch", () => ({
   useRaceWatch: () => ({ linked: false, candidates: [], ...watch }),
   useLinkRaceWatch: () => ({ mutate: vi.fn(), isPending: false }),
 }));
-vi.mock("@/features/shared/hooks/hyrox/useHyroxReferences", () => ({
-  useHyroxReferences: () => ({ data: [{ division: "all", bracket: "all", segment: "ski", p1_s: 200, p10_s: 220, p50_s: 240, p90_s: 300 }] }),
+// Dernier bilan de tests validé : la règle « seuils » est déclenchée.
+vi.mock("@/features/shared/hooks/hyrox/useHyroxTests", () => ({
+  useHyroxAnalyses: () => ({ data: [{ id: "t1", date: "2026-09-01", validated_at: "2026-09-02", outputs: { rules: [{ id: "run_seuils", axis: "Seuils de course", means: "" }] } }] }),
 }));
 vi.mock("@/features/shared/hooks/hyrox/useHyroxRacePlans", () => ({ useHyroxRacePlans: () => ({ data: plans }) }));
 vi.mock("@/features/shared/hooks/hyrox/useHyroxResults", () => ({ useHyroxResults: () => ({ data: [] }), useUpdateHyroxResult: () => ({ mutate: vi.fn(), isPending: false }) }));
@@ -41,9 +42,17 @@ describe("RaceAnalysis", () => {
     watch = { loading: false, activityId: null, detail: null, error: null };
     render(<RaceAnalysis race={race} onBack={() => {}} />);
     expect(screen.getByText("HYROX Paris")).toBeTruthy();
+    // Sans plan : objectif construit sur le run du jour ; aucune position dans la catégorie, seul le rang officiel.
+    expect(screen.getByText(/^Vs objectif/)).toBeTruthy();
+    expect(screen.getAllByText(/run du jour/).length).toBeGreaterThan(0);
+    expect(screen.queryByText("Position")).toBeNull();
+    expect(screen.getAllByText(/Top \d+ %/)).toHaveLength(1); // rang officiel 120 / 800, rien d'autre
+    expect(screen.getByText("Rang")).toBeTruthy();
     expect(screen.getAllByText(/Aucune activité de montre/).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole("tab", { name: "Gains" }));
-    expect(screen.getAllByText("SkiErg").length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("tab", { name: "Stratégie" }));
+    expect(screen.getByText("Et avec une meilleure stratégie ?")).toBeTruthy();
+    expect(screen.getAllByText("Roxzone").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Déjà dans ses axes/)).toBeNull(); // l'axe du bilan : coach seulement
     fireEvent.click(screen.getByRole("tab", { name: "Runs" }));
     expect(screen.getByText(/Allure par km/)).toBeTruthy();
   });
@@ -56,18 +65,22 @@ describe("RaceAnalysis", () => {
     expect(screen.getByText(/Départ placé à 10:00/)).toBeTruthy();
   });
 
-  it("coach : plan de course, « Comparer à », leviers et colonne Plan", () => {
+  it("coach : objectif = plan de course, « Comparer à », leviers et colonne Objectif", () => {
     watch = { loading: false, activityId: null, detail: null, error: null };
     const seg = (k: string) => (race as unknown as Record<string, number>)[`${k}_s`];
     const targets = Object.fromEntries(["run_1", "run_2", "run_3", "run_4", "run_5", "run_6", "run_7", "run_8", "ski", "sled_push", "sled_pull", "bbj", "row", "farmers", "lunges", "wall_balls"].map((k) => [k, seg(k) - 5]));
     plans = [{ id: "p1", result_id: "r1", competition_id: null, target_total_s: total - 80, targets: { ...targets, roxzone_per_transition: 50 }, updated_at: "2026-10-01" }];
     render(<RaceAnalysis race={race} onBack={() => {}} audience="coach" />);
-    expect(screen.getByText("Vs plan de course")).toBeTruthy();
-    expect(screen.getByRole("radio", { name: "Plan de course" }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByText(/^Vs objectif/)).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "Objectif · plan de course" }).getAttribute("aria-checked")).toBe("true");
     expect((screen.getByRole("radio", { name: /Course précédente/ }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText(/Leviers · quoi travailler/)).toBeTruthy();
     expect(screen.getAllByRole("button", { name: "Ajouter au programme" }).length).toBeGreaterThan(0);
-    expect(screen.getByText("Plan")).toBeTruthy();
+    // Runs tous 5 s au-dessus du plan : allure de course, reliée à l'axe « seuils » du bilan validé.
+    expect(screen.getAllByText("Allure de course").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Seuils de course").length).toBeGreaterThan(0);
+    expect(screen.getByText("Objectif")).toBeTruthy();
+    expect(screen.queryByText("Médiane")).toBeNull();
     plans = [];
   });
 });

@@ -5,7 +5,8 @@ import {
   AccountError, accountKeys, claimAthleteAccount, coachCodeExists, coachPreviewByCode, createPendingAthlete,
   deleteAccount, ensureCoachCode, generateCoachCode, getClaimInfo, getClaimToken, getCoachRoster, getConsents,
   invalidateAccount, linkToCoachByCode, pickFreeCoachCode, readOwnRows, recordConsents,
-  registerAthleteWithCode, registerCoach, registerStaff, reportClientBuild, serverReason, setCoachAthlete, setOwnCoach,
+  registerAthleteWithCode, registerCoach, registerStaff, reportClientBuild,
+  coachInvitationLink, coachInvitationStatus, createCoachInvitation, getCoachInvitation, revokeCoachInvitation, serverReason, setCoachAthlete, setOwnCoach,
 } from "@/api/account";
 import type { Profile } from "@/api/profile";
 
@@ -102,13 +103,27 @@ describe("api/account — code coach et inscription", () => {
     await expect(coachCodeExists("X")).rejects.toThrow(/Vérification du code coach impossible/);
   });
 
-  it("registerCoach : profil coach avec code ; coach-athlète = son propre coach", async () => {
-    const { tables } = world({}, { rpcs: { coach_code_exists: () => false } });
-    await registerCoach("a@b.c", "motdepasse", "Agon Démo", "1990-04-12", true);
-    expect(tables.profiles[0]).toMatchObject({
-      id: "new", role: "coach_athlete", full_name: "Agon Démo", coach_id: "new", birth_date: "1990-04-12",
-    });
-    expect(tables.profiles[0].coach_code).toMatch(/^[A-Z2-9]{6}$/);
+  const TOKEN = "t".repeat(64);
+  const invitation = (status = "valide", email = "a@b.c") => () => [{ email, inviter_name: "Agon Démo", status }];
+
+  it("registerCoach : invitation vérifiée, profil créé par la RPC register_coach", async () => {
+    const asked: Record<string, unknown>[] = [];
+    const w = world({}, { rpcs: { get_coach_invitation: invitation(), register_coach: (a) => (asked.push(a), "ABC234") } });
+    await registerCoach(" A@B.c ", "motdepasse", "Agon Démo", "1990-04-12", true, TOKEN);
+    expect(asked).toEqual([{ p_token: TOKEN, p_full_name: "Agon Démo", p_birth_date: "1990-04-12", p_coach_athlete: true }]);
+    expect(w.signUps).toHaveLength(1);
+    expect(w.tables.profiles ?? []).toHaveLength(0); // plus d'insertion directe
+  });
+
+  it("registerCoach : sans invitation valable ou avec un autre e-mail, refusé AVANT de créer le compte", async () => {
+    let w = world({}, { rpcs: { get_coach_invitation: () => [] } });
+    await expect(registerCoach("a@b.c", "motdepasse", "Coach", "1990-04-12", false, TOKEN)).rejects.toThrow("sur invitation");
+    await expect(registerCoach("a@b.c", "motdepasse", "Coach", "1990-04-12", false, "")).rejects.toThrow("sur invitation");
+    w = world({}, { rpcs: { get_coach_invitation: invitation("expiree") } });
+    await expect(registerCoach("a@b.c", "motdepasse", "Coach", "1990-04-12", false, TOKEN)).rejects.toThrow("expiré");
+    w = world({}, { rpcs: { get_coach_invitation: invitation("valide", "autre@b.c") } });
+    await expect(registerCoach("a@b.c", "motdepasse", "Coach", "1990-04-12", false, TOKEN)).rejects.toThrow("autre@b.c");
+    expect(w.signUps).toEqual([]);
   });
 
   it("registerAthleteWithCode : code inconnu refusé AVANT de créer le compte", async () => {
@@ -117,17 +132,16 @@ describe("api/account — code coach et inscription", () => {
     expect(tables.profiles ?? []).toHaveLength(0);
   });
 
-  it("registerAthleteWithCode : rattachement par la RPC, message d'origine si elle refuse", async () => {
-    const linked: unknown[] = [];
-    const { tables } = world({}, { rpcs: { coach_code_exists: () => true, link_to_coach_by_code: (a) => (linked.push(a.p_code), "coach") } });
+  it("registerAthleteWithCode : profil et rattachement par la RPC register_athlete, message d'origine si elle refuse", async () => {
+    const asked: Record<string, unknown>[] = [];
+    const { tables } = world({}, { rpcs: { coach_code_exists: () => true, register_athlete: (a) => (asked.push(a), "coach") } });
     await registerAthleteWithCode("a@b.c", "motdepasse", "Léa Démo", "1998-04-12", "demo42");
-    expect(tables.profiles[0]).toEqual(expect.objectContaining({ id: "new", role: "athlete", full_name: "Léa Démo", birth_date: "1998-04-12" }));
-    expect(tables.profiles[0].coach_id).toBeUndefined();
-    expect(linked).toEqual(["DEMO42"]);
+    expect(asked).toEqual([{ p_coach_code: "DEMO42", p_full_name: "Léa Démo", p_birth_date: "1998-04-12" }]);
+    expect(tables.profiles ?? []).toHaveLength(0);
 
-    world({}, { rpcs: { coach_code_exists: () => true, link_to_coach_by_code: raise("Code coach invalide") } });
+    world({}, { rpcs: { coach_code_exists: () => true, register_athlete: raise("Code coach invalide — vérifie auprès de ton coach") } });
     await expect(registerAthleteWithCode("a@b.c", "motdepasse", "Léa", "1998-04-12", "X"))
-      .rejects.toThrow("Compte créé, mais le rattachement au coach a échoué : Code coach invalide");
+      .rejects.toThrow("Code coach invalide — vérifie auprès de ton coach");
   });
 
   it("coachPreviewByCode : nom du coach, code normalisé, null si inconnu", async () => {
@@ -152,21 +166,43 @@ describe("api/account — code coach et inscription", () => {
     const young = `${today.getFullYear() - 14}-01-01`;
     const w = world({}, { rpcs: { coach_code_exists: () => true } });
     const msg = "Tu dois avoir au moins 15 ans pour utiliser Agon.";
-    await expect(registerCoach("a@b.c", "motdepasse", "Coach", young)).rejects.toThrow(msg);
+    await expect(registerCoach("a@b.c", "motdepasse", "Coach", young, false, TOKEN)).rejects.toThrow(msg);
     await expect(registerAthleteWithCode("a@b.c", "motdepasse", "Léa", young, "DEMO42")).rejects.toThrow(msg);
-    await expect(registerStaff("a@b.c", "motdepasse", "Kiné", young, "kine")).rejects.toThrow(msg);
+    await expect(registerStaff("a@b.c", "motdepasse", "Kiné", young, "kine", TOKEN)).rejects.toThrow(msg);
     await expect(claimAthleteAccount("tok", "a@b.c", "motdepasse", young)).rejects.toThrow(msg);
-    await expect(registerCoach("a@b.c", "motdepasse", "Coach", "")).rejects.toThrow("Indique ta date de naissance.");
-    await expect(registerStaff("a@b.c", "motdepasse", "Kiné", future, "kine")).rejects.toThrow("Date de naissance invalide.");
+    await expect(registerCoach("a@b.c", "motdepasse", "Coach", "", false, TOKEN)).rejects.toThrow("Indique ta date de naissance.");
+    await expect(registerStaff("a@b.c", "motdepasse", "Kiné", future, "kine", TOKEN)).rejects.toThrow("Date de naissance invalide.");
     expect(w.signUps).toEqual([]);
     expect(w.invoked).toEqual([]);
     expect(w.tables.profiles ?? []).toHaveLength(0);
   });
 
-  it("registerStaff : profil staff avec date de naissance et métier", async () => {
-    const { tables } = world();
-    await registerStaff("k@b.c", "motdepasse", "Kiné Démo", "1985-06-01", "kine");
-    expect(tables.profiles[0]).toMatchObject({ id: "new", role: "staff", full_name: "Kiné Démo", birth_date: "1985-06-01", profession: "kine" });
+  it("registerStaff : profil staff par la RPC register_staff, avec l'invitation staff", async () => {
+    const asked: Record<string, unknown>[] = [];
+    const { tables } = world({}, { rpcs: { register_staff: (a) => (asked.push(a), "new") } });
+    await registerStaff("k@b.c", "motdepasse", "Kiné Démo", "1985-06-01", "kine", TOKEN);
+    expect(asked).toEqual([{ p_token: TOKEN, p_full_name: "Kiné Démo", p_birth_date: "1985-06-01", p_profession: "kine" }]);
+    expect(tables.profiles ?? []).toHaveLength(0);
+  });
+
+  it("invitations coach : état, lien, création et révocation par RPC", async () => {
+    expect(coachInvitationStatus({ usedAt: null, revokedAt: null, expiresAt: "2026-11-20T00:00:00Z" }, Date.parse("2026-11-16T00:00:00Z"))).toBe("valide");
+    expect(coachInvitationStatus({ usedAt: null, revokedAt: null, expiresAt: "2026-11-10T00:00:00Z" }, Date.parse("2026-11-16T00:00:00Z"))).toBe("expiree");
+    expect(coachInvitationStatus({ usedAt: "2026-11-12T00:00:00Z", revokedAt: null, expiresAt: "2026-11-10T00:00:00Z" })).toBe("utilisee");
+    expect(coachInvitationStatus({ usedAt: null, revokedAt: "2026-11-12T00:00:00Z", expiresAt: "2099-01-01T00:00:00Z" })).toBe("revoquee");
+    expect(coachInvitationLink("https://agon-training.com", "abc")).toBe("https://agon-training.com/coach-invite/abc");
+    const revoked: unknown[] = [];
+    world({}, { rpcs: {
+      create_coach_invitation: (a) => [{ id: "i1", token: TOKEN, email: String(a.p_email).trim().toLowerCase(), expires_at: "2026-11-23T00:00:00Z" }],
+      revoke_coach_invitation: (a) => (revoked.push(a.p_id), null),
+    } });
+    const inv = await createCoachInvitation(" Coach@B.c ");
+    expect(inv).toMatchObject({ id: "i1", token: TOKEN, email: "coach@b.c" });
+    await revokeCoachInvitation("i1");
+    expect(revoked).toEqual(["i1"]);
+    world({}, { rpcs: { get_coach_invitation: invitation("utilisee") } });
+    expect(await getCoachInvitation(TOKEN)).toEqual({ email: "a@b.c", inviterName: "Agon Démo", status: "utilisee" });
+    expect(await getCoachInvitation("court")).toBeNull();
   });
 
   it("linkToCoachByCode : AccountError dont `reason` garde le message du serveur", async () => {

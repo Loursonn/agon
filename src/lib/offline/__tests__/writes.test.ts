@@ -17,10 +17,11 @@ describe("writeKey", () => {
     );
   });
   it("douleur de séance : une clé par séance (deux séances en attente ne se fusionnent pas)", () => {
-    const pain = (source: { workoutLogId: string } | { energyAssignmentId: string }) =>
+    const pain = (source: { workoutLogId: string } | { energyAssignmentId: string } | { competitionId: string }) =>
       writeKey("session.pain", { athleteId: "a", source, levels: { Genou: 6 }, note: null });
     expect(pain({ workoutLogId: "L1" })).toBe("session.pain:L1");
     expect(pain({ energyAssignmentId: "E1" })).toBe("session.pain:E1");
+    expect(pain({ competitionId: "C1" })).toBe("session.pain:C1");
     expect(pain({ workoutLogId: "L1" })).not.toBe(pain({ workoutLogId: "L2" }));
   });
   it("activités libres : une seule saisie en attente par athlète (la liste la plus récente remplace)", () => {

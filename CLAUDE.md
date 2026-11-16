@@ -101,7 +101,7 @@ La CI GitHub (`.github/workflows/ci.yml`) lance `typecheck`, `lint`, `test`, `bu
 - **Base de test `agon-test`** (`docs/BASE_DE_TEST.md`) : vérifications d'écran, seeds démo et tests qui écrivent s'y font (`npm run dev -- --mode staging`, `seed-demo.mjs --env staging`), jamais en prod.
 - **Demander à Hugo avant toute écriture en prod.** Tester d'abord à blanc : `BEGIN; … ; ROLLBACK;` avec `SET LOCAL ROLE authenticated` + `set_config('request.jwt.claims', …)` (exemples dans `supabase/tests/`).
 - Durcissement côté serveur : mesurer `git rev-list --count origin/main..origin/dev`. Le client de prod vient de `main` ; s'il ne sait pas encore appeler la nouvelle règle, découper la migration (avant / après déploiement).
-- Après une migration : régénérer `supabase gen types typescript --linked > src/integrations/supabase/types.ts`.
+- **Jamais de copie de schéma (`db dump`), d'export ni de lecture massive sur la prod** : le plan gratuit tombe (3 pannes, dont le 16/11 à 1 h). Chaque migration est rejouée sur `agon-test`, et `schema.sql`, `reference_data.sql` et les types se régénèrent depuis `~/agon-test-cli` (`supabase/tests/ci/README.md`). En prod : la migration, une requête de contrôle, `migration repair`, et c'est tout.
 - Changer `profiles.coach_id` : seulement via les RPC `link_to_coach_by_code`, `redeem_invitation`, `unlink_athlete` ou les Edge Functions.
 
 ## Edge Functions — déploiement
@@ -122,6 +122,7 @@ Ne jamais montrer, capturer ni exporter de vrais athlètes. Pour les captures et
 
 - `main` = production (Vercel). On n'y committe jamais directement.
 - `dev` = branche de travail partagée par Hugo et Tito. Pas de feature branches.
+- **Au plus 3 chantiers qui écrivent en même temps** (décision 2026-11-16, après la 3ᵉ panne de prod) : chacun dans son propre worktree, jamais dans le dossier principal partagé ; une 4ᵉ demande attend qu'un chantier finisse. Les sessions qui ne font que lire ne comptent pas.
 
 **Début de session** :
 ```bash

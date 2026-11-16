@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ActivityStream } from "@shared/activityFiles/stream";
 import type { HyroxReferenceSegment, HyroxResult } from "@/features/shared/types/hyrox";
 import {
-  bracketLabel, previousRace, profilePercentiles, raceShortName, recordGap, runPaceEvolution, segmentPositions, timeSplit,
+  bracketLabel, previousRace, raceShortName, recordGap, runPaceEvolution, segmentPositions, timeSplit,
 } from "@/lib/hyrox/raceEvolution";
 import {
   cadenceDrop, compromisedFromTimes, crossRaceWithWatch, raceGains, runCostAfter, shareAboveHr, stationsAtLevel,
@@ -81,9 +81,6 @@ describe("raceEvolution", () => {
     expect(ski.deltaPts).toBe(-40);
     expect(rows.map((r) => r.key).slice(-2)).toEqual(["run_total", "roxzone_total"]);
     expect(rows.find((r) => r.key === "sled_push")!.latestPct).toBeNull();
-    const p = profilePercentiles(result(), lookup);
-    expect(p.run).toBe(50);
-    expect(p.stations).toBe(23);
   });
 });
 

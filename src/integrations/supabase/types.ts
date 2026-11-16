@@ -1248,6 +1248,57 @@ export type Database = {
           },
         ]
       }
+      coach_invitations: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string | null
+          revoked_at: string | null
+          token: string
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          revoked_at?: string | null
+          token?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          revoked_at?: string | null
+          token?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_invitations_used_by_fkey"
+            columns: ["used_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       competitions: {
         Row: {
           athlete_comment: string | null
@@ -1265,6 +1316,9 @@ export type Database = {
           notes: string | null
           planning_block_id: string | null
           priority: string
+          result_text: string | null
+          result_url: string | null
+          rpe_score: number | null
           season_id: string | null
           type: string
         }
@@ -1284,6 +1338,9 @@ export type Database = {
           notes?: string | null
           planning_block_id?: string | null
           priority?: string
+          result_text?: string | null
+          result_url?: string | null
+          rpe_score?: number | null
           season_id?: string | null
           type?: string
         }
@@ -1303,6 +1360,9 @@ export type Database = {
           notes?: string | null
           planning_block_id?: string | null
           priority?: string
+          result_text?: string | null
+          result_url?: string | null
+          rpe_score?: number | null
           season_id?: string | null
           type?: string
         }
@@ -2336,6 +2396,92 @@ export type Database = {
           },
         ]
       }
+      hyrox_objective_grid: {
+        Row: {
+          bbj_s: number
+          created_at: string
+          division: string
+          farmers_s: number
+          is_estimate: boolean
+          lunges_s: number
+          row_s: number
+          roxzone_s: number
+          run_avg_s: number
+          run_shape: number[]
+          ski_s: number
+          sled_pull_s: number
+          sled_push_s: number
+          source: string
+          version: string
+          wall_balls_s: number
+        }
+        Insert: {
+          bbj_s: number
+          created_at?: string
+          division: string
+          farmers_s: number
+          is_estimate?: boolean
+          lunges_s: number
+          row_s: number
+          roxzone_s: number
+          run_avg_s: number
+          run_shape: number[]
+          ski_s: number
+          sled_pull_s: number
+          sled_push_s: number
+          source: string
+          version: string
+          wall_balls_s: number
+        }
+        Update: {
+          bbj_s?: number
+          created_at?: string
+          division?: string
+          farmers_s?: number
+          is_estimate?: boolean
+          lunges_s?: number
+          row_s?: number
+          roxzone_s?: number
+          run_avg_s?: number
+          run_shape?: number[]
+          ski_s?: number
+          sled_pull_s?: number
+          sled_push_s?: number
+          source?: string
+          version?: string
+          wall_balls_s?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hyrox_objective_grid_version_fkey"
+            columns: ["version"]
+            isOneToOne: false
+            referencedRelation: "hyrox_objective_versions"
+            referencedColumns: ["version"]
+          },
+        ]
+      }
+      hyrox_objective_versions: {
+        Row: {
+          active: boolean
+          created_at: string
+          notes: string | null
+          version: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          notes?: string | null
+          version: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          notes?: string | null
+          version?: string
+        }
+        Relationships: []
+      }
       hyrox_race_plans: {
         Row: {
           athlete_id: string
@@ -2344,6 +2490,8 @@ export type Database = {
           created_by: string | null
           division: string
           id: string
+          locked_total: boolean
+          model_version: string | null
           name: string
           notes: string | null
           predicted_from: Json | null
@@ -2351,6 +2499,7 @@ export type Database = {
           predicted_total_s: number | null
           profile: string
           result_id: string | null
+          run_avg_s: number | null
           target_total_s: number
           targets: Json
           updated_at: string
@@ -2362,6 +2511,8 @@ export type Database = {
           created_by?: string | null
           division: string
           id?: string
+          locked_total?: boolean
+          model_version?: string | null
           name: string
           notes?: string | null
           predicted_from?: Json | null
@@ -2369,6 +2520,7 @@ export type Database = {
           predicted_total_s?: number | null
           profile?: string
           result_id?: string | null
+          run_avg_s?: number | null
           target_total_s: number
           targets: Json
           updated_at?: string
@@ -2380,6 +2532,8 @@ export type Database = {
           created_by?: string | null
           division?: string
           id?: string
+          locked_total?: boolean
+          model_version?: string | null
           name?: string
           notes?: string | null
           predicted_from?: Json | null
@@ -2387,6 +2541,7 @@ export type Database = {
           predicted_total_s?: number | null
           profile?: string
           result_id?: string | null
+          run_avg_s?: number | null
           target_total_s?: number
           targets?: Json
           updated_at?: string
@@ -2667,6 +2822,57 @@ export type Database = {
             columns: ["watch_activity_id"]
             isOneToOne: false
             referencedRelation: "provider_activities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hyrox_season_goals: {
+        Row: {
+          athlete_id: string
+          created_at: string
+          created_by: string | null
+          division: string
+          id: string
+          note: string | null
+          run_avg_s: number
+          season: string
+          updated_at: string
+        }
+        Insert: {
+          athlete_id: string
+          created_at?: string
+          created_by?: string | null
+          division: string
+          id?: string
+          note?: string | null
+          run_avg_s: number
+          season: string
+          updated_at?: string
+        }
+        Update: {
+          athlete_id?: string
+          created_at?: string
+          created_by?: string | null
+          division?: string
+          id?: string
+          note?: string | null
+          run_avg_s?: number
+          season?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hyrox_season_goals_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hyrox_season_goals_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2991,6 +3197,7 @@ export type Database = {
       injury_followups: {
         Row: {
           athlete_id: string
+          competition_id: string | null
           created_at: string
           created_by: string | null
           day: string
@@ -3003,6 +3210,7 @@ export type Database = {
         }
         Insert: {
           athlete_id: string
+          competition_id?: string | null
           created_at?: string
           created_by?: string | null
           day: string
@@ -3015,6 +3223,7 @@ export type Database = {
         }
         Update: {
           athlete_id?: string
+          competition_id?: string | null
           created_at?: string
           created_by?: string | null
           day?: string
@@ -3031,6 +3240,13 @@ export type Database = {
             columns: ["athlete_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "injury_followups_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
             referencedColumns: ["id"]
           },
           {
@@ -3059,6 +3275,55 @@ export type Database = {
             columns: ["workout_log_id"]
             isOneToOne: false
             referencedRelation: "workout_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      injury_stage_history: {
+        Row: {
+          athlete_id: string
+          changed_at: string
+          changed_by: string | null
+          entry_id: string
+          id: string
+          stage: string
+        }
+        Insert: {
+          athlete_id: string
+          changed_at?: string
+          changed_by?: string | null
+          entry_id: string
+          id?: string
+          stage: string
+        }
+        Update: {
+          athlete_id?: string
+          changed_at?: string
+          changed_by?: string | null
+          entry_id?: string
+          id?: string
+          stage?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "injury_stage_history_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "injury_stage_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "injury_stage_history_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "medical_entries"
             referencedColumns: ["id"]
           },
         ]
@@ -3221,6 +3486,7 @@ export type Database = {
           mechanism: string | null
           notes: string | null
           pain_level: number | null
+          recovery_stage: string | null
           return_date: string | null
           status: string
           title: string
@@ -3242,6 +3508,7 @@ export type Database = {
           mechanism?: string | null
           notes?: string | null
           pain_level?: number | null
+          recovery_stage?: string | null
           return_date?: string | null
           status?: string
           title: string
@@ -3263,6 +3530,7 @@ export type Database = {
           mechanism?: string | null
           notes?: string | null
           pain_level?: number | null
+          recovery_stage?: string | null
           return_date?: string | null
           status?: string
           title?: string
@@ -5801,6 +6069,7 @@ export type Database = {
       _get_latest: { Args: { "": string }; Returns: number[] }
       _get_note: { Args: { "": string }; Returns: string }
       _is_verbose: { Args: never; Returns: boolean }
+      _new_coach_code: { Args: never; Returns: string }
       _prokind: { Args: { p_oid: unknown }; Returns: unknown }
       _query: { Args: { "": string }; Returns: string }
       _refine_vol: { Args: { "": string }; Returns: string }
@@ -5809,6 +6078,8 @@ export type Database = {
         Args: { p_levels: Json; p_note: string }
         Returns: Record<string, unknown>
       }
+      _signup_guard: { Args: never; Returns: string }
+      _signup_name: { Args: { p_full_name: string }; Returns: string }
       _table_privs: { Args: never; Returns: unknown[] }
       _temptypes: { Args: { "": string }; Returns: string }
       _todo: { Args: never; Returns: string }
@@ -6030,6 +6301,15 @@ export type Database = {
           redirect_uri: string
         }[]
       }
+      create_coach_invitation: {
+        Args: { p_email: string }
+        Returns: {
+          email: string
+          expires_at: string
+          id: string
+          token: string
+        }[]
+      }
       create_cycle: {
         Args: {
           p_athlete: string
@@ -6097,6 +6377,14 @@ export type Database = {
           coach_name: string
           first_name: string
           last_name: string
+        }[]
+      }
+      get_coach_invitation: {
+        Args: { p_token: string }
+        Returns: {
+          email: string
+          inviter_name: string
+          status: string
         }[]
       }
       get_coach_overview: { Args: { coach_uuid: string }; Returns: Json }
@@ -6479,6 +6767,32 @@ export type Database = {
         Args: { p_athlete: string; p_from: string }
         Returns: number
       }
+      register_athlete: {
+        Args: {
+          p_birth_date: string
+          p_coach_code: string
+          p_full_name: string
+        }
+        Returns: string
+      }
+      register_coach: {
+        Args: {
+          p_birth_date: string
+          p_coach_athlete?: boolean
+          p_full_name: string
+          p_token: string
+        }
+        Returns: string
+      }
+      register_staff: {
+        Args: {
+          p_birth_date: string
+          p_full_name: string
+          p_profession: string
+          p_token: string
+        }
+        Returns: string
+      }
       remove_co_coach: { Args: { p_athlete: string }; Returns: undefined }
       remove_provider_activity: { Args: { p_activity: string }; Returns: Json }
       reopen_energy_assignment: {
@@ -6543,6 +6857,7 @@ export type Database = {
       report_client_build: { Args: { p_build: string }; Returns: undefined }
       report_session_pain: {
         Args: {
+          p_competition?: string
           p_energy_assignment?: string
           p_levels?: Json
           p_note?: string
@@ -6558,6 +6873,7 @@ export type Database = {
         Args: { p_approve: boolean; p_log: string; p_notification: string }
         Returns: undefined
       }
+      revoke_coach_invitation: { Args: { p_id: string }; Returns: undefined }
       rls_linked_to: { Args: { p_athlete: string }; Returns: boolean }
       run_workout_status_maintenance: {
         Args: never

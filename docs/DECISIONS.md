@@ -2706,3 +2706,72 @@ et son README.
   « séance : <nom> », zones, commentaire) ; une blessure née d'une séance n'est pas répétée en ligne « blessure ».
 - **Coach** : la blessure apparaît dans le profil santé et les badges « blessure active » ; sur la séance, pastille
   « Douleur » (Retours semaine et mois, panneau du jour, tiroir « Prévu et réalisé »), lue dans les suivis.
+
+## 2026-11-16 — Fenêtre « À faire » athlète et weekly review au choix
+
+**Contexte** : idée d'Hugo (14/11) : quand un athlète a des choses à faire, une fenêtre s'ouvre à l'ouverture de l'app, et si possible une notification.
+
+**Décisions d'Hugo (15/11)** :
+- Contenu : wellness du jour, séance pas terminée, retour du coach sans réaction, fiche jamais ouverte, compétition passée sans bilan, weekly review. Pas le test du jour.
+- Une fois par jour (première ouverture du jour, s'il reste quelque chose) ; le wellness est une ligne de la liste, il ne s'ouvre pas tout seul.
+- Notifications : plus tard, avec l'app native (Capacitor, 2027). Sur iPhone, le web ne notifie que si l'app est installée sur l'écran d'accueil.
+- Weekly review **désactivée par défaut**, activée par le coach athlète par athlète (« ça dépend du profil »). Désactivée : plus de bandeau, plus de ligne, page vide côté athlète ; l'athlète sort de la page coach Weekly reviews. L'historique reste visible dans l'onglet Review de l'athlète.
+
+**Choix techniques** :
+- Logique pure dans `src/lib/athleteTodo.ts`, fenêtre `AthleteTodoSheet` montée dans `AthleteLayout`, attend qu'aucune autre fenêtre ne soit ouverte. « Déjà vue aujourd'hui » : localStorage par compte (`agon:todo-shown:<uid>`), donc par appareil.
+- Activation de la weekly review rangée dans `profiles.home_hidden_sections` sous la forme `+weekly_review` (sections « à activer », `HOME_OPT_IN_SECTIONS`) : pas de colonne ni de migration, prod gelée ce jour-là. À migrer vers une vraie colonne si d'autres options s'ajoutent.
+
+## 2026-11-15 — Étape de résolution d'une blessure
+
+Demande d'Hugo : changer le statut d'une blessure active et suivre son degré de résolution. Cinq étapes : Blessé → Réhabilitation → Réhab presque finie → Réathlétisation → Guéri (`medical_entries.recovery_stage`).
+- Qui la change : l'athlète, ses coachs et le staff autorisé sur « medical » (mêmes droits que la blessure, RLS inchangée).
+- Où : frise de 5 étapes sur la carte blessure du profil (coach, athlète, staff) et dans Retours (ordinateur et téléphone).
+- Historique daté de chaque étape (`injury_stage_history`), écrit par déclencheur seulement.
+- `status` reste la source des badges « blessure active », de `report_session_pain` et de l'IA : un déclencheur le tient d'accord (Guéri ⇔ `gueri`, sinon `en_cours`). Un client qui n'écrit que `status` reste juste.
+- L'assistant IA lit l'étape (liste blanche `@shared/domain/injuries`, champ `etape`).
+- Migration additive `20261116160000_injury_recovery_stage`, appliquée en prod le 15/11 ; coach-api redéployée.
+
+## 2026-11-15 — Inscription fermée : coachs sur invitation
+
+Demande d'Hugo : empêcher n'importe qui de s'inscrire sur Agon. Choix d'Hugo :
+- coach sur invitation seulement : lien lié à l'e-mail du coach, valable 7 jours, à usage unique, révocable (`coach_invitations`) ;
+- invitation créée par l'admin ou par un coach certifié (page Coachs) ;
+- athlètes et staff verrouillés côté serveur aussi : profil créé par RPC (`register_athlete` avec un code coach valide, rattachement dans la même transaction ; `register_staff` avec une invitation staff valide).
+Deux temps (règle « durcissement côté serveur ») : migration `20261116170000_signup_invitations` additive (table, RPC `register_*`), puis, une fois en prod le client qui les appelle, une migration séparée fait refuser par `guard_profile_privileged_fields` toute création de profil hors de ces RPC (drapeau `agon.signup`). Les coachs existants gardent leur accès. Les comptes créés par le serveur (athlètes en attente, `service_role`) ne sont pas concernés.
+
+## 2026-11-16 — La compétition est une séance à remplir le jour J
+
+Demande d'Hugo (15/11) : « lorsqu'un athlète a une compétition, il faut la mettre comme un entraînement à remplir », liable à une sortie Garmin (« Iron Rock » = HYROX, dictée vocale), en faisant attention à l'échauffement, autre activité, avant la course, souvent la plus longue.
+
+**Décisions d'Hugo (15/11)** :
+- La compétition **elle-même** devient la séance du jour J (pas de séance copiée dans le planning, rien à synchroniser) : compétitions et matchs maintenus ; stage, off, autre gardent le simple bilan écrit.
+- Échauffement : activité à part. La course proposée d'office est la plus longue du jour, ou celle dont la durée est la plus proche du chrono HYROX saisi ; l'athlète ou le coach peut choisir l'autre. L'échauffement reste une activité du jour, comptée à part dans la charge.
+- Saisie : résultat libre et lien (pas de chrono ni de classement structurés), plus RPE, ressenti / bilan (`athlete_comment`, existant) et douleur de fin de séance.
+
+**Choix techniques** :
+- Migration en deux temps, parce que le client de `main` (622 commits de retard) n'affiche pas une activité rattachée à un type de séance qu'il ne connaît pas :
+  - A, `20261116190000_competition_session` (additive, appliquée tout de suite) : `competitions.result_text / result_url / rpe_score` ; type `competition` dans `activity_plan_links` et `link_activity_to_plan` (rattachement choisi par l'athlète ou le coach) ; trigger sur `competitions` (date, type, annulation, suppression) ; `injury_followups.competition_id` et `report_session_pain(..., p_competition)` (dernier argument, facultatif : les appels existants ne changent pas).
+  - B, `supabase/pending/20261116190500_competition_auto_link` (après mise en prod du front) : proposition automatique en base (famille `any`, durée de référence = chrono HYROX sinon plus longue activité acceptée du jour), trigger du chrono HYROX, premier calcul. D'ici là la même règle est calculée côté client dans « Ma séance ».
+- Un seul mécanisme de lien : le rapprochement planning. L'analyse HYROX garde son propre lien (`hyrox_results.watch_activity_id` + recalage) mais prend d'office l'activité liée à la compétition.
+- Charge : la course liée à une compétition compte comme une activité (FC), pas comme une séance prévue ; l'échauffement aussi.
+- Prévu / réalisé : un lien vers une séance absente de la lecture (compétition annulée…) laisse l'activité libre, visible, au lieu de la faire disparaître.
+
+## 2026-11-15 — L'assistant Claude du coach lit douleur, maladie et bilan hebdo (accord IA du 15/11)
+
+- **Demande d'Hugo** : une analyse de la semaine complète par Claude, douleurs et ressenti compris. Le 13/11, ces données
+  étaient promises « jamais transmises à une IA » (accord IA inchangé ce jour-là).
+- **Choix d'Hugo** : élargir l'accord IA unique (pas de case séparée). `LEGAL_VERSION` et `AI_CONSENT_SINCE` passent au
+  2026-11-15 : la question IA est reposée à tous les athlètes majeurs. Accord socle inchangé (`CORE_CONSENT_SINCE`).
+- **Ce qui part** (bloc `details_sante` de `GET /summary`, `_shared/coachApiHealthDetails.ts`) : douleur 0-10, zones de
+  douleur et de courbatures (identifiants de la carte), malade, envie ; douleur de suivi d'une blessure (`injury_followups`,
+  zone de la blessure, après séance ou non) ; bilans hebdo envoyés : 5 notes, statut des engagements, cause du blocage,
+  douleur (zone 40 car., type, niveau), feu à l'envoi, retour du coach oui/non et réaction de l'athlète.
+- **Choix d'Hugo** : chiffres et choix seulement. Restent exclus : note de blessure du matin, note de suivi, phrases du bilan
+  (engagements, « ce qui a marché / bloqué / à changer », mot au coach), commentaire de retour du coach.
+- **Paliers, pas de coupure** : un accord ≥ `AI_ASSISTANT_SINCE` (30/10) reste valable pour ce qu'il nommait. Le serveur
+  sert l'ancien résumé, octet pour octet (golden), et ajoute `details_sante` seulement si `doc_version ≥
+  AI_HEALTH_DETAILS_SINCE`. Aucun athlète ne disparaît de l'API en attendant sa réponse ; le serveur peut être déployé
+  avant le client (personne n'atteint la nouvelle version tant que `main` ne porte pas le nouveau texte).
+- **API Claude d'Agon** (`athlete-insights`, `ai-program`) : rien de nouveau, ces données ne lui sont toujours pas envoyées.
+- Politique (§ finalités, § assistant, liste « jamais transmis »), texte de l'accord, écran de mise à jour,
+  `docs/stores/DONNEES_COLLECTEES.md` et `docs/API_COACH.md` mis à jour.

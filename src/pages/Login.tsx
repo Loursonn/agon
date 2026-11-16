@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { CircleCheck, Dumbbell, Users } from "lucide-react";
 import { errorMessage } from "@/lib/errors";
 import { LEGAL_ROUTES } from "@/lib/legal";
@@ -7,7 +7,7 @@ import { localIsoDay } from "@shared/domain/dates";
 import { MIN_AGE, OLDEST_BIRTH_DATE } from "@/lib/age";
 import { useAuth } from "@/hooks/useAuth";
 import { isPasswordLongEnough, resendSignupEmail, sendPasswordReset } from "@/api/auth";
-import { coachPreviewByCode, normalizeCoachCode } from "@/api/account";
+import { COACH_INVITATION_STATUS_TEXT, coachPreviewByCode, getCoachInvitation, normalizeCoachCode, type CoachInvitationPreview } from "@/api/account";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { C, alpha } from "@/lib/theme";
 import { MONO } from "@/features/shared/components/seance/seanceUi";
@@ -28,6 +28,9 @@ const link = { background: "none", border: "none", padding: 0, color: C.ac, font
  * rôle, code du coach (vérifié dès le 6ᵉ caractère, le coach trouvé s'affiche),
  * compte. L'accord sur les données de santé est demandé à la première
  * connexion (ConsentGate), après la confirmation de l'e-mail.
+ *
+ * Coach : sur invitation seulement (15/11/2026). Le lien /coach-invite/:token
+ * ouvre directement l'inscription coach, e-mail de l'invitation imposé.
  */
 export default function Login() {
   const { login, registerCoach, registerAthleteWithCode } = useAuth();
@@ -61,6 +64,29 @@ export default function Login() {
   const [registered, setRegistered] = useState(false);
   const [resent, setResent] = useState(false);
 
+  // Invitation coach (lien /coach-invite/:token).
+  const { token: inviteToken = "" } = useParams<{ token: string }>();
+  const [invite, setInvite] = useState<CoachInvitationPreview | null>(null);
+  const [inviteError, setInviteError] = useState("");
+  useEffect(() => {
+    if (!inviteToken) return;
+    let alive = true;
+    getCoachInvitation(inviteToken)
+      .then((inv) => {
+        if (!alive) return;
+        if (!inv) { setInviteError("Ce lien d'invitation n'existe pas. Vérifie-le auprès de qui t'a invité."); return; }
+        if (inv.status !== "valide") { setInviteError(COACH_INVITATION_STATUS_TEXT[inv.status]); return; }
+        setInvite(inv);
+        setEmail(inv.email);
+        setTab("register");
+        setRole("coach");
+        setStep(3);
+      })
+      .catch(() => { if (alive) setInviteError("Invitation illisible pour l'instant : réessaie dans un moment."); });
+    return () => { alive = false; };
+  }, [inviteToken]);
+  const coachInvited = !!invite && invite.status === "valide";
+
   // Code vérifié dès le 6ᵉ caractère.
   useEffect(() => {
     const c = normalizeCoachCode(code);
@@ -91,7 +117,7 @@ export default function Login() {
     e.preventDefault();
     if (password !== confirm) { setError("Les deux mots de passe ne sont pas identiques."); return; }
     void run(async () => {
-      if (role === "coach") await registerCoach(email, password, fullName, birthDate, isCoachAthlete);
+      if (role === "coach") await registerCoach(email, password, fullName, birthDate, isCoachAthlete, inviteToken);
       else await registerAthleteWithCode(email, password, fullName, birthDate, normalizeCoachCode(code));
       setRegistered(true);
     });
@@ -208,11 +234,17 @@ export default function Login() {
     return (
       <AuthScreen
         top={<>{tabs}</>}
-        footer={<AuthButton type="button" disabled={!role} onClick={() => setStep(role === "coach" ? 3 : 2)}>Continuer</AuthButton>}
+        footer={<AuthButton type="button" disabled={!role || (role === "coach" && !coachInvited)} onClick={() => setStep(role === "coach" ? 3 : 2)}>Continuer</AuthButton>}
       >
         <AuthTitle kicker={kicker} title="Tu es…" text="Choisis ton rôle. Tu ne pourras pas le changer ensuite." />
+        {inviteError && <AuthError>{inviteError}</AuthError>}
         {card("athlete", "Athlète", "Tu suis ton programme et ta progression, sur ton téléphone.", Dumbbell)}
-        {card("coach", "Coach", "Tu crées les programmes et suis tes athlètes, sur ordinateur.", Users)}
+        {card("coach", "Coach", "Tu crées les programmes et suis tes athlètes, sur ordinateur. Sur invitation.", Users)}
+        {role === "coach" && !coachInvited && (
+          <div role="status" style={{ padding: 14, borderRadius: 14, background: C.s1, border: `1px solid ${alpha(C.ac, 0.35)}`, fontSize: 13, color: C.tx2, lineHeight: 1.5 }}>
+            L’inscription coach se fait sur invitation : demande ton lien à l’équipe Agon ou à un coach certifié. Tu as reçu le lien ? Ouvre-le directement, il te mène à ton inscription.
+          </div>
+        )}
         <div style={{ fontSize: 12.5, color: C.tx3, lineHeight: 1.5 }}>Coach qui s’entraîne aussi ? Choisis « Coach » : une case « Je m’entraîne aussi » t’attend à l’étape suivante.</div>
         <div style={{ textAlign: "center", fontSize: 13, color: C.tx2 }}>
           Déjà un compte ? <button type="button" style={link} onClick={() => switchTab("login")}>Me connecter</button>
@@ -269,7 +301,7 @@ export default function Login() {
         top={<BackRow label={kicker} onBack={back} />}
         footer={<AuthButton disabled={!ready}>{loading ? "Création…" : role === "coach" ? "Créer mon compte coach" : `Rejoindre ${coach?.name ?? "mon coach"}`}</AuthButton>}
       >
-        <AuthTitle title="Ton compte" />
+        <AuthTitle title="Ton compte" text={role === "coach" && invite ? `${invite.inviterName ?? "L'équipe Agon"} t’invite à rejoindre Agon comme coach.` : undefined} />
         <AuthField label="Prénom et nom">
           <input aria-label="Prénom et nom" required autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Prénom Nom" style={AUTH_INPUT} />
         </AuthField>
@@ -277,7 +309,8 @@ export default function Login() {
           <input id="birthDate" aria-label="Date de naissance" type="date" required min={OLDEST_BIRTH_DATE} max={localIsoDay()} value={birthDate} onChange={(e) => setBirthDate(e.target.value)} style={{ ...AUTH_INPUT, colorScheme: "dark" }} />
         </AuthField>
         <AuthField label="E-mail">
-          <input aria-label="E-mail" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ton@email.fr" style={AUTH_INPUT} />
+          <input aria-label="E-mail" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ton@email.fr"
+            readOnly={role === "coach" && coachInvited} style={{ ...AUTH_INPUT, ...(role === "coach" && coachInvited ? { color: C.tx2 } : {}) }} />
         </AuthField>
         <AuthField label="Mot de passe" hint="8 caractères minimum.">
           <PasswordInput aria-label="Mot de passe" required minLength={8} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" iconColor={C.tx2} style={AUTH_INPUT} />

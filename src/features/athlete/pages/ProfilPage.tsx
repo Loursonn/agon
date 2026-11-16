@@ -83,7 +83,7 @@ export default function ProfilPage() {
     const t = window.setTimeout(() => document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
     return () => window.clearTimeout(t);
   }, [hash]);
-  const { volume, isLoading: volumeLoading } = useRunningVolume(athleteId ?? undefined, freeSessions);
+  const { volume, outings: runOutings, others: otherActivities, isLoading: volumeLoading } = useRunningVolume(athleteId ?? undefined, freeSessions);
 
   // Pesées journalisées, plus récente d'abord
   const weighIns = Object.entries(weightLog ?? {})
@@ -257,7 +257,13 @@ export default function ProfilPage() {
       {/* ── Volume de course à pied ── */}
       <div className="mb-6">
         <SectionTitle n="05">Volume de course à pied</SectionTitle>
-        <RunningVolumeCard volume={volume} isLoading={volumeLoading} />
+        <RunningVolumeCard
+          volume={volume}
+          outings={runOutings}
+          others={otherActivities}
+          isLoading={volumeLoading}
+          activityHref={(id) => (viewOnly ? `/coach/athletes/${athleteId}/seance/${id}` : `/athlete/program/activity/${id}`)}
+        />
       </div>
 
       {/* Données Strava : déplacées dans « Montres et données » (planche Ath2Montres). */}

@@ -14,6 +14,8 @@ import { genId } from "@/lib/energy/treeUtils";
 import { paceBounds } from "@/lib/energy/paceCompat";
 import { PaceEquivalents } from "@/features/shared/components/PaceEquivalents";
 import { paceFromTimeOverDistance, timeForDistance, LAP_M } from "@/lib/energy/paceEquivalents";
+import { orderedRange, parseClock, parsePace, parseSpeedKmh, parseWhole } from "@/lib/energy/blockCards";
+import { CommitInput } from "./CommitInput";
 
 /** Unités de saisie d'une allure dans l'éditeur. Toutes stockées en s/km. */
 type PaceInputUnit = "min_per_km" | "kmh" | "lap_400" | "rep_distance";
@@ -66,20 +68,10 @@ const POWER_TEST_METRICS = ["PMA", "FTP", "PC30", "PC5"];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+/** « 90 » = 90 s (format historique de ce champ) ; sinon « 1:30 », « 1:05:00 », « 2'30 », « 1h30 »… */
 function parseMMSS(raw: string): number {
-  const parts = raw.split(":");
-  if (parts.length === 3) {
-    const h = parseInt(parts[0], 10) || 0;
-    const m = parseInt(parts[1], 10) || 0;
-    const s = parseInt(parts[2], 10) || 0;
-    return h * 3600 + m * 60 + s;
-  }
-  if (parts.length === 2) {
-    const m = parseInt(parts[0], 10) || 0;
-    const s = parseInt(parts[1], 10) || 0;
-    return m * 60 + s;
-  }
-  return parseInt(raw, 10) || 0;
+  if (/^\s*\d+\s*$/.test(raw)) return parseInt(raw, 10) || 0;
+  return parseClock(raw) ?? 0;
 }
 
 function toMMSS(secs: number): string {
@@ -104,25 +96,40 @@ function RangeInputs({
   min: number; max: number; unit?: string;
   onMin: (v: number) => void; onMax: (v: number) => void;
 }) {
+  const show = (n: number) => (n > 0 ? String(n) : "");
   return (
     <div className="flex items-center gap-2">
-      <input
-        type="number" className={cn(INPUT, "w-20")}
-        value={min} onChange={(e) => onMin(Number(e.target.value))}
-        placeholder="min"
-      />
+      <CommitInput key={`min-${min}`} initial={show(min)} parse={parseWhole} onCommit={onMin} label="Minimum" placeholder="min" example="150" className={cn(INPUT, "w-20")} />
       <span className={UNIT}>–</span>
-      <input
-        type="number" className={cn(INPUT, "w-20")}
-        value={max} onChange={(e) => onMax(Number(e.target.value))}
-        placeholder="max"
-      />
+      <CommitInput key={`max-${max}`} initial={show(max)} parse={parseWhole} onCommit={onMax} label="Maximum" placeholder="max" example="165" className={cn(INPUT, "w-20")} />
       {unit && <span className={UNIT}>{unit}</span>}
     </div>
   );
 }
 
-/** Saisie d'un temps sur une distance connue, converti en secondes par km. */
+/** Vitesse en km/h ; stockée en secondes par km comme toutes les allures. */
+function SpeedRangeInputs({
+  min, max, onMin, onMax,
+}: {
+  min: number; max: number;
+  onMin: (v: number) => void; onMax: (v: number) => void;
+}) {
+  const show = (sPerKm: number) => (sPerKm > 0 ? (3600 / sPerKm).toLocaleString("fr-FR", { maximumFractionDigits: 1 }) : "");
+  return (
+    <div className="flex items-center gap-2">
+      <CommitInput key={`min-${min}`} initial={show(min)} parse={parseSpeedKmh} onCommit={onMin} label="Vitesse 1" placeholder="15" example="15,5" className={cn(INPUT, "w-20")} />
+      <span className={UNIT}>–</span>
+      <CommitInput key={`max-${max}`} initial={show(max)} parse={parseSpeedKmh} onCommit={onMax} label="Vitesse 2" placeholder="16" example="16" className={cn(INPUT, "w-20")} />
+      <span className={UNIT}>km/h</span>
+    </div>
+  );
+}
+
+/**
+ * Saisie d'un temps sur une distance connue, converti en secondes par km.
+ * Validée en sortant du champ : l'ancien champ se reformatait à chaque frappe
+ * (« 4: » devenait « 4:00 »), ce qui empêchait de corriger une allure.
+ */
 function TimeRangeInputs({
   min, max, meters, unit, onMin, onMax,
 }: {
@@ -130,21 +137,18 @@ function TimeRangeInputs({
   onMin: (v: number) => void; onMax: (v: number) => void;
 }) {
   const toText = (sPerKm: number) => (sPerKm > 0 ? toMMSS(timeForDistance(sPerKm, meters)) : "");
-  const fromText = (raw: string) =>
-    meters === 1000 ? parseMMSS(raw) : paceFromTimeOverDistance(parseMMSS(raw), meters);
+  const fromText = (raw: string): number | null => {
+    if (meters === 1000) return parsePace(raw);
+    // Temps au tour ou sur la rép. : « 80 » = 80 s, « 1:20 », « 1'20 ».
+    const sec = /^\s*\d+\s*$/.test(raw) ? parseInt(raw, 10) : parseClock(raw);
+    return sec && sec > 0 ? paceFromTimeOverDistance(sec, meters) : null;
+  };
+  const example = meters === 1000 ? "4:15" : "1:20";
   return (
     <div className="flex items-center gap-2">
-      <input
-        type="text" className={cn(INPUT, "w-20")}
-        value={toText(min)} onChange={(e) => onMin(fromText(e.target.value))}
-        placeholder="4:00"
-      />
+      <CommitInput key={`min-${min}-${meters}`} initial={toText(min)} parse={fromText} onCommit={onMin} label="Allure 1" placeholder="4:00" example={example} className={cn(INPUT, "w-20")} />
       <span className={UNIT}>–</span>
-      <input
-        type="text" className={cn(INPUT, "w-20")}
-        value={toText(max)} onChange={(e) => onMax(fromText(e.target.value))}
-        placeholder="5:00"
-      />
+      <CommitInput key={`max-${max}-${meters}`} initial={toText(max)} parse={fromText} onCommit={onMax} label="Allure 2" placeholder="5:00" example={example} className={cn(INPUT, "w-20")} />
       <span className={UNIT}>{unit}</span>
     </div>
   );
@@ -224,15 +228,17 @@ export default function IntervalEditor({ open, onOpenChange, interval, onSave, t
   }
 
   function buildTarget(): EnergyTarget {
+    // Bornes tapées dans n'importe quel sens : la plus petite d'abord.
+    const [lo, hi] = orderedRange(rangeMin, rangeMax);
     switch (targetKind) {
       case "hr_zone": return { kind: "hr_zone", zone: hrZone };
-      case "hr_pct":  return { kind: "hr_pct", min: rangeMin, max: rangeMax };
-      case "hr_bpm":  return { kind: "hr_bpm", min: rangeMin, max: rangeMax };
-      case "pace":    return { kind: "pace", min_s_per_unit: rangeMin, max_s_per_unit: rangeMax, unit: paceInput === "kmh" ? "kmh" : "min_per_km" };
-      case "pace_test_pct":  return { kind: "pace_test_pct", test_metric: testMetric, min: rangeMin, max: rangeMax };
-      case "power":          return { kind: "power", min: rangeMin, max: rangeMax };
-      case "power_test_pct": return { kind: "power_test_pct", test_metric: testMetric, min: rangeMin, max: rangeMax };
-      case "cadence":        return { kind: "cadence", min: rangeMin, max: rangeMax, unit: cadenceUnit };
+      case "hr_pct":  return { kind: "hr_pct", min: lo, max: hi };
+      case "hr_bpm":  return { kind: "hr_bpm", min: lo, max: hi };
+      case "pace":    return { kind: "pace", min_s_per_unit: lo, max_s_per_unit: hi, unit: paceInput === "kmh" ? "kmh" : "min_per_km" };
+      case "pace_test_pct":  return { kind: "pace_test_pct", test_metric: testMetric, min: lo, max: hi };
+      case "power":          return { kind: "power", min: lo, max: hi };
+      case "power_test_pct": return { kind: "power_test_pct", test_metric: testMetric, min: lo, max: hi };
+      case "cadence":        return { kind: "cadence", min: lo, max: hi, unit: cadenceUnit };
       case "text":           return { kind: "text", value: textValue };
       default:               return { kind: "none" };
     }
@@ -383,7 +389,7 @@ export default function IntervalEditor({ open, onOpenChange, interval, onSave, t
                 </SelectContent>
               </Select>
               {paceInput === "kmh" ? (
-                <RangeInputs min={rangeMin} max={rangeMax} unit="km/h" onMin={setRangeMin} onMax={setRangeMax} />
+                <SpeedRangeInputs min={rangeMin} max={rangeMax} onMin={setRangeMin} onMax={setRangeMax} />
               ) : (
                 <TimeRangeInputs
                   min={rangeMin}

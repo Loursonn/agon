@@ -1,7 +1,7 @@
 import { C } from "@/lib/theme";
 import { MONO } from "@/features/shared/components/seance/seanceUi";
-import { hyroxPictoColor } from "@/features/shared/components/hyroxStation";
-import type { GainItem } from "@/lib/hyrox/raceWatch";
+import { CASCADE_COLOR } from "./raceAnalysisShared";
+import type { CascadeStep } from "@/lib/hyrox/objective/levers";
 import { fmtClock } from "@/lib/seance";
 
 const W = 360;
@@ -19,13 +19,13 @@ function twoLines(label: string): [string, string] {
 
 /**
  * Cascade du chrono actuel au chrono possible : barre de départ, une marche par
- * point à gagner, barre « Possible ». L'échelle est coupée (elle ne part pas de
- * zéro) pour que les marches restent lisibles.
+ * levier (Stratégie puis Capacité), barre « Possible ». L'échelle est coupée
+ * (elle ne part pas de zéro) pour que les marches restent lisibles.
  */
 export default function RaceGainsCascade({ currentS, possibleS, items, startLabel }: {
   currentS: number;
   possibleS: number;
-  items: GainItem[];
+  items: CascadeStep[];
   startLabel: string;
 }) {
   const lo = Math.max(0, Math.floor((possibleS - 45) / 60) * 60);
@@ -35,7 +35,6 @@ export default function RaceGainsCascade({ currentS, possibleS, items, startLabe
   const slot = W / n;
   const bw = Math.min(30, slot * 0.62);
   const xMid = (i: number) => slot * i + slot / 2;
-  const station = hyroxPictoColor("skierg");
   let at = currentS;
   const steps = items.map((g) => {
     const from = at;
@@ -44,7 +43,7 @@ export default function RaceGainsCascade({ currentS, possibleS, items, startLabe
   });
   const bars: Array<{ label: string; top: number; bottom: number; value: string; color: string }> = [
     { label: startLabel, top: currentS, bottom: lo, value: fmtClock(currentS), color: C.tx3 },
-    ...steps.map((s) => ({ label: s.g.label, top: s.from, bottom: s.to, value: `−${Math.round(s.g.gainS)} s`, color: station })),
+    ...steps.map((s) => ({ label: s.g.label, top: s.from, bottom: s.to, value: `−${Math.round(s.g.gainS)} s`, color: CASCADE_COLOR[s.g.group] })),
     { label: "Possible", top: possibleS, bottom: lo, value: fmtClock(possibleS), color: C.g },
   ];
   return (
@@ -68,6 +67,14 @@ export default function RaceGainsCascade({ currentS, possibleS, items, startLabe
           );
         })}
       </svg>
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 11, color: C.tx2 }}>
+        {(["strategie", "capacite"] as const).filter((g) => items.some((i) => i.group === g)).map((g) => (
+          <span key={g} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <span aria-hidden style={{ width: 9, height: 9, borderRadius: 2, background: CASCADE_COLOR[g] }} />
+            {g === "strategie" ? "Stratégie · le jour de la course" : "Capacité · à l'entraînement"}
+          </span>
+        ))}
+      </div>
       <div style={{ fontSize: 11, color: C.tx3 }}>Échelle coupée : le graphique va de {fmtClock(lo)} à {fmtClock(hi)}.</div>
     </div>
   );

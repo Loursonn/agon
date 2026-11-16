@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import type { DeclaredBy, MedicalEntry, MedicalEntryInput } from "@/features/shared/types/medical";
+import type { DeclaredBy, InjuryStageEvent, MedicalEntry, MedicalEntryInput, RecoveryStage } from "@/features/shared/types/medical";
 import { check, db, unwrap, unwrapRows } from "./client";
 
 /**
@@ -23,6 +23,7 @@ export const medicalKeys = {
   all: (athleteId: string) => ["medical", athleteId] as const,
   entries: (athleteId: string) => ["medical", athleteId, "entries"] as const,
   followups: (athleteId: string, scope: string) => ["medical", athleteId, "followups", scope] as const,
+  stages: (athleteId: string) => ["medical", athleteId, "stages"] as const,
 };
 
 async function currentUserId(): Promise<string | null> {
@@ -68,6 +69,30 @@ export async function deleteEntry(entry: Pick<MedicalEntry, "id">): Promise<void
   check(await db().from("medical_entries").delete().eq("id", entry.id), "Suppression de la blessure impossible");
 }
 
+// ── Étape de résolution (15/11) ──────────────────────────────────────────────
+
+/**
+ * Change l'étape d'une blessure. La base met le statut d'accord (Guéri ⇔
+ * guéri) et date l'étape dans `injury_stage_history` (déclencheurs).
+ */
+export async function setInjuryStage(entryId: string, stage: RecoveryStage): Promise<MedicalEntry> {
+  const row = unwrap(
+    await db().from("medical_entries").update({ recovery_stage: stage }).eq("id", entryId).select("*").single(),
+    "Changement d'étape impossible",
+  );
+  return row as unknown as MedicalEntry;
+}
+
+/** Étapes datées des blessures d'un athlète, de la plus ancienne à la plus récente. */
+export async function listStageHistory(athleteId: string): Promise<InjuryStageEvent[]> {
+  const rows = unwrapRows(
+    await db().from("injury_stage_history").select("id, entry_id, stage, changed_at, changed_by")
+      .eq("athlete_id", athleteId).order("changed_at"),
+    "Lecture des étapes de blessure impossible",
+  );
+  return rows as unknown as InjuryStageEvent[];
+}
+
 // ── Douleur de séance → blessure déclarée (15/11) ─────────────────────────────
 
 /**
@@ -84,6 +109,8 @@ export interface InjuryFollowup {
   note: string | null;
   workout_log_id: string | null;
   energy_assignment_id: string | null;
+  /** Compétition d'origine (douleur de fin de compétition). */
+  competition_id: string | null;
   /** Zone de la blessure suivie (libellé de la carte douleur, ou saisi à la main). */
   zone: string | null;
   /** Nom de la séance d'origine (null si elle a été supprimée). */
@@ -92,8 +119,8 @@ export interface InjuryFollowup {
 }
 
 const FOLLOWUP_COLS =
-  "id, entry_id, athlete_id, day, pain_level, note, workout_log_id, energy_assignment_id, created_at, "
-  + "medical_entries(zone), workout_logs(session_name), energy_session_assignments(energy_sessions(name))";
+  "id, entry_id, athlete_id, day, pain_level, note, workout_log_id, energy_assignment_id, competition_id, created_at, "
+  + "medical_entries(zone), workout_logs(session_name), energy_session_assignments(energy_sessions(name)), competitions(name)";
 
 type One<T> = T | T[] | null | undefined;
 const one = <T,>(v: One<T>): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
@@ -103,6 +130,7 @@ function toFollowup(r: Record<string, unknown>): InjuryFollowup {
   const wl = one(r.workout_logs as One<{ session_name: string | null }>);
   const ea = one(r.energy_session_assignments as One<{ energy_sessions: One<{ name: string | null }> }>);
   const energyName = ea ? one(ea.energy_sessions)?.name ?? "Séance d'énergie" : null;
+  const comp = one(r.competitions as One<{ name: string | null }>);
   return {
     id: r.id as string,
     entry_id: r.entry_id as string,
@@ -112,8 +140,9 @@ function toFollowup(r: Record<string, unknown>): InjuryFollowup {
     note: (r.note as string | null) ?? null,
     workout_log_id: (r.workout_log_id as string | null) ?? null,
     energy_assignment_id: (r.energy_assignment_id as string | null) ?? null,
+    competition_id: (r.competition_id as string | null) ?? null,
     zone: entry?.zone ?? null,
-    session_name: wl?.session_name ?? energyName,
+    session_name: wl?.session_name ?? energyName ?? (comp ? comp.name ?? "Compétition" : null),
     created_at: r.created_at as string,
   };
 }
@@ -132,7 +161,7 @@ export async function listInjuryFollowups(
   return (rows as unknown as Record<string, unknown>[]).map(toFollowup);
 }
 
-export type SessionPainSource = { workoutLogId: string } | { energyAssignmentId: string };
+export type SessionPainSource = { workoutLogId: string } | { energyAssignmentId: string } | { competitionId: string };
 
 export interface SessionPainResult {
   zone: string;
@@ -157,6 +186,7 @@ export async function reportSessionPain(
     p_energy_assignment: "energyAssignmentId" in source ? source.energyAssignmentId : undefined,
     p_levels: levels,
     p_note: note ?? undefined,
+    p_competition: "competitionId" in source ? source.competitionId : undefined,
   });
   return (unwrap(res, "Enregistrement de la douleur impossible") as unknown as SessionPainResult[] | null) ?? [];
 }

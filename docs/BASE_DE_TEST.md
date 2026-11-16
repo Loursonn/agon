@@ -46,7 +46,7 @@ Dans le dossier lié à `agon-test`, dans cet ordre :
 7. `supabase/staging/fix_auth_tokens.sql` (sinon l'admin auth répond « Database error finding users »)
 8. Seed démo complet (ci-dessus).
 
-Une migration validée en prod se rejoue aussi ici (`supabase db query --linked -f` depuis le dossier `agon-test`) pour garder les deux bases au même niveau.
+Une migration validée en prod se rejoue aussi ici (`supabase db query --linked -f` depuis le dossier `agon-test`) pour garder les deux bases au même niveau. C'est d'ici, et jamais de la prod, qu'on régénère `supabase/tests/ci/schema.sql`, `reference_data.sql` et les types (décision du 16/11/2026, après la 3e panne de la prod).
 
 ## Ce que la base de test n'a pas
 

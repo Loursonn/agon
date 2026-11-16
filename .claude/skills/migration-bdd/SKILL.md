@@ -30,4 +30,4 @@ Cas à couvrir : l'athlète voit ses lignes, pas celles d'un autre ; le coach (r
 1. **Demander à Hugo** (outil de question) en résumant ce qui change.
 2. `supabase db query --linked -f supabase/migrations/<fichier>.sql` — pas de `supabase db push` ; puis `supabase migration repair --status applied <version> --linked` (la version = les 14 chiffres du nom, unique).
 3. Vérifier par une requête en lecture (`pg_policies`, `information_schema`).
-4. `supabase gen types typescript --linked > src/integrations/supabase/types.ts`, puis `npm run typecheck`.
+4. Rejouer la migration sur la base de test, puis régénérer **depuis `~/agon-test-cli`, jamais depuis la prod** : `supabase gen types typescript --linked > <dépôt>/src/integrations/supabase/types.ts`, `schema.sql` et au besoin `reference_data.sql` (`supabase/tests/ci/README.md`). Puis `npm run typecheck`.

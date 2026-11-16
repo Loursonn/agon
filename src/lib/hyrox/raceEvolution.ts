@@ -139,17 +139,3 @@ export function segmentPositions(chronological: readonly HyroxResult[], refLooku
   });
 }
 
-/** Percentiles course et stations (moyenne des 8 stations) d'une course, dans toute sa catégorie : base du profil. */
-export function profilePercentiles(r: HyroxResult, refLookup: RefLookup): { run: number | null; stations: number | null } {
-  const refDiv = raceCategory(r);
-  const bracket = POSITION_BRACKET;
-  const rt = runTotal(r);
-  const runRef = refLookup(refDiv, "run_total", bracket);
-  const run = runRef && rt != null ? percentile(rt, runRef) : null;
-  const st = STATION_KEYS.map((k) => {
-    const v = seg(r, k);
-    const ref = refLookup(refDiv, k, bracket);
-    return v != null && ref ? percentile(v, ref) : null;
-  }).filter((p): p is number => p != null);
-  return { run, stations: st.length ? Math.round(st.reduce((a, b) => a + b, 0) / st.length) : null };
-}

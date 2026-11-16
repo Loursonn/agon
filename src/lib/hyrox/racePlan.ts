@@ -1,17 +1,13 @@
 /**
- * Plan de course HYROX (`hyrox_race_plans`) : un chrono cible réparti en 17
- * objectifs (8 runs, 8 stations, Roxzone) selon la médiane du niveau visé,
- * chacun modifiable par le coach. Pur et testé, aucune lecture en base.
+ * Plan de course HYROX (`hyrox_race_plans`) : les 17 cibles (8 runs, 8
+ * stations, Roxzone) d'un objectif, construit depuis le run moyen par
+ * `objective/model.ts`, chacune modifiable par le coach. Pur et testé.
  *
  * Stockage (`targets`, format `HyroxPlanTargets` historique) : temps des runs
  * et des stations, Roxzone en `roxzone_per_transition` = total / 8 (même
  * convention que `planVsActual`).
  */
-import {
-  REFERENCE_DIVISION, RUN_KEYS, STATION_KEYS,
-  type HyroxDivision, type HyroxPlanTargets, type HyroxResult,
-} from "@/features/shared/types/hyrox";
-import { bracketOf, type RefLookup } from "./calc";
+import { RUN_KEYS, STATION_KEYS, type HyroxPlanTargets, type HyroxResult } from "@/features/shared/types/hyrox";
 
 /** Les 17 segments d'un plan, dans l'ordre de la course (Roxzone en dernier). */
 export const PLAN_SEGMENTS = [
@@ -42,26 +38,6 @@ export function planTargets(s: PlanSegments): HyroxPlanTargets {
 /** Chrono du plan : somme des 17 objectifs. */
 export const planTotal = (s: PlanSegments): number => PLAN_SEGMENTS.reduce((n, k) => n + s[k], 0);
 
-/**
- * Répartit un chrono cible sur les 17 segments, au prorata de la médiane du
- * niveau visé (tranche de chrono de la cible). `null` si une médiane manque.
- * Les arrondis sont rattrapés sur le run 8 : la somme vaut la cible.
- */
-export function planFromTarget(targetS: number, division: HyroxDivision, refs: RefLookup): PlanSegments | null {
-  const div = REFERENCE_DIVISION(division);
-  const bracket = bracketOf(targetS);
-  const med: Partial<Record<PlanSegment, number>> = {};
-  for (const k of PLAN_SEGMENTS) {
-    const ref = refs(div, k, bracket) ?? refs(div, k, "all");
-    if (!ref?.p50_s) return null;
-    med[k] = ref.p50_s;
-  }
-  const sum = PLAN_SEGMENTS.reduce((n, k) => n + (med[k] as number), 0);
-  const out = {} as PlanSegments;
-  for (const k of PLAN_SEGMENTS) out[k] = Math.round(((med[k] as number) * targetS) / sum);
-  out.run_8 += Math.round(targetS) - planTotal(out);
-  return out;
-}
 
 /** Ce que l'analyse lit d'un plan. */
 export interface PlanLike {

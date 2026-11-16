@@ -94,7 +94,7 @@ export interface LoadActivityRow {
 
 export interface LoadLinkRow {
   activityId: string;
-  plannedKind: "energy" | "workout" | "test";
+  plannedKind: "energy" | "workout" | "test" | "competition";
   plannedId: string;
 }
 
@@ -232,6 +232,9 @@ export function sessionLoads(inp: LoadInputs): SessionLoad[] {
   const usedActs = new Set<string>();
   for (const l of inp.links) {
     if (!actById.has(l.activityId)) continue;
+    // Compétition : pas de charge prévue ; sa course compte comme une activité
+    // (FC), l'échauffement aussi, à part.
+    if (l.plannedKind === "competition") continue;
     linked.set(`${l.plannedKind}:${l.plannedId}`, l.activityId);
     usedActs.add(l.activityId);
   }

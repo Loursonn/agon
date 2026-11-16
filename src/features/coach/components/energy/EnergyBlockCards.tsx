@@ -17,12 +17,14 @@ import { deleteStep, duplicateStep, makeRootGroup, reorderChildren } from "@/lib
 import { formatTarget } from "@/lib/energy/formatTarget";
 import {
   CARD_TARGET_LABEL, NEW_BLOCK_LABEL, blockCardKind, blockSummary, blockTitle, blockZone, cardTargetOf, defaultTarget,
-  fmtPace, formatDuration, mainInterval, newBlock, parseClock, parseDistance, parsePace, patchMain, setRepeat, setRest,
+  fmtPace, formatDuration, mainInterval, newBlock, orderedRange, parseClock, parseDistance, parsePace, parseSpeedKmh, parseWhole,
+  patchMain, setRepeat, setRest,
   type CardTarget, type NewBlock,
 } from "@/lib/energy/blockCards";
 import type { EnergyDuration, EnergyGroup, EnergyInterval, EnergyStep, EnergyTarget, SessionKind } from "@/types/energy";
 import { Segmented } from "@/features/shared/components/ordi/OrdiUi";
 import IntervalBuilder from "./IntervalBuilder";
+import { CommitInput } from "./CommitInput";
 
 interface Props {
   root: EnergyGroup;
@@ -178,11 +180,14 @@ function CardBody({ step, onChange }: { step: EnergyStep; onChange: (s: EnergySt
       {group && (
         <Row label="Répétitions">
           <span className="inline-flex items-center gap-2">
-            <input
-              type="number" min={1} max={99} value={group.repeat}
-              onChange={(e) => onChange(setRepeat(step, Number(e.target.value)))}
-              aria-label="Répétitions"
-              className={cn(FIELD, MONO_CLS, "w-24")}
+            <TextCommit
+              key={`rep-${group.repeat}`}
+              initial={String(group.repeat)}
+              parse={(s) => { const n = parseWhole(s); return n != null && n >= 1 && n <= 99 ? n : null; }}
+              onCommit={(n) => onChange(setRepeat(step, n))}
+              width={96}
+              label="Répétitions"
+              example="8"
             />
             <span className="text-[12.5px] text-agon-tx3">fois</span>
           </span>
@@ -277,6 +282,7 @@ function DurationField({ value, onChange, allowNone = false }: {
           onCommit={(n) => onChange({ kind: value.kind, value: n })}
           width={140}
           label={value.kind === "time" ? "Durée" : "Distance"}
+          example={value.kind === "time" ? "2 min 30 s" : "400 m"}
         />
       )}
       {other && <span className="text-[12.5px] text-agon-tx2">{formatDuration(value)}</span>}
@@ -299,9 +305,9 @@ function TargetField({ target, role, onChange }: { target: EnergyTarget; role: E
         {target.kind === "pace" && <PaceRange target={target} onChange={onChange} />}
         {(target.kind === "hr_bpm" || target.kind === "power") && (
           <span className="inline-flex items-center gap-1.5">
-            <NumCommit value={target.min} label="Minimum" onCommit={(n) => onChange({ ...target, min: n })} />
+            <NumCommit value={target.min} label="Minimum" onCommit={(n) => { const [min, max] = orderedRange(n, target.max); onChange({ ...target, min, max }); }} />
             <span className="text-[12px] text-agon-tx3">à</span>
-            <NumCommit value={target.max} label="Maximum" onCommit={(n) => onChange({ ...target, max: n })} />
+            <NumCommit value={target.max} label="Maximum" onCommit={(n) => { const [min, max] = orderedRange(target.min, n); onChange({ ...target, min, max }); }} />
             <span className="text-[12px] text-agon-tx3">{target.kind === "power" ? "W" : "bpm"}</span>
           </span>
         )}
@@ -320,17 +326,17 @@ function PaceRange({ target, onChange }: { target: Extract<EnergyTarget, { kind:
   const hi = target.max_s_per_unit ?? legacy.max ?? 0;
   const kmh = target.unit === "kmh";
   const show = (s: number) => (s > 0 ? (kmh ? (3600 / s).toLocaleString("fr-FR", { maximumFractionDigits: 1 }) : fmtPace(s)) : "");
-  const parse = (s: string) => {
-    if (!kmh) return parsePace(s);
-    const v = Number(s.replace(",", "."));
-    return v > 0 ? Math.round(3600 / v) : null;
+  const parse = kmh ? parseSpeedKmh : parsePace;
+  // Bornes remises dans l'ordre (la plus rapide d'abord) : « 4'25 à 4'15 » devient « 4'15 à 4'25 ».
+  const set = (a: number, b: number) => {
+    const [min, max] = orderedRange(a, b);
+    onChange({ kind: "pace", unit: target.unit, min_s_per_unit: min, max_s_per_unit: max });
   };
-  const set = (min: number, max: number) => onChange({ kind: "pace", unit: target.unit, min_s_per_unit: min, max_s_per_unit: max });
   return (
     <span className="inline-flex items-center gap-1.5">
-      <TextCommit key={`lo-${lo}`} initial={show(lo)} parse={parse} onCommit={(n) => set(n, hi)} width={80} label="Allure basse" />
+      <TextCommit key={`lo-${lo}`} initial={show(lo)} parse={parse} onCommit={(n) => set(n, hi)} width={80} label="Allure basse" example={kmh ? "15,5" : "4'15"} />
       <span className="text-[12px] text-agon-tx3">à</span>
-      <TextCommit key={`hi-${hi}`} initial={show(hi)} parse={parse} onCommit={(n) => set(lo, n)} width={80} label="Allure haute" />
+      <TextCommit key={`hi-${hi}`} initial={show(hi)} parse={parse} onCommit={(n) => set(lo, n)} width={80} label="Allure haute" example={kmh ? "16" : "4'25"} />
       <span className="text-[12px] text-agon-tx3">{kmh ? "km/h" : "/km"}</span>
     </span>
   );
@@ -364,23 +370,13 @@ function ZoneSelect({ zone, onChange }: { zone: number; onChange: (z: 1 | 2 | 3 
   );
 }
 
-/** Texte validé à la sortie du champ (ou Entrée) ; une saisie illisible revient à la valeur d'avant. */
-function TextCommit({ initial, parse, onCommit, width, label }: {
-  initial: string; parse: (s: string) => number | null; onCommit: (n: number) => void; width: number; label: string;
+/** Champ des cartes : CommitInput au style des cartes (largeur passée par l'appelant). */
+function TextCommit({ initial, parse, onCommit, width, label, example }: {
+  initial: string; parse: (s: string) => number | null; onCommit: (n: number) => void; width: number; label: string; example?: string;
 }) {
-  const [text, setText] = useState(initial);
-  const commit = () => {
-    const n = parse(text);
-    if (n == null || n <= 0) setText(initial);
-    else onCommit(n);
-  };
   return (
-    <input
-      value={text}
-      aria-label={label}
-      onChange={(e) => setText(e.target.value)}
-      onBlur={commit}
-      onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+    <CommitInput
+      initial={initial} parse={parse} onCommit={onCommit} label={label} example={example}
       className={cn(FIELD, MONO_CLS)}
       // Largeur passée par l'appelant (valeur numérique).
       style={{ width }}
@@ -393,10 +389,11 @@ function NumCommit({ value, label, onCommit }: { value: number; label: string; o
     <TextCommit
       key={`${label}-${value}`}
       initial={Number.isFinite(value) ? String(value) : ""}
-      parse={(s) => { const n = Math.round(Number(s.replace(",", "."))); return Number.isFinite(n) ? n : null; }}
+      parse={parseWhole}
       onCommit={onCommit}
       width={70}
       label={label}
+      example="165"
     />
   );
 }

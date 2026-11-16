@@ -5,30 +5,25 @@ import { DASH, fmtClock, fmtPace } from "@/lib/seance";
 import { fmtDelta } from "./raceAnalysisShared";
 
 /** Détail d'un segment de la frise (touché, ou survolé côté coach). */
-export default function RaceSegmentDetail({ s, cruise, usualS = null, medianS, coach = false, planS = null }: {
+export default function RaceSegmentDetail({ s, cruise, usualS = null, objectiveS }: {
   s: SegmentWatch;
   /** Allure de croisière de l'athlète (médiane des runs 2 à 7). */
   cruise: number;
   /** Ralentissement habituel à ce run chez les athlètes du niveau (s/km vs leur croisière). */
   usualS?: number | null;
-  /** Médiane du niveau pour ce segment (« Écart médiane »). */
-  medianS: number | null;
-  coach?: boolean;
-  /** Objectif du plan de course pour ce segment (« Écart plan »). */
-  planS?: number | null;
+  /** Cible de l'objectif de la course pour ce segment (« Écart objectif »). */
+  objectiveS: number | null;
 }) {
   const big = { ...MONO, fontSize: 18 };
-  const vsMedian = medianS != null ? s.officialS - medianS : null;
+  const vsObj = objectiveS != null ? s.officialS - objectiveS : null;
   return (
     <div style={{ ...CARD, padding: "12px 14px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))", gap: 10 }}>
       <div style={{ gridColumn: "1 / -1", fontSize: 14, fontWeight: 600 }}>{s.label}</div>
       <div><div style={LABEL}>Temps</div><div style={big}>{fmtClock(s.officialS)}</div></div>
       {s.kind === "run" && <div><div style={LABEL}>Allure</div><div style={big}>{fmtPace(s.officialS)} <span style={{ fontSize: 11, color: C.tx3 }}>/km</span></div></div>}
-      {vsMedian != null && (
-        <div><div style={LABEL}>Écart médiane</div><div style={{ ...big, color: vsMedian > 0 ? C.o : C.g }}>{fmtDelta(vsMedian, (x) => `${x} s`)}</div></div>
-      )}
-      {planS != null && (
-        <div><div style={LABEL}>Écart plan</div><div style={{ ...big, color: s.officialS > planS ? C.o : C.g }}>{fmtDelta(s.officialS - planS, (x) => `${x} s`)}</div></div>
+      {objectiveS != null && <div><div style={LABEL}>Objectif</div><div style={{ ...big, color: C.tx2 }}>{fmtClock(objectiveS)}</div></div>}
+      {vsObj != null && (
+        <div><div style={LABEL}>Écart objectif</div><div style={{ ...big, color: vsObj > 0 ? C.o : C.g }}>{fmtDelta(vsObj, (x) => `${x} s`)}</div></div>
       )}
       <div><div style={LABEL}>FC moy. / max</div><div style={big}>{s.avgHr ?? DASH} / {s.maxHr ?? DASH}</div></div>
       {s.kind === "run" && <div><div style={LABEL}>Cadence</div><div style={big}>{s.avgCadence ?? DASH}</div></div>}

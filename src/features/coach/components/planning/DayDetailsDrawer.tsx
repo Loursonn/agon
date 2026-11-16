@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { CompetitionResultLine } from "@/features/shared/components/CompetitionResultLine";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { X, Plus, ChevronLeft, Trophy } from "lucide-react";
@@ -13,7 +14,7 @@ import { CoachSessionOverrideModal } from "./CoachSessionOverrideModal";
 import { DayThemeEditor } from "./DayThemeEditor";
 import { WatchCard } from "@/features/shared/components/planning/WatchCard";
 import { usePlannedVsDone } from "@/features/shared/hooks/usePlannedVsDone";
-import { watchCardsOfDay } from "@/lib/planningCard";
+import { standsAlone, watchCardsOfDay } from "@/lib/planningCard";
 import { FREE_COLOR, TEST_COLOR } from "./day-details/dayDetailsConstants";
 import { WorkoutRecapModal } from "./day-details/WorkoutRecapModal";
 import { WorkoutDetailView } from "./day-details/WorkoutDetailView";
@@ -89,7 +90,7 @@ export function DayDetailsDrawer({
   const watchDay     = watchDays?.[0];
   const watchCards   = watchCardsOfDay(watchDay, Date.now());
   const linkedCard   = new Map(watchCards.filter((c) => c.planned).map((c) => [`${c.planned!.kind}:${c.planned!.id}`, c]));
-  const freeWatch    = watchCards.filter((c) => !c.planned);
+  const freeWatch    = watchCards.filter(standsAlone);
   const seancePath   = (id: string) => `/coach/athletes/${athleteId}/seance/${id}`;
   const eventOrWatch = (e: CalEvent) => {
     const c = linkedCard.get(`${e.type}:${e.id}`);
@@ -229,6 +230,7 @@ export function DayDetailsDrawer({
                       </span>
                     )}
                   </div>
+                  {e.raw && <CompetitionResultLine comp={e.raw as { result_text?: string | null; result_url?: string | null; rpe_score?: number | null }} />}
                   {e.raw?.athlete_comment ? (
                     <div style={{ background: C.s1, borderRadius: 4, padding: "8px 10px" }}>
                       <div style={{ fontSize: 9, fontWeight: 700, color: C.ac, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.4px" }}>Retour de l'athlète</div>

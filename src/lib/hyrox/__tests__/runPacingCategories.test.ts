@@ -3,8 +3,7 @@ import type { HyroxReferenceSegment, HyroxResult } from "@/features/shared/types
 import { POSITION_BRACKET, percentile, standing, timeAtPercentile, type RefLookup } from "@/lib/hyrox/calc";
 import { cruisePace, cruiseSpread, excessLevel, levelRunPattern, stationRunCosts } from "@/lib/hyrox/runPacing";
 import { categoryOptions, crossFormatNote, raceCategory, raceFormat } from "@/lib/hyrox/categories";
-import { equivalences, equivalentTotal } from "@/lib/hyrox/categoryEquivalence";
-import { profilePercentiles, segmentPositions } from "@/lib/hyrox/raceEvolution";
+import { segmentPositions } from "@/lib/hyrox/raceEvolution";
 
 const runs = (v: number[]) => (k: string) => {
   const i = Number(k.replace("run_", "")) - 1;
@@ -82,10 +81,9 @@ describe("calibrage : position dans toute la catégorie, seuils nets", () => {
     expect(standing(null)).toBeNull();
   });
 
-  it("positions de l'Évolution et du profil : toute la catégorie", () => {
+  it("positions de l'Évolution : toute la catégorie", () => {
     const rows = segmentPositions([race()], lookup);
     expect(rows.find((r) => r.key === "ski")!.latestPct).toBe(percentile(255, lookup("men", "ski", "all")!));
-    expect(profilePercentiles(race(), lookup).stations).toBe(percentile(255, lookup("men", "ski", "all")!));
   });
 
   it("percentile ↔ temps : aller-retour", () => {
@@ -112,11 +110,7 @@ describe("catégories : format + division", () => {
     expect(crossFormatNote("men", "doubles_men")).toMatch(/^Stations non comparables/);
   });
 
-  it("chrono équivalent au même rang, et options du sélecteur", () => {
-    const e = equivalentTotal(4500, "men", "doubles_men", lookup)!;
-    expect(e).toEqual({ pct: 25, timeS: 4000 });
-    const eq = equivalences(4500, "men", lookup);
-    expect(eq.map((x) => x.category)).toEqual(["men_pro", "doubles_men"]);
+  it("options du sélecteur de catégorie", () => {
     expect(categoryOptions("women")[0]).toBe("women");
     expect(categoryOptions("women").slice(1, 4)).toEqual(["women_pro", "doubles_women", "doubles_women_pro"]);
   });

@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import type { ActivityStream } from "@shared/activityFiles/stream";
 import type { HyroxReferenceSegment, HyroxResult } from "@/features/shared/types/hyrox";
 import type { RefLookup } from "@/lib/hyrox/calc";
-import { PLAN_SEGMENTS, parseClock, planForRace, planFromTarget, planSegments, planTargets, planTotal } from "@/lib/hyrox/racePlan";
+import { PLAN_SEGMENTS, parseClock, planForRace, planSegments, planTargets, planTotal } from "@/lib/hyrox/racePlan";
+import { objectiveForTotal } from "@/lib/hyrox/objective/model";
 import { compareAvailable, compareTarget, defaultCompare } from "@/lib/hyrox/raceCompare";
-import { RUN_AFTER_STATION_WEIGHT, raceLevers } from "@/lib/hyrox/raceLevers";
 import { HYROX_WORK_PROPOSALS } from "@/lib/hyrox/workProposals";
 import { evolutionRaces, nextHyroxCompetition, raceProjection, runEfficiencySeries } from "@/lib/hyrox/raceProjection";
 import { crossRaceWithWatch } from "@/lib/hyrox/raceWatch";
@@ -43,20 +43,15 @@ function stream(total: number, hr: (t: number) => number | null, cad: (t: number
 }
 
 describe("plan de course", () => {
-  it("répartit un chrono cible sur les 17 segments, somme exacte", () => {
-    const p = planFromTarget(4770, "women", refs)!;
+  it("objectif depuis un chrono visé : 17 segments, somme exacte", () => {
+    const p = objectiveForTotal("women", 4770)!.segments;
     expect(Object.keys(p)).toHaveLength(17);
     expect(planTotal(p)).toBe(4770);
-    // au prorata des médianes : le sled push reste plus court que le SkiErg
     expect(p.sled_push).toBeLessThan(p.ski);
   });
 
-  it("sans médiane, pas de plan", () => {
-    expect(planFromTarget(4770, "women", () => undefined)).toBeNull();
-  });
-
   it("aller-retour stockage ↔ segments (Roxzone = 8 × par transition)", () => {
-    const p = planFromTarget(4770, "women", refs)!;
+    const p = objectiveForTotal("women", 4770)!.segments;
     const t = planTargets(p);
     expect(t.roxzone_per_transition * 8).toBeCloseTo(p.roxzone_total);
     expect(planSegments(t)).toEqual(p);
@@ -64,7 +59,7 @@ describe("plan de course", () => {
   });
 
   it("plan d'une course : rattaché au résultat d'abord, sinon à la compétition", () => {
-    const t = planTargets(planFromTarget(4770, "women", refs)!);
+    const t = planTargets(objectiveForTotal("women", 4770)!.segments);
     const comp = { id: "p1", result_id: null, competition_id: "c-lyon", target_total_s: 4770, targets: t, updated_at: "2026-09-01" };
     const res = { id: "p2", result_id: "lyon", competition_id: null, target_total_s: 4700, targets: t, updated_at: "2026-08-01" };
     expect(planForRace(lyon(), [comp])?.id).toBe("p1");
@@ -82,66 +77,23 @@ describe("plan de course", () => {
 
 describe("comparer à", () => {
   const prev = lyon({ id: "paris", run_1_s: 285, total_s: 5057, roxzone_total_s: 429 });
-  const plan = planFromTarget(4770, "women", refs)!;
-  const median = (s: string) => P50[s] ?? null;
+  const objective = objectiveForTotal("women", 4770)!.segments;
 
-  it("course précédente, plan, médiane", () => {
-    expect(compareTarget("previous", { previous: prev, plan, median })("run_1")).toBe(285);
-    expect(compareTarget("previous", { previous: prev, plan, median })("total")).toBe(5057);
-    expect(compareTarget("plan", { previous: prev, plan, median })("total")).toBe(4770);
-    expect(compareTarget("plan", { previous: prev, plan, median })("wall_balls")).toBe(plan.wall_balls);
-    expect(compareTarget("median", { previous: prev, plan, median })("roxzone_total")).toBe(331);
+  it("objectif de la course ou course précédente", () => {
+    expect(compareTarget("previous", { previous: prev, objective })("run_1")).toBe(285);
+    expect(compareTarget("previous", { previous: prev, objective })("total")).toBe(5057);
+    expect(compareTarget("objective", { previous: prev, objective })("total")).toBe(4770);
+    expect(compareTarget("objective", { previous: prev, objective })("wall_balls")).toBe(objective.wall_balls);
   });
 
-  it("sans donnée : « — » et choix indisponible ; défaut = plan, sinon médiane", () => {
-    const src = { previous: null, plan: null, median };
+  it("sans donnée : « — » et choix indisponible ; défaut = objectif, sinon course précédente", () => {
+    const src = { previous: null, objective: null };
     expect(compareTarget("previous", src)("run_1")).toBeNull();
-    expect(compareAvailable("plan", src)).toBe(false);
-    expect(defaultCompare(src)).toBe("median");
-    expect(defaultCompare({ ...src, plan })).toBe("plan");
-  });
-});
-
-describe("leviers", () => {
-  it("garde les points ≥ 10 s derrière la médiane, triés par score, avec une proposition", () => {
-    const l = raceLevers({ race: lyon(), refs, analysis: null });
-    const keys = l.map((x) => x.key);
-    // wall balls +28 s, roxzone +46 s, sled push +22 s ; ski, rameur… au niveau
-    expect(keys).toEqual(expect.arrayContaining(["wall_balls", "roxzone", "sled_push"]));
-    expect(keys).not.toContain("ski");
-    expect(l.every((x) => x.proposal.length > 0)).toBe(true);
-    expect(l.map((x) => x.score)).toEqual([...l.map((x) => x.score)].sort((a, b) => b - a));
-    expect(l.find((x) => x.key === "wall_balls")?.proposal).toBe(HYROX_WORK_PROPOSALS.wall_balls);
-    expect(l.find((x) => x.key === "roxzone")?.reason).toBe("8 % du chrono");
-    expect(l.some((x) => x.watch)).toBe(false);
-  });
-
-  it("avec la montre : FC la plus haute, cadence du run suivant, levier « Course après »", () => {
-    const race = lyon();
-    const base = crossRaceWithWatch(race, null)!;
-    const wb = base.segments.find((s) => s.key === "wall_balls")!;
-    const sp = base.segments.find((s) => s.key === "sled_push")!;
-    const run3 = base.segments.find((s) => s.key === "run_3")!;
-    const st = stream(race.total_s + 5,
-      (t) => (t >= wb.startS && t < wb.endS ? 184 : 165),
-      (t) => (t >= run3.startS && t < run3.endS ? 82 : 88));
-    const a = crossRaceWithWatch(race, st)!;
-    expect(sp.key).toBe("sled_push");
-    // Niveau où la course après les farmers ralentit peu d'habitude : run 7 à 285.
-    const levelP50 = (k: string) => (k === "run_7" ? 285 : P50[k] ?? null);
-    const l = raceLevers({ race, refs, analysis: a, roxzoneRecoveryBpm: 10, levelP50 });
-    expect(l.find((x) => x.key === "wall_balls")?.reason).toBe("FC moy. 184 bpm, la plus haute de la course");
-    expect(l.find((x) => x.key === "sled_push")?.reason).toMatch(/^Cadence du run suivant −\d+ pas\/min$/);
-    expect(l.find((x) => x.key === "roxzone")?.reason).toBe("8 % du chrono · récupération −10 bpm en 60 s");
-    const ra = l.find((x) => x.watch)!;
-    // Lyon : croisière 294 ; run 7 = +9 vs croisière, habituel −4 au niveau (croisière 289) → surcoût 13.
-    expect(ra.key).toBe("run_after_farmers");
-    expect(ra.label).toBe("Course après farmers");
-    expect(ra.weight).toBe(RUN_AFTER_STATION_WEIGHT);
-    expect(ra.gainS).toBe(13);
-    expect(ra.reason).toBe("Run 7 : +9 s/km vs ta croisière, habituel −4");
-    // Sans l'habituel du niveau : pas de levier « Course après ».
-    expect(raceLevers({ race, refs, analysis: a }).some((x) => x.watch)).toBe(false);
+    expect(compareTarget("objective", src)("total")).toBeNull();
+    expect(compareAvailable("objective", src)).toBe(false);
+    expect(defaultCompare(src)).toBe("objective");
+    expect(defaultCompare({ ...src, previous: prev })).toBe("previous");
+    expect(defaultCompare({ previous: prev, objective })).toBe("objective");
   });
 });
 

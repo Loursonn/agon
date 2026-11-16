@@ -1,4 +1,5 @@
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
+import { backFrom } from "@/features/shared/components/seance/backFrom";
 import { useSelectedAthlete } from "@/features/coach/context/SelectedAthleteContext";
 import { SeanceView } from "@/features/shared/components/seance/SeanceView";
 
@@ -6,6 +7,7 @@ import { SeanceView } from "@/features/shared/components/seance/SeanceView";
 export default function SeancePage() {
   const { athleteId = "", activityId = "" } = useParams<{ athleteId: string; activityId: string }>();
   const { selectedAthlete } = useSelectedAthlete();
+  const location = useLocation();
   const first = selectedAthlete?.full_name?.trim().split(/\s+/)[0] ?? null;
   return (
     <SeanceView
@@ -13,7 +15,7 @@ export default function SeancePage() {
       activityId={activityId}
       role="coach"
       athleteFirstName={first}
-      back={{ to: `/coach/athletes/${athleteId}/planning`, label: "Planning" }}
+      back={backFrom(location.state) ?? { to: `/coach/athletes/${athleteId}/planning`, label: "Planning" }}
       thresholdsLink={`/coach/athletes/${athleteId}/profil-sportif?view=testing`}
     />
   );

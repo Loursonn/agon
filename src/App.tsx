@@ -241,6 +241,7 @@ function AppRoutes() {
           <Route path="/reset-password" element={<Page><ResetPassword /></Page>} />
           {/* Anciens liens d'invitation coach (supprimés, décision 6) : rejoindre un coach = son code. */}
           <Route path="/invite/:token" element={<Navigate to="/login" replace />} />
+          <Route path="/coach-invite/:token" element={<Page><Login /></Page>} />
           <Route path="/staff-invite/:token" element={<Page><StaffInviteAccept /></Page>} />
           <Route path="/claim/:token" element={<Page><ClaimAthlete /></Page>} />
 

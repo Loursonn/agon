@@ -10,7 +10,7 @@ import { dayThemeChipLabel, dayThemeColors, dayThemeFullLabel, isDayThemeEmpty, 
 import { MONO } from "@/features/shared/components/seance/seanceUi";
 import type { ScheduledDoc } from "@/features/shared/hooks/fiches/useDocSchedule";
 import { DayFiches } from "@/features/shared/components/fiches/DayFiches";
-import type { PlanningCardModel } from "@/lib/planningCard";
+import { standsAlone, type PlanningCardModel } from "@/lib/planningCard";
 import { LIFE_EVENT_COLOR, CARD_MONO } from "./calendarConstants";
 import { WatchFreeChip } from "./WatchFreeChip";
 import { DayThemeMenu } from "./DayThemeMenu";
@@ -53,7 +53,7 @@ export function DroppableDay({
   const dateStr = format(date, "yyyy-MM-dd");
   const { setNodeRef, isOver } = useDroppable({ id: dateStr });
   const watchByPlanned = new Map(watchCards.filter((c) => c.planned).map((c) => [`${c.planned!.kind}:${c.planned!.id}`, c.state]));
-  const watchFree = watchCards.filter((c) => !c.planned);
+  const watchFree = watchCards.filter(standsAlone);
 
   const today     = isToday(date);
   const maxVisible = tall ? 99 : 3;

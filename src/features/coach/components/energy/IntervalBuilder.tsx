@@ -268,11 +268,12 @@ function GroupRowHeader({
         <input
           autoFocus
           type="number"
-          min={1} max={50}
+          min={1} max={99}
           value={repeatVal}
           onChange={(e) => setRepeatVal(Number(e.target.value))}
-          onBlur={() => { onEditRepeat(repeatVal); setEditingRepeat(false); }}
-          onKeyDown={(e) => { if (e.key === "Enter") { onEditRepeat(repeatVal); setEditingRepeat(false); } }}
+          // Champ vidé ou hors bornes : on garde le nombre de répétitions d'avant (jamais 0).
+          onBlur={() => { onEditRepeat(validRepeat(repeatVal, group.repeat)); setEditingRepeat(false); }}
+          onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
           className={cn(SMALL_INPUT, "w-[50px] text-[12px]")}
         />
       ) : (
@@ -573,4 +574,10 @@ export default function IntervalBuilder({ root, onChange, athleteId, sessionKind
       />
     </div>
   );
+}
+
+/** Nombre de répétitions saisi, ou celui d'avant s'il est vide ou hors de 1-99. */
+function validRepeat(typed: number, previous: number): number {
+  const r = Math.round(typed);
+  return Number.isFinite(r) && r >= 1 && r <= 99 ? r : previous;
 }

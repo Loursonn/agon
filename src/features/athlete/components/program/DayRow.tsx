@@ -17,7 +17,7 @@ import { WatchCard } from "@/features/shared/components/planning/WatchCard";
 import type { WeekDay, WeekSession } from "@/features/shared/hooks/useActivePlan";
 import { haptic } from "@/features/athlete/components/program/programUtils";
 import { useState } from "react";
-import { watchCardsOfDay } from "@/lib/planningCard";
+import { standsAlone, watchCardsOfDay } from "@/lib/planningCard";
 
 // ── Day row ───────────────────────────────────────────────────────────────────
 
@@ -57,7 +57,7 @@ export function DayRow({
   // Une séance rattachée à une activité de montre devient sa carte (jamais deux cartes).
   const watchCards = watch ? watchCardsOfDay(watch.day, watch.now) : [];
   const linkedCard = new Map(watchCards.filter((c) => c.planned).map((c) => [`${c.planned!.kind}:${c.planned!.id}`, c]));
-  const freeWatch = watchCards.filter((c) => !c.planned);
+  const freeWatch = watchCards.filter(standsAlone);
   const watchCard = (c: (typeof watchCards)[number]) => (
     <WatchCard key={c.key} card={c} day={watch!.day} athleteId={watch!.athleteId} seancePath={(id) => `/athlete/program/activity/${id}`} />
   );

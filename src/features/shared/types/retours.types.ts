@@ -171,6 +171,10 @@ export interface WeeklyRetourData {
     location: string | null;
     athlete_comment: string | null;
     priority: 'A' | 'B' | 'C' | null;
+    /** Séance du jour J : résultat libre, lien, RPE. */
+    result_text?: string | null;
+    result_url?: string | null;
+    rpe_score?: number | null;
   }[];
 
   avg_wellness: number | null;
@@ -250,6 +254,9 @@ export interface CompetitionDetail {
   location: string | null;
   athlete_comment: string | null;
   priority: 'A' | 'B' | 'C' | null;
+  result_text?: string | null;
+  result_url?: string | null;
+  rpe_score?: number | null;
 }
 
 export interface MonthlyRetourData {

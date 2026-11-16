@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DoneActivity, PlannedItem, PlannedVsDoneDay } from "@/lib/plannedVsDone";
-import { associableOf, freeCard, isSyncing, plannedCard, watchCardsOfDay } from "@/lib/planningCard";
+import { associableOf, freeCard, isSyncing, plannedCard, watchCardsOfDay, standsAlone } from "@/lib/planningCard";
 
 const NOW = Date.parse("2026-11-10T19:30:00Z");
 
@@ -78,5 +78,13 @@ describe("planningCard", () => {
     expect(watchCardsOfDay(day, NOW).map((c) => [c.key, c.state])).toEqual([["energy:e1", "toConfirm"], ["activity:a2", "free"]]);
     expect(associableOf(day).map((p) => p.id)).toEqual(["e2", "w1"]);
     expect(watchCardsOfDay(undefined, NOW)).toEqual([]);
+  });
+});
+
+describe("standsAlone", () => {
+  it("activité libre et course d'une compétition : carte seule ; séance prévue : sa carte", () => {
+    expect(standsAlone({ planned: null })).toBe(true);
+    expect(standsAlone({ planned: { kind: "competition", id: "c1" } })).toBe(true);
+    expect(standsAlone({ planned: { kind: "energy", id: "e1" } })).toBe(false);
   });
 });

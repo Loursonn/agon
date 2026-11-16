@@ -17,7 +17,7 @@ Détail et plan pour réaligner : `docs/PLAN_LEGACY.md` §3. Tant que ce n'est p
 | Fichier | Contenu | Origine |
 |---|---|---|
 | `before_schema.sql` | retire les droits par défaut de Supabase local sur `public`, pour que les droits de la prod soient reproduits à l'identique | écrit à la main |
-| `schema.sql` | schéma de la prod (tables, fonctions, policies, droits), **aucune donnée** | `supabase db dump --linked` (lecture) |
+| `schema.sql` | schéma de la prod (tables, fonctions, policies, droits), **aucune donnée** | copie du schéma de la base de test `agon-test`, tenue au niveau de la prod (jamais de copie depuis la prod, voir plus bas) |
 | `reference_data.sql` | bibliothèques : exercices, définitions et variables de tests, séances d'énergie, grilles et règles HYROX, politiques des sources (`created_by` remis à NULL). Aucune donnée d'athlète ni de coach | `export_reference_data.mjs` (lecture) |
 | `platform.sql` | buckets et policies Storage, tâches pg_cron (le dump de schéma ne couvre pas le schéma `storage` ni `cron.job`) | requêtes de lecture sur `storage.buckets`, `pg_policies`, `cron.job` |
 | `seed.sql` | utilisateurs **fictifs** (admin, coachs, athlètes dont « Léa Démo », e-mails `@example.invalid`) et ce que les scripts de test cherchent dans la base | écrit à la main |
@@ -26,19 +26,26 @@ Puis `run.mjs` exécute chaque script dans `BEGIN … ROLLBACK` et lit ses ligne
 
 ## Rafraîchir après une migration appliquée en prod
 
-Le schéma de test doit suivre la prod. Après chaque migration appliquée (`supabase db query --linked -f …`) :
+**Jamais de copie de schéma ni d'export depuis la prod** (Hugo, 16/11/2026). Sur le plan gratuit, ces lectures massives vident le budget d'accès disque : trois pannes de la prod (13/11, 14-15/11, 16/11 à 1 h). La prod ne reçoit que la migration elle-même et une requête de contrôle.
+
+La base de test `agon-test` (`docs/BASE_DE_TEST.md`) suit la prod : chaque migration y est rejouée. C'est d'elle qu'on copie, depuis le dossier lié `~/agon-test-cli` :
 
 ```bash
-supabase db dump --linked -f supabase/tests/ci/schema.sql
+cd ~/agon-test-cli
+supabase db query --linked -f <dépôt>/supabase/migrations/<fichier>.sql   # si pas déjà rejouée
+supabase db dump --linked -f <dépôt>/supabase/tests/ci/schema.sql
 ```
 
-Sans Docker (`pg_dump` 17+ installé, par exemple `brew install libpq`) : `supabase db dump --linked --dry-run` affiche le script `pg_dump` ; le lancer avec `bash` et rediriger la sortie vers `schema.sql`. Ne jamais copier ce script ailleurs : il contient un mot de passe temporaire.
+Sans Docker (`pg_dump` 17+, par exemple `brew install libpq`) : `supabase db dump --linked --dry-run` affiche le script `pg_dump` ; le lancer avec `bash` (PATH avec `/opt/homebrew/opt/libpq/bin`) et rediriger la sortie vers `schema.sql`. Ne jamais copier ce script ailleurs : il contient un mot de passe temporaire. Le job R2 compare ce fichier au rejeu des migrations : un oubli sur la base de test le rend rouge.
 
-Si la migration ajoute des lignes de bibliothèque (nouvelle table de référence, nouveaux presets) :
+Si la migration ajoute des lignes de bibliothèque (nouvelle table de référence, nouveaux presets), toujours depuis `~/agon-test-cli` :
 
 ```bash
-node supabase/tests/ci/export_reference_data.mjs > supabase/tests/ci/reference_data.sql
+cd ~/agon-test-cli
+node <dépôt>/supabase/tests/ci/export_reference_data.mjs > <dépôt>/supabase/tests/ci/reference_data.sql
 ```
+
+Les types aussi : `cd ~/agon-test-cli && supabase gen types typescript --linked > <dépôt>/src/integrations/supabase/types.ts`.
 
 (liste des tables dans le script ; n'y ajouter **que** des tables sans donnée personnelle). Un nouveau bucket, une nouvelle policy Storage ou une nouvelle tâche cron : les ajouter à `platform.sql`.
 

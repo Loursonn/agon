@@ -94,6 +94,8 @@ export interface Profile {
   co_coached_by_me?: boolean;
   /** Côté coach : id du co-coach de l'athlète (null = un seul coach) */
   co_coach_id?: string | null;
+  /** Réglages de l'accueil athlète par le coach (sections masquées, « +clé » = activée). Voir useHomeSections. */
+  home_hidden_sections?: string[] | null;
 }
 
 /** Champs de la fiche modifiables depuis l'app (jamais rôle, coach, drapeaux). */

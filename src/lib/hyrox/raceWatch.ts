@@ -39,6 +39,12 @@ export interface RaceTimeline {
   segments: RaceSegment[];
   /** Roxzone répartie à parts égales faute de temps de passage détaillés. */
   roxzoneEstimated: boolean;
+  /**
+   * Secondes ajoutées (positif) ou retirées (négatif) pour que la course finisse
+   * au chrono officiel : les temps intermédiaires sont arrondis à la seconde,
+   * leur somme ne tombe pas pile sur le chrono. 0 sans chrono officiel.
+   */
+  gapS: number;
 }
 
 /** Transitions en roxzone : entrée avant chacune des 8 stations, sortie après les 7 premières. */
@@ -58,12 +64,31 @@ export function raceTimeline(r: HyroxResult): RaceTimeline | null {
   const detailed = Array.isArray(r.roxzone_splits) && r.roxzone_splits.length >= ROX_TRANSITIONS
     && r.roxzone_splits.slice(0, ROX_TRANSITIONS).every((x) => typeof x === "number" && x >= 0);
   const roxTotal = r.roxzone_total_s ?? 0;
-  const rox = (i: number) => detailed ? (r.roxzone_splits as number[])[i] : roxTotal / ROX_TRANSITIONS;
+  const roxRaw = (i: number) => detailed ? (r.roxzone_splits as number[])[i] : roxTotal / ROX_TRANSITIONS;
+
+  // La course finit au chrono officiel (Hugo, 15/11/2026 : « les chronos
+  // finaux sont plus longs que le chrono réel »). Runs et stations gardent
+  // leur temps officiel ; l'écart d'arrondi va dans la roxzone. Si la roxzone
+  // ne suffit pas à l'absorber, tout est mis à l'échelle.
+  const runStation = (splits as number[]).reduce((a, s) => a + s, 0);
+  const roxSum = Array.from({ length: ROX_TRANSITIONS }, (_, i) => roxRaw(i)).reduce((a, s) => a + s, 0);
+  const official = r.total_s != null && r.total_s > 0 ? r.total_s : null;
+  const gapS = official != null ? official - (runStation + roxSum) : 0;
+  let roxFactor = 1;
+  let roxEven = 0; // roxzone vide : l'écart positif se répartit à parts égales
+  let scale = 1;
+  if (gapS !== 0) {
+    if (roxSum > 0 && roxSum + gapS >= 0) roxFactor = (roxSum + gapS) / roxSum;
+    else if (roxSum === 0 && gapS > 0) roxEven = gapS / ROX_TRANSITIONS;
+    else scale = (official as number) / (runStation + roxSum);
+  }
+  const rox = (i: number) => roxRaw(i) * roxFactor + roxEven;
 
   const segments: RaceSegment[] = [];
   let at = 0;
   let t = 0;
-  const push = (key: string, kind: RaceSegmentKind, label: string, dur: number) => {
+  const push = (key: string, kind: RaceSegmentKind, label: string, raw: number) => {
+    const dur = raw * scale;
     if (dur <= 0) return;
     segments.push({ key, kind, label, startS: at, endS: at + dur });
     at += dur;
@@ -79,7 +104,7 @@ export function raceTimeline(r: HyroxResult): RaceTimeline | null {
     push(key, "station", STATION_META[key as StationKey].label, dur);
     if (n < 8) push(`rox_out_${n}`, "roxzone", "Roxzone", rox(t++));
   });
-  return { segments, roxzoneEstimated: !detailed && roxTotal > 0 };
+  return { segments, roxzoneEstimated: (!detailed && roxTotal > 0) || roxEven > 0, gapS };
 }
 
 export interface SegmentWatch extends RaceSegment {
@@ -359,7 +384,7 @@ export function compromisedRunning(a: RaceWatchAnalysis, levelP50: RunLookup | n
 
 // ───────────────────────────── Où gagner du temps ────────────────────────────
 
-/** Référence d'un segment : médiane (p50) du niveau, et au-delà si connue. */
+/** Référence d'un segment : cible de l'objectif de la course (autrefois médiane du niveau). */
 export type MedianLookup = (segment: string) => number | null;
 
 export interface GainItem {
@@ -483,7 +508,7 @@ export function athleteFindings(input: {
     out.push({
       value: `+${Math.round(rox.gainS)}`,
       unit: "s",
-      text: `Roxzone : ${fmtMs(rox.athleteS)}, soit ${Math.round(rox.gainS)} s de plus que la médiane de ton niveau.`,
+      text: `Roxzone : ${fmtMs(rox.athleteS)}, soit ${Math.round(rox.gainS)} s de plus que l'objectif.`,
     });
   }
   return out.slice(0, 3);

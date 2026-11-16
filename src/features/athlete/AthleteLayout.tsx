@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo, type CSSProperties } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { alpha, C } from "@/lib/theme";
 import { cn } from "@/lib/utils";
@@ -8,6 +8,7 @@ import { AgonIcon } from "@/components/ui/AgonIcon";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useActiveInjuries } from "@/features/shared/hooks/useMedicalEntries";
 import { useUnfinishedWorkouts } from "@/features/shared/hooks/useUnfinishedWorkouts";
+import { AthleteTodoSheet } from "./components/AthleteTodoSheet";
 import { useAthleteStaff } from "@/features/staff/hooks/useAthleteStaff";
 import { shouldShowOnboarding } from "@/lib/onboarding";
 import { useAuth } from "@/hooks/useAuth";
@@ -275,7 +276,14 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
 
         {/* ── Contenu (marge basse pour la barre d'onglets fixe et le minuteur) ── */}
         {/* PC : zone bordée, sans barre du bas ; chaque page y organise sa largeur. */}
-        <div className={"min-w-0 flex-1 " + ((timerActive || timerFinished) ? "pb-[136px] lg:pb-20" : "pb-[88px] lg:pb-8")}>
+        <div
+          className="min-w-0 flex-1 pb-[var(--athlete-pb)] lg:pb-[var(--athlete-pb-lg)]"
+          style={floatingPadding(
+            timerActive || timerFinished,
+            !viewOnly && !isOnWorkoutPage && !!pendingFinish,
+            !!activeWorkout && !isOnWorkoutPage,
+          )}
+        >
           <Outlet />
         </div>
       </div>
@@ -550,6 +558,11 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
 
       <FicheViewerHost athleteId={athleteId} viewOnly={viewOnly} />
 
+      {/* « À faire » : une fois par jour, quand aucune autre fenêtre n'est ouverte. */}
+      {!viewOnly && (
+        <AthleteTodoSheet uid={user?.id} blocked={onboarding || showWellness || showAppFeedback || drawerOpen || isOnWorkoutPage || !!activeWorkout} />
+      )}
+
       {onboarding && user && (
         <Suspense fallback={null}>
         <AthleteOnboarding
@@ -588,4 +601,15 @@ export default function AthleteLayout({ onSwitchMode, userName }: AthleteLayoutP
     </div>
     </AthleteChromeContext.Provider>
   );
+}
+
+/**
+ * Marge basse du contenu selon ce qui flotte au-dessus de la barre du bas
+ * (minuteur, rappel « séance non terminée », « Revenir à la séance ») :
+ * sans elle, le dernier bouton de la page reste caché dessous.
+ */
+function floatingPadding(timer: boolean, unfinished: boolean, resume: boolean): CSSProperties {
+  const phone = 88 + (timer ? 48 : 0) + (unfinished ? 84 : 0) + (resume ? 64 : 0);
+  const desk = 32 + (timer ? 48 : 0) + (unfinished ? 84 : 0) + (resume ? 64 : 0);
+  return { "--athlete-pb": `${phone}px`, "--athlete-pb-lg": `${desk}px` } as CSSProperties;
 }

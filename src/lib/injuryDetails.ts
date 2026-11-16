@@ -22,6 +22,7 @@ import {
   type MedicalEntryStatus,
   type TrainingImpact,
 } from "@/features/shared/types/medical";
+import { painWord } from "./painZones";
 
 /**
  * Sous-ensemble d'un `MedicalEntry` suffisant pour juger et résumer. Les champs
@@ -69,13 +70,7 @@ export function painValue(level: number | null | undefined): number | null {
  */
 export function painReading(level: number | null | undefined): string | null {
   const v = painValue(level);
-  if (v === null) return null;
-  if (v === 0) return "aucune douleur";
-  if (v <= 2) return "douleur légère";
-  if (v <= 4) return "douleur modérée";
-  if (v <= 6) return "douleur gênante";
-  if (v <= 8) return "douleur forte";
-  return "douleur très forte";
+  return v === null ? null : painWord(v);
 }
 
 /** « 1 jour d'arrêt », « 3 jours d'arrêt », « aucun jour d'arrêt ». */

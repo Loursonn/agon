@@ -22,7 +22,7 @@
  * Les corrections purement rédactionnelles (typo, reformulation) ne doivent PAS
  * l'incrémenter, sinon on harcèle les utilisateurs pour rien.
  */
-export const LEGAL_VERSION = "2026-11-14";
+export const LEGAL_VERSION = "2026-11-15";
 
 /**
  * Plus ancienne version sous laquelle l'accord socle (`health_data`) reste
@@ -56,11 +56,19 @@ export const CORE_CONSENT_SINCE = "2026-11-13";
  * Anthropic étant déjà nommé dans le texte du 30 octobre, et le cadre devenant
  * plus protecteur (sous-traitance, pas d'entraînement), les accords donnés
  * depuis restent valables : décision d'Hugo, `docs/DECISIONS.md`.
+ *
+ * 15 novembre 2026 : l'assistant Claude du coach peut aussi lire la douleur et
+ * la maladie du matin, les courbatures et douleurs par zone, la douleur de
+ * suivi d'une blessure et le bilan hebdomadaire (chiffres et choix, jamais les
+ * phrases). La question IA est reposée à tous ; un accord plus ancien reste
+ * valable pour ce qu'il nommait (le serveur sert alors l'ancien résumé). Même
+ * valeur que `AI_HEALTH_DETAILS_SINCE` (`supabase/functions/_shared/coachApiOps.ts`),
+ * vérifiée par un test.
  */
-export const AI_CONSENT_SINCE = "2026-10-30";
+export const AI_CONSENT_SINCE = "2026-11-15";
 
 /** Date d'entrée en vigueur affichée en tête des documents. */
-export const LEGAL_EFFECTIVE_DATE = "14 novembre 2026";
+export const LEGAL_EFFECTIVE_DATE = "15 novembre 2026";
 
 /**
  * Marqueur des champs que seul Hugo peut renseigner (données d'état civil et

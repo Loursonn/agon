@@ -45,6 +45,18 @@ export { cleanText };
  */
 export const AI_ASSISTANT_SINCE = "2026-10-30";
 
+/**
+ * Version du texte IA qui nomme aussi, pour l'assistant du coach, la douleur et
+ * la maladie du matin, les courbatures et douleurs par zone, la douleur de
+ * suivi d'une blessure et le bilan hebdomadaire (chiffres et choix).
+ *
+ * Un accord plus ancien (>= `AI_ASSISTANT_SINCE`) reste valable pour ce qu'il
+ * nommait : l'athlète garde le résumé d'avant, sans le bloc `details_sante`.
+ * Égal à `AI_CONSENT_SINCE` (`src/lib/legal.ts`), qui fait reposer la
+ * question : un test le vérifie.
+ */
+export const AI_HEALTH_DETAILS_SINCE = "2026-11-15";
+
 export const DRAFT_KINDS = ["axe", "programme", "planning", "objectifs", "semaine", "plan"] as const;
 export type DraftKind = typeof DRAFT_KINDS[number];
 

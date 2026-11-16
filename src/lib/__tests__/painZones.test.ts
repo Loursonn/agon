@@ -28,8 +28,10 @@ describe("carte douleur", () => {
     expect(painSummary({})).toBe("");
   });
 
-  it("repères de l'échelle : 0 aucune, 1-3 gêne, 4-9 douleur, 10 insupportable", () => {
-    expect([0, 1, 3, 4, 9, 10].map(painWord)).toEqual(["aucune", "gêne", "gêne", "douleur", "douleur", "insupportable"]);
+  it("mots de l'échelle : 1 petite gêne, 2 gêne modérée, 3 douleur légère (Hugo, 15/11)", () => {
+    expect([0, 1, 2, 3, 4, 6, 9, 10].map(painWord)).toEqual([
+      "aucune douleur", "petite gêne", "gêne modérée", "douleur légère", "douleur modérée", "douleur forte", "douleur très forte", "douleur insupportable",
+    ]);
   });
 });
 

@@ -1,4 +1,5 @@
 import { priorityLabel } from "@/types/planning";
+import { CompetitionResultLine } from "@/features/shared/components/CompetitionResultLine";
 import { Trophy, X, MapPin } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -55,7 +56,8 @@ function CompCard({ comp }: { comp: CompetitionDetail }) {
         </div>
       )}
 
-      {/* Retour de l'athlète (lecture seule) */}
+      {/* Séance du jour J et retour de l'athlète (lecture seule) */}
+      <CompetitionResultLine comp={comp} />
       {comp.athlete_comment ? (
         <div className="rounded-[4px] bg-agon-accent-doux px-2.5 py-2">
           <div className="mb-[3px] text-[9px] font-bold text-agon-accent">Retour de l'athlète</div>

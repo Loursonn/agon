@@ -38,7 +38,7 @@ Constats valables pour toutes les catégories :
 | Vercel (US) | Sous-traitant : hébergement web | Adresse IP, requêtes (pas de données en base) | Prestataire → **pas un partage** |
 | Anthropic (API Claude, depuis le 14/11/2026) | Sous-traitant IA | Données d'entraînement et de forme **saisies dans Agon ou importées par fichier**. **Jamais de données Garmin ni COROS** (`data_source_policies.ai_allowed = false`, vues `ai_provider_*`). Seulement si l'athlète a donné l'accord IA. | Prestataire → **pas un partage** (pas d'entraînement des modèles) |
 | Garmin, COROS | Responsables indépendants | Ils **envoient** des données (sur connexion volontaire). Agon leur envoie : jetons, révocation, séances planifiées (`provider_workout_pushes`) | Source de collecte. L'envoi de séances vers Garmin = action demandée par l'utilisateur → pas un partage |
-| Anthropic (Claude, via le compte du coach) | **Ni prestataire ni choisi par Agon** : clé API générée par le coach (`coach-api`) | Prénom, séances, charges, bien-être, poids, blessures (zones, dates), compétitions, tests, données de montre autorisées, titres d'événements de calendrier. Seulement si l'athlète a donné l'accord IA. | **Probablement un partage** (voir §5, point 1) |
+| Anthropic (Claude, via le compte du coach) | **Ni prestataire ni choisi par Agon** : clé API générée par le coach (`coach-api`) | Prénom, séances, charges, bien-être, poids, blessures (zones, dates), compétitions, tests, données de montre autorisées, titres d'événements de calendrier. Depuis le texte IA du 15/11/2026 (bloc `details_sante`) : douleur et maladie du matin, courbatures et douleurs par zone, douleur de suivi d'une blessure, bilan hebdomadaire (notes, statuts, choix, feu ; sans texte libre). Seulement si l'athlète a donné l'accord IA. | **Probablement un partage** (voir §5, point 1) |
 | Staff et co-coach | Utilisateurs de l'app | Domaines ouverts par le coach, avec l'accord staff de l'athlète | Partage entre utilisateurs de l'app → pas un partage au sens des stores |
 
 ## 2. Inventaire par catégorie
@@ -64,6 +64,9 @@ Légende : **Obl.** = obligatoire pour utiliser l'app ; **Fac.** = facultatif.
 | Bien-être (sommeil, fatigue, stress, courbatures) | `app_data` `asp:*`, `wellness_entries` | Fac. | Suivi coach, IA | Oui | Oui |
 | Poids, taille, masse grasse, métabolisme, mensurations | `profiles.weight_kg` / `height_cm` / `body_fat_pct` / `base_metabolism`, `body_weight_*`, `measurement_logs` | Fac. | Suivi, calculs | Oui (poids) | Oui (poids) |
 | Blessures sportives (zone, douleur, impact, arrêt, notes) | `medical_entries` | Fac. | Suivi coach / staff | Zones et dates seulement | Zones et dates seulement |
+| Douleur et maladie du matin, envie, carte douleurs / courbatures | `wellness_entries` (`pain`, `pain_levels`, `doms_levels`, `sick`, `envie`) | Fac. | Suivi coach, feu du matin | Non | Oui, accord IA ≥ 15/11/2026 (sans `injury_note`) |
+| Douleur de suivi d'une blessure (fin de séance) | `injury_followups` | Fac. | Suivi blessure | Non | Oui, accord IA ≥ 15/11/2026 (sans `note`) |
+| Bilan hebdomadaire | `weekly_reviews` (envoyés), `weekly_retours.athlete_reaction` | Fac. | Suivi coach | Non | Notes, statuts, cause, douleur, feu ; accord IA ≥ 15/11/2026 (jamais les phrases) |
 | Nutrition | `app_data` `asp:*` (tables `nutrition_*` non utilisées par le front) | Fac. | Suivi | Non (`athlete-insights` n'en reçoit pas) | Non |
 | Tests, résultats HYROX, compétitions | `test_*`, `athlete_test_*`, `hyrox_*`, `competitions` | Fac. | Suivi, programmation | Oui | Oui |
 | Habitudes | `habits`, `habit_logs` | Fac. | Suivi | Non | Oui (fiches/habitudes écrites) |

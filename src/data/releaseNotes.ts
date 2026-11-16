@@ -38,6 +38,336 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-16-fix-affichages-telephone",
+    date: "2026-11-16",
+    kind: "fix",
+    title: "Trois corrections d'affichage côté athlète",
+    summary: "Le dernier bouton d'une page n'est plus caché, et la comparaison du volume de course est juste en début de semaine.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Quand le rappel « Séance non terminée » est affiché, l'athlète peut descendre jusqu'au dernier bouton de la page (par exemple « Voir le débrief » en HYROX) : il n'est plus caché dessous.",
+          "Volume de course : la semaine en cours se compare à la semaine dernière au même jour, et plus à la semaine dernière complète. Un lundi matin n'affiche plus « −100 % ».",
+          "Étapes d'une blessure sur téléphone : libellés courts (Réhab, Fin réhab, Réathlé), les mots ne sont plus coupés en deux.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-16-hyrox-objectif-saison",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "HYROX : l'objectif part du run moyen, et chaque saison a le sien",
+    summary:
+      "L'onglet « Plan de course » devient « Objectif » : un run moyen visé suffit pour obtenir les 17 cibles de la course. Un objectif de saison s'ajoute, et les courses sont rangées par saison.",
+    sections: [
+      {
+        title: "Objectif d'une course",
+        points: [
+          "Choisis un run moyen (/km, hors Roxzone) ou un chrono visé : Agon en tire les 8 runs, les 8 stations et la Roxzone, d'après les athlètes qui courent à cette allure, dans la division choisie (solo et duo).",
+          "Le run moyen est proposé : objectif de saison, sinon la dernière course de la même division ou le dernier bilan de tests validé (le plus récent).",
+          "Boutons −5 s / +5 s pour ajuster l'allure, chaque cible reste modifiable. Chrono verrouillé : une cible modifiée est compensée sur les autres ; « Revenir au modèle » remet les 17 cibles calculées.",
+        ],
+      },
+      {
+        title: "Saisons",
+        points: [
+          "Une saison va du 15 août au 14 août (Saison 26/27).",
+          "Objectif de saison : un run moyen visé par division, fixé dans l'onglet Objectif. Il pré-remplit l'objectif des prochaines courses de la saison ; l'athlète le voit en haut de « Ma saison ».",
+          "La liste des courses est rangée par saison, la plus récente en haut. Une course déjà faite sans objectif reste jugée sur son run du jour.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-16-hyrox-meilleure-strategie",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "HYROX : « Et avec une meilleure stratégie ? »",
+    summary:
+      "Pour chaque course, le chrono possible en revenant à l'objectif, levier par levier, en secondes : ce qui se gagne le jour J et ce qui se construit à l'entraînement.",
+    sections: [
+      {
+        title: "Dans l'analyse de course",
+        points: [
+          "L'onglet Gains devient « Stratégie » : ton chrono, le chrono possible et la cascade de l'un à l'autre, en deux groupes, Stratégie (départ trop rapide, régularité des runs, course après les sleds, run 8, Roxzone, no reps) puis Capacité (chaque station, allure de course).",
+          "Chaque seconde de retard n'est comptée qu'une fois, et un point sous 10 s n'est pas cité. Un départ trop rapide se paie environ 2,5 fois plus tard : il est chiffré à part.",
+          "Si les 8 passages en Roxzone sont saisis, les 3 plus longs sont cités.",
+          "Montre liée : la FC (au-dessus de SV2) et la cadence expliquent un levier (pastille « Indice montre »), sans ajouter de secondes.",
+        ],
+      },
+      {
+        title: "Côté coach",
+        points: [
+          "Les leviers de l'onglet Course sont désormais calculés contre l'objectif de la course (plus contre la médiane de la catégorie), avec une proposition de travail et « Ajouter au programme ».",
+          "Si un bilan de tests validé existe, le levier affiche l'axe qui dit la même chose (« Déjà dans ses axes »).",
+          "Le débrief et Ma saison de l'athlète reprennent les leviers qui rapportent le plus et le chrono possible.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-16-competition-seance",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "Le jour J, la compétition se remplit comme une séance",
+    summary:
+      "Compétition ou match : l'athlète saisit son résultat, un lien, son RPE, son bilan et une éventuelle douleur, et la lie à l'activité de sa montre.",
+    sections: [
+      {
+        title: "Côté athlète",
+        points: [
+          "Dès le jour de la compétition, « Remplir ma séance » sur la carte de la compétition (Aujourd'hui, Programme) : résultat libre (« 12e / 80 », « 3-1 »…), lien vers les résultats, RPE, ressenti, douleur de fin de séance.",
+          "Les activités de la montre du jour (Garmin, COROS ou fichier importé) sont listées : Agon propose la plus longue (la course, l'échauffement étant plus court). L'athlète peut choisir l'autre.",
+          "L'échauffement reste une activité à part : il compte dans la charge du jour, séparément de la course.",
+          "Tant que rien n'est saisi, la compétition reste « à remplir » dans la fenêtre « À faire ».",
+        ],
+      },
+      {
+        title: "Côté coach",
+        points: [
+          "Résultat, RPE et lien s'affichent avec le bilan de l'athlète : Retours, panneau du jour du planning, fiche de la compétition.",
+          "Dans le planning, la course rattachée apparaît comme une séance réalisée (ou à confirmer), avec la montre et l'attribution Garmin.",
+          "Une douleur déclarée en fin de compétition devient une blessure (contexte « compétition ») ou met à jour celle déjà en cours sur la zone.",
+          "HYROX : l'analyse de course reprend d'office l'activité liée à la compétition.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-15-assistant-douleurs-bilan-hebdo",
+    date: "2026-11-15",
+    kind: "feature",
+    title: "Ton assistant Claude lit les douleurs et le bilan de la semaine",
+    summary:
+      "Pour un bilan de semaine complet : ton assistant IA voit maintenant la douleur et la maladie du matin, les zones douloureuses et les bilans hebdo de tes athlètes, s'ils l'acceptent.",
+    sections: [
+      {
+        title: "Ce qu'il voit en plus",
+        points: [
+          "Chaque matin : douleur sur 10, zones de douleur et de courbatures, malade ou non, envie de s'entraîner.",
+          "La douleur notée en fin de séance pour une blessure déclarée, avec sa zone.",
+          "Le bilan de la semaine : les 5 notes, les engagements tenus ou non, ce qui a bloqué (moi, programme, vie), la douleur de la semaine et le feu du matin.",
+          "Jamais les phrases écrites par l'athlète : ses commentaires restent dans Agon.",
+        ],
+      },
+      {
+        title: "L'accord de tes athlètes",
+        points: [
+          "La question sur l'IA est reposée à tes athlètes majeurs à leur prochaine ouverture d'Agon.",
+          "Tant qu'un athlète n'a pas répondu, ton assistant continue de voir ce qu'il voyait avant, sans ces nouveautés.",
+        ],
+      },
+      {
+        title: "Le bilan de semaine",
+        points: [
+          "Demande « fais-moi le bilan de la semaine de Léa » : il compare la semaine aux 4 précédentes (charge, sommeil, fatigue, douleurs zone par zone, bilan de l'athlète) et te propose 3 ajustements au plus.",
+          "Télécharge le nouveau mode d'emploi ci-dessous et redonne-le à ton assistant.",
+        ],
+      },
+    ],
+    resources: [
+      {
+        label: "Mode d'emploi pour ton assistant IA",
+        description: "À donner à Claude Code sur ton ordinateur, avec ta clé. Claude dans le navigateur (claude.ai) ne peut pas appeler l'API.",
+        text: COACH_API_PROMPT,
+        filename: COACH_API_PROMPT_FILENAME,
+      },
+    ],
+  },
+  {
+    id: "2026-11-15-hyrox-course-contre-objectif",
+    date: "2026-11-15",
+    kind: "feature",
+    title: "HYROX : chaque course est analysée contre son objectif",
+    summary:
+      "L'analyse d'une course HYROX ne compare plus l'athlète à la médiane de sa catégorie : chaque segment est jugé contre l'objectif de la course, en secondes.",
+    sections: [
+      {
+        title: "L'objectif de la course",
+        points: [
+          "C'est le plan de course s'il y en a un. Sinon, Agon construit l'objectif à partir de l'allure moyenne des 8 runs du jour : les stations, la Roxzone et la forme des runs attendues chez les athlètes qui courent à cette allure.",
+          "En haut de l'analyse : le chrono, puis l'écart à l'objectif (en avance, dans l'objectif ou en retard), avec l'allure de run visée.",
+        ],
+      },
+      {
+        title: "Segment par segment",
+        points: [
+          "La frise et le tableau des 17 segments montrent l'objectif et l'écart de chaque segment : vert en avance, gris dans l'objectif (2 % de marge), orange en retard.",
+          "Un run 1 nettement plus rapide que prévu est signalé « départ rapide », jamais comme un point fort.",
+          "Points forts, points à travailler et « où gagner du temps » sont comptés en secondes contre l'objectif.",
+          "Côté coach, « Comparer à » propose l'objectif ou la course précédente.",
+        ],
+      },
+      {
+        title: "Ce qui disparaît",
+        points: [
+          "Les positions « top x % » calculées, les couleurs fort / dans la norme / à travailler, le profil runner / hybride et l'équivalence de chrono entre catégories. Seul le rang officiel de la course reste affiché.",
+          "Dans Ma saison, le profil des stations devient l'écart de chaque station à l'objectif de la dernière course.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-15-volume-course-semaine",
+    date: "2026-11-15",
+    kind: "feature",
+    title: "Volume de course : 12 semaines, et toutes les sorties d'une semaine d'un geste",
+    summary:
+      "Le graphique des km de course par semaine est plus lisible, et un clic (ou un toucher sur téléphone) sur une semaine affiche toutes ses sorties.",
+    sections: [
+      {
+        title: "Le graphique",
+        points: [
+          "12 semaines au lieu de 8, avec la moyenne des semaines terminées en pointillé et la semaine en cours mise en avant.",
+          "Une semaine sans course s'affiche « — », jamais 0 km.",
+        ],
+      },
+      {
+        title: "Les sorties de la semaine",
+        points: [
+          "En tête : le total de la semaine en grand, sa durée, son dénivelé, l'écart avec la semaine précédente (en km et en %), et une frise des 7 jours qui montre quand l'athlète a couru.",
+          "Chaque sortie avec son nom, son jour, sa distance, sa durée, son allure, son D+ et d'où elle vient (montre, fichier importé, saisie). Un clic ouvre son détail.",
+          "Le vélo, la natation ou le HYROX de la semaine apparaissent à part, hors du total de course.",
+          "Les flèches passent d'une semaine à l'autre. Dans Profil athlète → Général, et dans le profil de l'athlète.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-16-inscription-sur-invitation",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "Inscription des coachs sur invitation",
+    summary:
+      "On ne peut plus s'inscrire comme coach sans y être invité. Si vous êtes certifié, vous pouvez inviter un confrère depuis la page Coachs.",
+    sections: [
+      {
+        title: "Inviter un coach",
+        points: [
+          "Page Coachs › Inviter un coach : entrez son e-mail, le lien est copié, envoyez-le-lui.",
+          "Le lien ne marche qu'avec cet e-mail, une seule fois, pendant 7 jours. Vous pouvez l'annuler tant qu'il n'a pas servi.",
+          "La liste montre où en est chaque invitation : en attente, inscrit, expirée ou annulée.",
+        ],
+      },
+      {
+        title: "Vos athlètes et votre staff",
+        points: [
+          "Rien ne change pour eux : un athlète s'inscrit toujours avec votre code coach, un professionnel du staff avec le lien d'invitation que vous lui envoyez.",
+          "Ces codes et ces liens sont maintenant vérifiés par le serveur au moment de l’inscription.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-16-echelle-douleur",
+    date: "2026-11-16",
+    kind: "fix",
+    title: "Échelle de douleur : des mots plus justes pour les petites notes",
+    summary:
+      "Sur l'échelle de 0 à 10, 1 se lit « petite gêne », 2 « gêne modérée », et la douleur commence à 3 (« douleur légère »).",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "0 aucune douleur · 1 petite gêne · 2 gêne modérée · 3 douleur légère · 4-5 douleur modérée · 6-7 douleur forte · 8-9 douleur très forte · 10 douleur insupportable.",
+          "Les mêmes mots partout : carte douleur du matin, question douleur de fin de séance, blessures dans le profil et dans Retours.",
+          "Les notes déjà saisies ne changent pas, seul leur libellé change.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-16-hyrox-chrono-final",
+    date: "2026-11-16",
+    kind: "fix",
+    title: "HYROX : la frise de course finit au chrono officiel",
+    summary:
+      "La frise d'une course HYROX finissait quelques secondes après le chrono officiel. Elle s'arrête maintenant pile sur le temps officiel.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Les temps intermédiaires HYROX sont arrondis à la seconde : leur somme dépasse souvent le chrono de quelques secondes. Les runs et stations gardent leur temps officiel, l'écart est absorbé par la roxzone.",
+          "En collant un résultat, le chrono officiel (« Overall Time ») est reconnu même quand il est séparé de son temps par un simple espace : il n'est plus remplacé par la somme des temps intermédiaires.",
+          "Une course déjà enregistrée avec la somme à la place du chrono : corrigez le chrono dans la course, la frise suit.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-16-etape-blessure",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "Blessures : l'étape de résolution, de « Blessé » à « Guéri »",
+    summary:
+      "Chaque blessure en cours a maintenant son étape : Blessé, Réhabilitation, Réhab presque finie, Réathlétisation, Guéri. Vous, votre athlète ou son staff la changez d'un geste, et chaque étape est datée.",
+    sections: [
+      {
+        title: "Changer l'étape",
+        points: [
+          "Sur la carte de la blessure (fiche de l'athlète › Profil, et le profil de l'athlète) et dans Retours, sur ordinateur comme sur téléphone : touchez l'étape atteinte.",
+          "Passer à « Guéri » clôt la blessure : elle n'apparaît plus comme blessure active. La rouvrir la remet à « Blessé ».",
+          "Votre athlète peut aussi la changer lui-même depuis son profil, tout comme le staff qui a les droits sur les blessures.",
+        ],
+      },
+      {
+        title: "Suivre la guérison",
+        points: [
+          "Sous la frise : depuis quand l'athlète est à cette étape, et les dates des étapes précédentes (par exemple « Blessé 02/11 (6 j) → Réhab 08/11 »).",
+          "Les blessures déjà déclarées démarrent à « Blessé » (ou « Guéri » si elles étaient guéries).",
+          "L'assistant IA lit l'étape, pour adapter la charge à une réathlétisation plutôt qu'à une blessure toute fraîche.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-16-a-faire-athlete",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "« À faire aujourd'hui » à l'ouverture de l'app athlète, et weekly review au choix",
+    summary:
+      "À la première ouverture du jour, votre athlète voit ce qu'il lui reste à faire : wellness, séance à terminer, votre retour, une fiche, sa compétition à raconter, sa weekly review. La weekly review devient une option que vous activez athlète par athlète.",
+    sections: [
+      {
+        title: "Côté athlète",
+        points: [
+          "Une fenêtre « À faire aujourd'hui » s'ouvre une fois par jour, seulement s'il reste quelque chose : wellness du jour, séance commencée mais pas terminée, retour du coach pas encore lu, nouvelle fiche, compétition passée sans bilan, weekly review (si vous l'avez activée).",
+          "Chaque ligne mène directement au bon endroit. « Plus tard » la ferme jusqu'au lendemain.",
+        ],
+      },
+      {
+        title: "Weekly review : à activer",
+        points: [
+          "Tous les athlètes n'ont pas besoin d'une weekly review : elle est désormais désactivée par défaut.",
+          "Pour l'activer : fiche de l'athlète › Profil › Identité › Accueil de l'athlète, case « Weekly review ».",
+          "La page Weekly reviews ne liste plus que les athlètes pour qui elle est activée.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-16-saisie-allures",
+    date: "2026-11-16",
+    kind: "fix",
+    title: "Séances d'énergie : les allures se modifient de nouveau",
+    summary:
+      "Dans l'éditeur de séance d'énergie, une allure tapée autrement que « 4'15 » (4.15, 4'15'', 415…) était refusée sans prévenir : le champ revenait à l'ancienne valeur. Toutes ces écritures sont maintenant acceptées.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Allure : 4'15, 4:15, 4.15, 4,15, 4'15'', 415 ou 4 min 15 donnent tous 4'15 /km.",
+          "Si vous tapez les deux bornes à l'envers (4'25 à 4'15), elles sont remises dans l'ordre.",
+          "Une saisie que l'app ne sait pas lire passe en rouge au lieu de disparaître ; Échap revient à la valeur d'avant.",
+          "Éditeur détaillé : le champ d'allure ne se réécrit plus pendant que vous tapez, et une vitesse en km/h est bien enregistrée.",
+          "Répétitions : vider le champ pour retaper un nombre ne remet plus 1 fois.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-16-douleur-de-seance",
     date: "2026-11-16",
     kind: "feature",

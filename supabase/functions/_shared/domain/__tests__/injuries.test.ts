@@ -12,11 +12,17 @@ describe("toExportedInjury", () => {
   it("n'exporte que la liste blanche, jamais le texte libre", () => {
     const out = toExportedInjury(row({}));
     expect(out).toEqual({
-      zone: "Genou gauche", type: "chronique_surmenage", statut: "en_cours",
+      zone: "Genou gauche", type: "chronique_surmenage", statut: "en_cours", etape: null,
       douleur: 4, impact: "adapte", debut: "2026-10-10", retour: null,
     });
     const json = JSON.stringify(out);
     for (const secret of ["IRM", "tendinopathie", "anti-inflammatoires", "peur"]) expect(json).not.toContain(secret);
+  });
+
+  it("exporte l'étape de résolution connue, rien d'autre", () => {
+    expect(toExportedInjury(row({ recovery_stage: "reathletisation" }))?.etape).toBe("reathletisation");
+    expect(toExportedInjury(row({ recovery_stage: "presque" }))?.etape).toBeNull();
+    expect(INJURY_EXPORT_COLUMNS).toContain("recovery_stage");
   });
 
   it("la requête ne lit aucune colonne de texte libre", () => {

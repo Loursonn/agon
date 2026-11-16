@@ -31,6 +31,10 @@ export interface WatchActivityInput {
   durationS: number | null;
   /** Modèle de l'appareil (attribution « Garmin [modèle] ») */
   deviceName?: string | null;
+  /** Titre donné par l'athlète (Strava, montre), affiché tel quel */
+  title?: string | null;
+  elevationGainM?: number | null;
+  avgPaceSPerKm?: number | null;
 }
 
 /** Séance énergie / spécifique programmée (`energy_session_assignments`). */
@@ -54,6 +58,8 @@ export interface PlannedSessionInput {
 /** Activité libre saisie par l'athlète (`asp:freesess`). */
 export interface FreeSessionInput {
   id: string;
+  /** Nom donné par l'athlète */
+  name?: string | null;
   date: string;
   sport: string | null;
   km: number | null;
@@ -82,6 +88,30 @@ export interface RunEntry {
   device?: string | null;
 }
 
+/** D'où vient une sortie de la liste « sorties de la semaine ». */
+export type RunOrigin = "activity" | "planned" | "free" | "strength";
+
+/**
+ * Une sortie comptée, avec ce qu'il faut pour la nommer dans la liste de la
+ * semaine. Même calcul que `entries` (une ligne ici = une ligne là) : la liste
+ * et le total ne peuvent pas diverger.
+ */
+export interface RunOuting extends RunEntry {
+  /** Clé stable (id de l'activité, de la séance prévue…) */
+  key: string;
+  origin: RunOrigin;
+  /** Nom affiché : titre de la sortie, sinon séance prévue, sinon null */
+  label: string | null;
+  /** Activité de montre / fichier à ouvrir en détail */
+  activityId: string | null;
+  /** Sport de l'activité de montre (« trail_running »…), null pour une saisie */
+  sport: string | null;
+  startedAt: string | null;
+  durationS: number | null;
+  elevationGainM: number | null;
+  paceSPerKm: number | null;
+}
+
 /** Une activité de montre rattachée à une séance prévue. */
 export interface RunMatch {
   plannedId: string;
@@ -101,6 +131,10 @@ export interface RunMatch {
 
 export interface RunLedger {
   entries: RunEntry[];
+  /** Les mêmes lignes que `entries`, détaillées (liste des sorties de la semaine) */
+  outings: RunOuting[];
+  /** Activités de montre qui ne sont pas de la course (vélo, natation…), hors total */
+  others: WatchActivityInput[];
   /** Rattachements montre ↔ séance prévue */
   matches: RunMatch[];
   /** Activités écartées comme doublon d'une autre activité (même départ ±2 min) */
@@ -316,13 +350,38 @@ export function buildRunLedger(input: {
   const matchedFree = new Set(freeMatches.map((m) => m.ref.id));
 
   const entries: RunEntry[] = [];
-  const push = (date: string, km: number | null, source: RunSource, activity?: WatchActivityInput) => {
+  const outings: RunOuting[] = [];
+  const push = (
+    date: string,
+    km: number | null,
+    source: RunSource,
+    activity: WatchActivityInput | undefined,
+    meta: { key: string; origin: RunOrigin; label: string | null; durationS?: number | null },
+  ) => {
     if (!positive(km)) return;
-    entries.push(
-      activity && source === "watch"
-        ? { date, km, source, provider: activity.source, device: activity.deviceName ?? null }
-        : { date, km, source },
-    );
+    const entry: RunEntry = activity && source === "watch"
+      ? { date, km, source, provider: activity.source, device: activity.deviceName ?? null }
+      : { date, km, source };
+    entries.push(entry);
+    const durationS = activity && positive(activity.durationS) ? activity.durationS : positive(meta.durationS) ? meta.durationS : null;
+    const pace = activity && source === "watch" && positive(activity.avgPaceSPerKm)
+      ? activity.avgPaceSPerKm
+      : durationS != null ? durationS / km : null;
+    outings.push({
+      ...entry,
+      // La montre a mesuré : sa provenance reste affichée même si la saisie a servi.
+      provider: activity?.source ?? entry.provider,
+      device: activity ? activity.deviceName ?? null : entry.device,
+      key: meta.key,
+      origin: meta.origin,
+      label: activity?.title?.trim() || meta.label,
+      activityId: activity?.id ?? null,
+      sport: activity?.sport ?? null,
+      startedAt: activity?.startedAt ?? null,
+      durationS,
+      elevationGainM: activity && activity.elevationGainM != null && Number.isFinite(activity.elevationGainM) ? activity.elevationGainM : null,
+      paceSPerKm: pace,
+    });
   };
 
   const matches: RunMatch[] = plannedMatches.map(({ activity, ref }) => {
@@ -330,7 +389,12 @@ export function buildRunLedger(input: {
     const manualKm = ref.activityType === "course" && positive(ref.manualKm) ? ref.manualKm : null;
     const countedKm = watchKm ?? manualKm;
     const countedSource: RunSource | null = watchKm != null ? "watch" : manualKm != null ? "manual" : null;
-    if (countedSource) push(activity.localDate, countedKm, countedSource, activity);
+    if (countedSource) {
+      push(activity.localDate, countedKm, countedSource, activity, {
+        key: activity.id, origin: "activity", label: ref.label,
+        durationS: positive(ref.manualDurationMin) ? ref.manualDurationMin * 60 : null,
+      });
+    }
     return {
       plannedId: ref.id,
       plannedLabel: ref.label,
@@ -347,27 +411,50 @@ export function buildRunLedger(input: {
 
   for (const { activity, ref } of freeMatches) {
     const watchKm = watchKmOf(activity);
-    if (watchKm != null) push(activity.localDate, watchKm, "watch", activity);
-    else push(ref.date, ref.km, "manual");
+    const meta = {
+      key: activity.id, origin: "activity" as const, label: ref.name?.trim() || null,
+      durationS: positive(ref.durationMin) ? ref.durationMin * 60 : null,
+    };
+    if (watchKm != null) push(activity.localDate, watchKm, "watch", activity, meta);
+    else push(ref.date, ref.km, "manual", activity, meta);
   }
 
   // Saisies sans activité de montre en face
   for (const p of input.planned) {
     if (matchedPlanned.has(p.id)) continue;
-    if (p.activityType === "course") push(p.date, p.manualKm, "manual");
+    if (p.activityType === "course") {
+      push(p.date, p.manualKm, "manual", undefined, {
+        key: `planned:${p.id}`, origin: "planned", label: p.label,
+        durationS: positive(p.manualDurationMin) ? p.manualDurationMin * 60 : null,
+      });
+    }
   }
   for (const f of freeRuns) {
-    if (!matchedFree.has(f.id)) push(f.date, f.km, "manual");
+    if (!matchedFree.has(f.id)) {
+      push(f.date, f.km, "manual", undefined, {
+        key: `free:${f.id}`, origin: "free", label: f.name?.trim() || null,
+        durationS: positive(f.durationMin) ? f.durationMin * 60 : null,
+      });
+    }
   }
-  for (const s of input.strength ?? []) push(s.date, s.km, "manual");
+  (input.strength ?? []).forEach((s, i) =>
+    push(s.date, s.km, "manual", undefined, { key: `strength:${s.date}:${i}`, origin: "strength", label: null }),
+  );
 
   // Sorties de montre sans séance en face : elles comptent seules
   for (const a of kept) {
-    if (!matchedActivity.has(a.id)) push(a.localDate, watchKmOf(a), "watch", a);
+    if (!matchedActivity.has(a.id)) {
+      push(a.localDate, watchKmOf(a), "watch", a, { key: a.id, origin: "activity", label: null });
+    }
   }
 
+  // Le reste (vélo, natation…) : listé à part, jamais compté dans les km de course.
+  const others = dedupeActivities(input.activities.filter((a) => !isRunningSport(a.sport))).kept
+    .sort((x, y) => x.startedAt.localeCompare(y.startedAt));
+
   entries.sort((x, y) => x.date.localeCompare(y.date));
-  return { entries, matches, duplicateActivityIds: duplicateIds };
+  outings.sort((x, y) => x.date.localeCompare(y.date) || (x.startedAt ?? "").localeCompare(y.startedAt ?? ""));
+  return { entries, outings, others, matches, duplicateActivityIds: duplicateIds };
 }
 
 // ── (d) Totaux par période ────────────────────────────────────────────────────

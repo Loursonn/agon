@@ -117,15 +117,15 @@ export function PainZoneMap({
               );
             })}
           </div>
-          {/* Repères : 0 aucune, 1-3 gêne, 4 douleur, 10 insupportable (alignés sur les cases). */}
+          {/* Repères : 0 aucune, 1-2 gêne, 3 douleur, 10 insupportable (alignés sur les cases). */}
           <div className="grid grid-cols-11 gap-[3px] text-agon-xs text-agon-tx3" aria-hidden>
             {PAIN_SCALE_MARKS.map((m) => (
               <span
                 key={m.label}
                 className={
                   m.at === 0 ? "col-start-1 whitespace-nowrap text-left"
-                  : m.at === 2 ? "col-span-3 col-start-2 border-t border-agon-brd-l pt-[2px] text-center"
-                  : m.at === 4 ? "col-start-5 -mx-agon-sm whitespace-nowrap pt-[3px] text-center"
+                  : m.at === 1 ? "col-span-2 col-start-2 border-t border-agon-brd-l pt-[2px] text-center"
+                  : m.at === 3 ? "col-start-4 -mx-agon-sm whitespace-nowrap pt-[3px] text-center"
                   : "col-span-4 col-start-8 whitespace-nowrap pt-[3px] text-right"
                 }
               >

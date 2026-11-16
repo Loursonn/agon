@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { C } from "@/lib/theme";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
@@ -17,6 +17,7 @@ import RaceCompare from "./RaceCompare";
 import { Plus, HelpCircle, ChevronRight, TrendingUp, ClipboardPaste } from "lucide-react";
 import { MONO } from "@/features/shared/components/seance/seanceUi";
 import { RaceCard } from "./RaceCard";
+import { groupBySeason } from "@/lib/hyrox/season";
 
 export default function RacesView() {
   const { athleteId } = useAthleteContext();
@@ -54,6 +55,10 @@ export default function RacesView() {
   const latest = races[0] ?? null;
   const ecartRecord = record && latest && record.id !== latest.id
     ? latest.total_s - record.total_s : null;
+
+  // Courses rangées par saison (15 août → 14 août), la plus récente d'abord.
+  const seasons = useMemo(() => groupBySeason(races), [races]);
+  const seasonTitle = (g: (typeof seasons)[number]) => `${g.season.label} · ${g.items.length} course${g.items.length > 1 ? "s" : ""}`;
 
   const selectedRace = raceId ? races.find((r) => r.id === raceId) ?? null : null;
   if (raceId && isLoading) {
@@ -192,19 +197,24 @@ export default function RacesView() {
             </span>
           </div>
           <div style={{ height: 1, background: C.brd }} />
-          <div style={{ background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 14, overflow: "hidden" }}>
-            {races.map((r, i) => (
-              <RaceCard
-                key={r.id}
-                race={r}
-                isRecord={record?.id === r.id}
-                checked={compareIds.includes(r.id)}
-                onToggle={() => toggleCompare(r.id)}
-                onOpen={() => openRace(r)}
-                last={i === races.length - 1}
-              />
-            ))}
-          </div>
+          {seasons.map((g) => (
+            <section key={g.season.key} aria-label={g.season.label} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <span style={{ ...MONO, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: C.tx3, marginTop: 4 }}>{seasonTitle(g)}</span>
+              <div style={{ background: C.s1, border: `1px solid ${C.brd}`, borderRadius: 14, overflow: "hidden" }}>
+                {g.items.map((r, i) => (
+                  <RaceCard
+                    key={r.id}
+                    race={r}
+                    isRecord={record?.id === r.id}
+                    checked={compareIds.includes(r.id)}
+                    onToggle={() => toggleCompare(r.id)}
+                    onOpen={() => openRace(r)}
+                    last={i === g.items.length - 1}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
         </div>
         <div className="hidden sm:block" style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, overflow: "hidden" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
@@ -225,7 +235,12 @@ export default function RacesView() {
               </tr>
             </thead>
             <tbody>
-              {races.map(r => {
+              {seasons.map((g) => (
+              <Fragment key={g.season.key}>
+              <tr style={{ borderBottom: "1px solid " + C.brd, background: C.s2 }}>
+                <td colSpan={10} style={{ padding: "7px 10px", ...MONO, fontSize: 10.5, letterSpacing: "0.12em", textTransform: "uppercase", color: C.tx2 }}>{seasonTitle(g)}</td>
+              </tr>
+              {g.items.map(r => {
                 const isSelected = compareIds.includes(r.id);
                 return (
                   <tr
@@ -267,6 +282,8 @@ export default function RacesView() {
                   </tr>
                 );
               })}
+              </Fragment>
+              ))}
             </tbody>
           </table>
         </div>

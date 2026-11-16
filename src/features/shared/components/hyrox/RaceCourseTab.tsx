@@ -4,7 +4,7 @@ import { useIsPhone } from "@/hooks/useIsPhone";
 import { CARD, KICKER, LABEL, MONO } from "@/features/shared/components/seance/seanceUi";
 import { hyroxPictoColor } from "@/features/shared/components/hyroxStation";
 import type { ActivityStream } from "@shared/activityFiles/stream";
-import type { HyroxReferenceSegment } from "@/features/shared/types/hyrox";
+import type { RaceVsObjective } from "@/lib/hyrox/objective/vsObjective";
 import {
   compromisedRunning, roxzoneRecovery, timeAboveHr, type Finding, type RaceWatchAnalysis,
 } from "@/lib/hyrox/raceWatch";
@@ -19,7 +19,7 @@ import RaceCompareBar from "./RaceCompareBar";
 import RaceLevers from "./RaceLevers";
 import type { HyroxAlert } from "@/features/shared/types/hyrox";
 import { COMPARE_SHORT, type CompareKind } from "@/lib/hyrox/raceCompare";
-import type { RaceLever } from "@/lib/hyrox/raceLevers";
+import type { LeverView } from "@/lib/hyrox/objective/levers";
 import { levelRunPattern } from "@/lib/hyrox/runPacing";
 
 /**
@@ -41,29 +41,28 @@ export default function RaceCourseTab(props: {
   above: ReturnType<typeof timeAboveHr>;
   recov: ReturnType<typeof roxzoneRecovery>;
   previous: { name: string; compromised: ReturnType<typeof compromisedRunning> } | null;
-  refOf: (seg: string) => HyroxReferenceSegment | null;
-  /** Références de position (toute la catégorie). */
-  posOf: (seg: string) => HyroxReferenceSegment | null;
-  /** Médianes des runs du niveau (habituel), `null` sans références. */
+  /** Cible de l'objectif par segment (`null` partout sans objectif). */
+  objective: (seg: string) => number | null;
+  vs: RaceVsObjective | null;
+  /** Runs de l'objectif (écart prévu), `null` sans objectif. */
   levelP50: ((seg: string) => number | null) | null;
   totalS: number;
-  totalRef: HyroxReferenceSegment | null;
   timeSource: string;
-  division: string;
-  bracketText: string;
+  /** « objectif 1:22:45 (run moyen 5:00) » pour les sources. */
+  objectiveText: string;
   /** Coach : « Comparer à » (référence de la colonne Écart et du pointillé d'allure). */
   compare?: {
     kind: CompareKind;
     onChange: (k: CompareKind) => void;
     target: (seg: string) => number | null;
-    /** Objectifs du plan de course ; `null` sans plan (colonne « — »). */
-    plan: ((seg: string) => number | null) | null;
     options: Array<{ key: CompareKind; label: string; available: boolean }>;
     alerts: HyroxAlert[];
   };
-  levers?: RaceLever[];
+  /** Leviers « meilleure stratégie » (coach). */
+  levers?: LeverView[];
   athleteId?: string;
-  atLevel?: number;
+  /** Stations dans l'objectif ou devant. */
+  onObjective?: number;
 }) {
   const { audience, analysis, stream, offset, sv1, sv2, attribution } = props;
   const coach = audience === "coach";
@@ -130,8 +129,8 @@ export default function RaceCourseTab(props: {
           </div>
         )}
         {sel
-          ? <RaceSegmentDetail s={sel} cruise={analysis.cruisePaceSPerKm} usualS={level?.usual[sel.key] ?? null} medianS={sel.kind === "roxzone" ? null : props.refOf(sel.key)?.p50_s ?? null} coach={coach}
-              planS={sel.kind === "roxzone" ? null : cmp?.plan?.(sel.key) ?? null} />
+          ? <RaceSegmentDetail s={sel} cruise={analysis.cruisePaceSPerKm} usualS={level?.usual[sel.key] ?? null}
+              objectiveS={sel.kind === "roxzone" ? null : props.objective(sel.key)} />
           : <div style={{ fontSize: 12, color: C.tx3 }}>{coach ? "Survole ou touche un segment pour voir son détail." : "Touche un segment pour voir son détail."}</div>}
         {!stream && !props.watchLoading && (
           <div style={{ fontSize: 12, color: C.tx2 }}>Aucune activité de montre ce jour-là : seuls les temps sont analysés. FC et cadence apparaîtront si la course est importée ou synchronisée.</div>
@@ -160,16 +159,16 @@ export default function RaceCourseTab(props: {
 
       {leversTitle && props.athleteId && (
         <RaceLevers title={leversTitle} levers={props.levers ?? []} athleteId={props.athleteId}
-          refText={`${props.division} · ${props.bracketText}`} atLevel={props.atLevel ?? 0} />
+          objectiveText={props.objectiveText} onObjective={props.onObjective ?? 0} />
       )}
 
-      <RaceSegmentsTable analysis={analysis} refOf={props.refOf} posOf={props.posOf} levelP50={props.levelP50} stream={stream} sv2={sv2} offset={offset}
-        totalS={props.totalS} totalRef={props.totalRef}
-        compare={cmp ? { label: COMPARE_SHORT[cmp.kind], target: cmp.target, plan: cmp.plan } : null}
+      <RaceSegmentsTable analysis={analysis} objective={props.objective} vs={props.vs} levelP50={props.levelP50} stream={stream} sv2={sv2} offset={offset}
+        totalS={props.totalS}
+        compare={cmp && cmp.kind !== "objective" ? { label: COMPARE_SHORT[cmp.kind], target: cmp.target } : null}
         timeSource={props.timeSource} attribution={attribution}
         title={coach ? segmentsTitle : "Les segments un par un"} defaultOpen={coach} />
       <Sources>
-        temps : {props.timeSource}{attribution ? ` · FC, cadence : ${attribution}` : ""} · médianes : références HYROX ({props.division} {props.bracketText}) · positions : toute la catégorie · run 1 jamais comparé, croisière = runs 2 à 7 · constats calculés par Agon, sans IA · mesure absente : « — »
+        temps : {props.timeSource}{attribution ? ` · FC, cadence : ${attribution}` : ""} · {props.objectiveText} · croisière = runs 2 à 7 · constats calculés par Agon, sans IA · mesure absente : « — »
       </Sources>
     </>
   );

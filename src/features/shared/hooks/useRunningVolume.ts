@@ -7,7 +7,7 @@ import { buildRunLedger, summarizeKm, type RunMatch, type WatchActivityInput } f
 
 export { RUNNING_WEEKS, computeRunningVolume } from "@/lib/runningVolume";
 export type { RunningVolume, RunningWeek, RunEntry } from "@/lib/runningVolume";
-export type { RunMatch } from "@/lib/watchRunMatching";
+export type { RunMatch, RunOuting, WatchActivityInput } from "@/lib/watchRunMatching";
 
 /** Préfixe des km saisis à la main (invalidé par les séances et les séances énergie). */
 export const runningVolumeKey = (athleteId: string) => ["runningVolume", athleteId] as const;
@@ -32,7 +32,8 @@ export function useRunningVolume(
   /** Début de l'historique chargé (défaut : début des RUNNING_WEEKS semaines) */
   fromISO?: string,
 ) {
-  const defaultFrom = iso(addDays(mondayOf(new Date()), -7 * (RUNNING_WEEKS - 1)));
+  // Une semaine de plus que le graphique : la plus ancienne se compare à la précédente.
+  const defaultFrom = iso(addDays(mondayOf(new Date()), -7 * RUNNING_WEEKS));
   const from = fromISO && fromISO < defaultFrom ? fromISO : defaultFrom;
 
   const manual = useQuery<ManualRunSources>({
@@ -54,6 +55,7 @@ export function useRunningVolume(
       .filter((f) => f.date && f.date >= from)
       .map((f) => ({
         id: f.id,
+        name: f.name ?? null,
         date: f.date as string,
         sport: f.sport ?? null,
         km: num(f.distance_km),
@@ -88,6 +90,10 @@ export function useRunningVolume(
   return {
     volume,
     runs,
+    /** Sorties comptées, détaillées (liste de la semaine) */
+    outings: ledger.outings,
+    /** Activités de montre hors course (vélo, natation…), hors total */
+    others: ledger.others,
     kmBetween,
     summaryBetween,
     matchByPlanned,

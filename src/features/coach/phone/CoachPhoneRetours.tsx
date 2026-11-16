@@ -11,6 +11,9 @@ import { useWeeklyCoachRetour, useUpsertWeeklyRetour, RETOUR_REACTIONS } from "@
 import { useMedicalEntries } from "@/features/shared/hooks/useMedicalEntries";
 import { useRunningVolume } from "@/features/shared/hooks/useRunningVolume";
 import { activeInjuries, fmtInjuryDate, injurySummary } from "@/lib/injuryDetails";
+import { stageOf } from "@/lib/injuryStage";
+import { RECOVERY_STAGE_SHORT } from "@/features/shared/types/medical";
+import { InjuryStageTrack } from "@/features/shared/components/medical/InjuryStageTrack";
 import { getReco } from "@/lib/wellness";
 import { mondayOf } from "@/lib/trainingLoadWeek";
 import { addDays, localIsoDay } from "@shared/domain/dates";
@@ -208,12 +211,15 @@ export default function CoachPhoneRetours() {
                 {injuries.slice(0, 6).map((inj, i) => {
                   const ongoing = inj.status === "en_cours";
                   return (
-                    <div key={inj.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 0", boxShadow: rowLine(i) }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13.5, fontWeight: 500 }}>{inj.title || inj.zone || "Blessure"}</div>
-                        <div style={{ fontSize: 12, color: C.tx2 }}>{[injurySummary(inj), fmtInjuryDate(inj.date)].filter(Boolean).join(" · ")}</div>
+                    <div key={inj.id} style={{ padding: "11px 0", boxShadow: rowLine(i), display: "flex", flexDirection: "column", gap: 8 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13.5, fontWeight: 500 }}>{inj.title || inj.zone || "Blessure"}</div>
+                          <div style={{ fontSize: 12, color: C.tx2 }}>{[injurySummary(inj), fmtInjuryDate(inj.date)].filter(Boolean).join(" · ")}</div>
+                        </div>
+                        <Tag color={ongoing ? ROUGE : C.g} filled={ongoing}>{RECOVERY_STAGE_SHORT[stageOf(inj)]}</Tag>
                       </div>
-                      <Tag color={ongoing ? ROUGE : C.g} filled={ongoing}>{ongoing ? "En cours" : "Guéri"}</Tag>
+                      {ongoing && <InjuryStageTrack entry={inj} athleteId={athleteId} canEdit compact />}
                     </div>
                   );
                 })}

@@ -74,7 +74,7 @@ describe("api/providers — lectures", () => {
     world({ provider_activities: [act("x3"), act("x1"), act("x2")] });
     const runs = await getWatchRuns("a", "2026-11-02");
     expect(runs.map((r) => r.id)).toEqual(["x2", "x3"]);
-    expect(runs[0]).toEqual({ id: "x2", source: "coros", localDate: "2026-11-02", startedAt: "2026-11-02T07:00:00Z", sport: "run", distanceM: 5012.5, durationS: 1800, deviceName: null });
+    expect(runs[0]).toEqual({ id: "x2", source: "coros", localDate: "2026-11-02", startedAt: "2026-11-02T07:00:00Z", sport: "run", distanceM: 5012.5, durationS: 1800, deviceName: null, title: null, elevationGainM: null, avgPaceSPerKm: 359.1 });
   });
 
   it("getManualRunSources : séances énergie et km de muscu, lève si une source est illisible", async () => {

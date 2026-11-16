@@ -3,22 +3,26 @@ import { C, alpha } from "@/lib/theme";
 import { CARD, DISPLAY, KICKER, LABEL, MONO } from "@/features/shared/components/seance/seanceUi";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useHyroxResults } from "@/features/shared/hooks/hyrox/useHyroxResults";
-import { useHyroxReferences } from "@/features/shared/hooks/hyrox/useHyroxReferences";
-import { pickRef } from "@/api/hyrox";
-import type { HyroxResult } from "@/features/shared/types/hyrox";
-import { bracketOf, type RefLookup } from "@/lib/hyrox/calc";
+import { useHyroxRacePlans } from "@/features/shared/hooks/hyrox/useHyroxRacePlans";
+import { STATION_KEYS, type HyroxResult } from "@/features/shared/types/hyrox";
 import { CATEGORY_LABEL, RACE_FORMAT_LABEL, raceCategory, type RaceFormat } from "@/lib/hyrox/categories";
-import { chronoByFormat, fmtPace, ownTotalPct, raceCruise, raceDebrief, stationProfile, type ChronoPoint } from "@/lib/hyrox/raceDebrief";
-import { raceGains } from "@/lib/hyrox/raceWatch";
+import { chronoByFormat, fmtPace, raceCruise, raceDebrief, segmentLabel, type ChronoPoint } from "@/lib/hyrox/raceDebrief";
+import { raceStrategy } from "@/lib/hyrox/objective/strategy";
 import { fmtClock } from "@/lib/seance";
-import { StandingLegend } from "@/features/shared/components/hyrox/RaceDebriefView";
-import { standingColor } from "@/features/shared/components/hyrox/raceAnalysisShared";
+import { ObjectiveLegend } from "@/features/shared/components/hyrox/RaceDebriefView";
+import { fmtGap, objectiveColor } from "@/features/shared/components/hyrox/raceAnalysisShared";
+import { objectiveForRace } from "@/lib/hyrox/objective/forRace";
+import { objectiveFromRun } from "@/lib/hyrox/objective/model";
+import { useHyroxSeasonGoals } from "@/features/shared/hooks/hyrox/useHyroxSeasonGoals";
+import { seasonOf } from "@/lib/hyrox/season";
+import { localIsoDay } from "@shared/domain/dates";
 
 /**
  * « Ma saison » (athlète, planche validée par Hugo le 15/11/2026) : la
  * dernière course en grand, la progression du chrono (solo et duo sur des
  * courbes séparées), ce qui a bougé depuis la course précédente du même
- * format, le profil des stations et où gagner du temps. Tout est calculé.
+ * format, les stations contre l'objectif de la course et où gagner du
+ * temps. Tout est calculé, aucune position dans la catégorie.
  */
 
 const FORMAT_COLOR: Record<RaceFormat, string> = { solo: C.tx, duo: C.b, relais: C.ame };
@@ -63,8 +67,11 @@ function SeasonChart({ series }: { series: Record<RaceFormat, ChronoPoint[]> }) 
 export default function HyroxSeasonView({ onOpenRace }: { onOpenRace: (id: string) => void }) {
   const { athleteId } = useAthleteContext();
   const { data: races = [], isLoading } = useHyroxResults(athleteId);
-  const { data: refs = [] } = useHyroxReferences();
-  const refLookup: RefLookup = useMemo(() => (d, s, b) => pickRef(refs, d, s, b) ?? undefined, [refs]);
+  const { data: plans = [] } = useHyroxRacePlans(athleteId);
+  const { data: goals = [] } = useHyroxSeasonGoals(athleteId);
+  // Objectif de saison (fixé par le coach) : saison en cours.
+  const season = seasonOf(localIsoDay());
+  const seasonGoals = goals.filter((g) => g.season === season?.key);
 
   const finished = useMemo(() => races.filter((r) => r.status === "finished" && r.total_s > 0).sort((a, b) => b.date.localeCompare(a.date)), [races]);
   const last: HyroxResult | null = finished[0] ?? null;
@@ -73,16 +80,16 @@ export default function HyroxSeasonView({ onOpenRace }: { onOpenRace: (id: strin
   const view = useMemo(() => {
     if (!last) return null;
     const cat = raceCategory(last);
-    const has = refs.length > 0;
-    const bracket = bracketOf(last.total_s);
-    const median = (seg: string) => pickRef(refs, cat, seg, bracket)?.p50_s ?? null;
-    const posOf = (seg: string) => pickRef(refs, cat, seg, "all");
+    const ov = objectiveForRace(last, plans);
     const best = finished.filter((r) => r.is_official && raceCategory(r) === cat).reduce<number | null>((m, r) => (m == null || r.total_s < m ? r.total_s : m), null);
     const isRecord = last.is_official && best != null && last.total_s <= best;
-    const debrief = raceDebrief({ race: last, races: finished, posOf, median: has ? median : null, refs: has ? refLookup : null, isRecord });
-    const gains = has ? raceGains(last, median) : null;
-    return { cat, isRecord, debrief, gains, profile: has ? stationProfile(last, refLookup) : [], pct: has ? ownTotalPct(last, refLookup) : null };
-  }, [last, refs, refLookup, finished]);
+    const debrief = raceDebrief({ race: last, races: finished, objective: ov?.objective.segments ?? null, vs: ov?.vs ?? null, isRecord });
+    const strategy = ov ? raceStrategy(last, ov.objective.segments) : null;
+    const stations = (ov?.vs.segments ?? [])
+      .filter((x): x is typeof x & { deltaS: number; actualS: number } => (STATION_KEYS as readonly string[]).includes(x.key) && x.deltaS != null && x.actualS != null)
+      .sort((a, b) => a.deltaS - b.deltaS);
+    return { cat, isRecord, debrief, strategy, stations, total: ov?.vs.total ?? null };
+  }, [last, plans, finished]);
 
   if (isLoading) return <div style={{ padding: 20, textAlign: "center", color: C.tx3, fontSize: 12 }}>Chargement…</div>;
   if (!last || !view) {
@@ -92,7 +99,8 @@ export default function HyroxSeasonView({ onOpenRace }: { onOpenRace: (id: strin
       </div>
     );
   }
-  const { debrief, gains } = view;
+  const { debrief, strategy } = view;
+  const top = strategy ? [...strategy.levers].sort((a, b) => b.gainS - a.gainS).slice(0, 3) : [];
   const prev = debrief.previous;
   const chronoRow = debrief.since.find((r) => r.key === "chrono");
   const cruise = raceCruise(last);
@@ -101,6 +109,21 @@ export default function HyroxSeasonView({ onOpenRace }: { onOpenRace: (id: strin
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      {season && seasonGoals.length > 0 && (
+        <section aria-label="Objectif de saison" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <span style={LABEL}>{season.label} · objectif de saison</span>
+          {seasonGoals.map((g) => {
+            const o = objectiveFromRun(g.division, g.run_avg_s);
+            return (
+              <div key={g.id} style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+                <span style={{ ...MONO, fontSize: 18 }}>{fmtPace(g.run_avg_s)}<span style={{ color: C.tx3, fontSize: 12 }}> /km</span></span>
+                {o && <span style={{ ...MONO, fontSize: 14, color: C.ac }}>→ {fmtClock(o.totalS)}</span>}
+                <span style={{ fontSize: 12.5, color: C.tx2 }}>{CATEGORY_LABEL[g.division as keyof typeof CATEGORY_LABEL] ?? g.division}</span>
+              </div>
+            );
+          })}
+        </section>
+      )}
       <section aria-label="Dernière course" style={{ ...CARD, borderColor: C.brdL, borderRadius: 16, padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
           <span style={LABEL}>Dernière course · {dateLabel}</span>
@@ -118,8 +141,10 @@ export default function HyroxSeasonView({ onOpenRace }: { onOpenRace: (id: strin
             </span>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={LABEL}>Position</span>
-            <span style={{ ...MONO, fontSize: 16 }}>{view.pct != null ? <>top {view.pct}<span style={{ color: C.tx3, fontSize: 12 }}> %</span></> : "—"}</span>
+            <span style={LABEL}>Vs objectif</span>
+            <span style={{ ...MONO, fontSize: 16, color: view.total ? (view.total.state === "on" ? C.tx2 : objectiveColor(view.total.state)) : C.tx }}>
+              {view.total ? (view.total.deltaS === 0 ? "0" : `${view.total.deltaS > 0 ? "+" : "−"}${fmtGap(view.total.deltaS)}`) : "—"}
+            </span>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <span style={LABEL}>{prev ? `vs ${prev.event_name.replace(/^hyrox\s+/i, "")}` : "Croisière"}</span>
@@ -163,43 +188,45 @@ export default function HyroxSeasonView({ onOpenRace }: { onOpenRace: (id: strin
         </section>
       )}
 
-      {view.profile.length > 0 && (
-        <section aria-label="Ton profil" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {view.stations.length > 0 && (
+        <section aria-label="Tes stations contre l'objectif" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-            <h2 style={H2}>03 — Ton profil</h2>
-            <span style={{ fontSize: 12, color: C.tx3 }}>vs toute la catégorie {CATEGORY_LABEL[view.cat]}</span>
+            <h2 style={H2}>03 — Tes stations</h2>
+            <span style={{ fontSize: 12, color: C.tx3 }}>contre l'objectif de la course</span>
           </div>
           <div style={{ ...CARD, padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
-            {view.profile.map((s) => (
-              <div key={s.key} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 13 }}>
-                  <span>{s.label}</span>
-                  <span style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
-                    <span style={{ ...MONO, fontSize: 12, color: C.tx3 }}>{fmtClock(s.timeS)}</span>
-                    <span style={{ ...MONO, fontSize: 13, color: s.standing === "norme" ? C.tx2 : standingColor(s.standing) }}>top {s.pct} %</span>
-                  </span>
+            {view.stations.map((s) => {
+              const color = s.state === "on" ? alpha(C.tx2, 0.6) : objectiveColor(s.state);
+              return (
+                <div key={s.key} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 13 }}>
+                    <span>{segmentLabel(s.key)}</span>
+                    <span style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
+                      <span style={{ ...MONO, fontSize: 12, color: C.tx3 }}>{fmtClock(s.actualS)} · obj. {fmtClock(s.targetS)}</span>
+                      <span style={{ ...MONO, fontSize: 13, color: s.state === "on" ? C.tx2 : color }}>{s.deltaS > 0 ? "+" : s.deltaS < 0 ? "−" : "±"}{Math.abs(s.deltaS)} s</span>
+                    </span>
+                  </div>
+                  <div style={{ height: 6, borderRadius: 999, background: C.s2, overflow: "hidden" }}>
+                    <div style={{ height: 6, borderRadius: 999, width: `${Math.max(4, (Math.abs(s.deltaS) / Math.max(10, ...view.stations.map((x) => Math.abs(x.deltaS)))) * 100)}%`, background: color }} />
+                  </div>
                 </div>
-                <div style={{ height: 6, borderRadius: 999, background: C.s2, overflow: "hidden" }}>
-                  <div style={{ height: 6, borderRadius: 999, width: `${100 - s.pct}%`, background: standingColor(s.standing) }} />
-                </div>
-              </div>
-            ))}
-            <StandingLegend />
+              );
+            })}
+            <ObjectiveLegend />
           </div>
         </section>
       )}
 
-      {gains && gains.items.length > 0 && (
+      {strategy && top.length > 0 && (
         <section aria-label="Où gagner du temps" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <h2 style={H2}>04 — Ce qui te fera gagner du temps</h2>
-          {gains.items.slice(0, 3).map((g) => (
+          <div style={{ fontSize: 13, color: C.tx2 }}>Avec une meilleure stratégie : <span style={{ ...MONO, color: C.ac }}>{fmtClock(strategy.possibleS)}</span> possible sur cette course.</div>
+          {top.map((g) => (
             <div key={g.key} style={{ display: "flex", alignItems: "center", gap: 14, borderRadius: 14, padding: 14, background: alpha(C.o, 0.08), border: `1px solid ${alpha(C.o, 0.3)}` }}>
-              <span style={{ ...MONO, fontSize: 20, color: C.o, minWidth: 64 }}>−{Math.round(g.gainS)} s</span>
+              <span style={{ ...MONO, fontSize: 20, color: C.o, minWidth: 64 }}>−{g.gainS} s</span>
               <span style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                 <span style={{ fontSize: 14, fontWeight: 500 }}>{g.label}</span>
-                <span style={{ fontSize: 12, color: C.tx2, lineHeight: 1.4 }}>
-                  {g.key === "runs" ? "Au-dessus de la médiane de ton niveau." : `${fmtClock(g.athleteS)}, la médiane de ton niveau est à ${fmtClock(g.medianS)}.`}
-                </span>
+                <span style={{ fontSize: 12, color: C.tx2, lineHeight: 1.4 }}>{g.detail}</span>
               </span>
             </div>
           ))}

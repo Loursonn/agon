@@ -15,11 +15,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
-  AI_ASSISTANT_SINCE, type DraftKind, type DraftOp, type PlanState, normName, validateDraft, type ProgSessionShape,
+  AI_ASSISTANT_SINCE, AI_HEALTH_DETAILS_SINCE, type DraftKind, type DraftOp, type PlanState, normName, validateDraft, type ProgSessionShape,
   type VideoBank, type VideoBankEntry, videoKey,
 } from "../_shared/coachApiOps.ts";
 import { ApplyConflict, applyDraft, parseUndo, UndoConflict, undoSteps } from "../_shared/coachApiApply.ts";
 import { readSummaryHealth } from "../_shared/coachApiHealth.ts";
+import { readHealthDetails } from "../_shared/coachApiHealthDetails.ts";
 import { buildFiches, buildHabits, buildPeriodisation, buildSummary, firstName, parsePeriod, readProgram, type SummaryInput } from "../_shared/coachApiRead.ts";
 import type { CareState } from "../_shared/coachApiCare.ts";
 import { cleanText, Invalid, isObj, oneOf, onlyKeys, reqText } from "../_shared/coachApiCheck.ts";
@@ -73,6 +74,8 @@ interface AllowedAthlete {
   id: string;
   first_name: string | null;
   full_name: string | null;
+  /** Accord IA donné sous le texte qui nomme les détails santé (`AI_HEALTH_DETAILS_SINCE`). */
+  health_details: boolean;
 }
 
 /**
@@ -110,9 +113,16 @@ async function allowedAthletes(admin: SupabaseClient, coachId: string): Promise<
     .gte("doc_version", AI_ASSISTANT_SINCE);
   if (cErr) throw new Error("current_consents: " + cErr.message);
 
-  const ok = new Set((consents ?? []).map((c) => c.user_id as string));
+  // user_id → l'accord couvre-t-il les détails santé ?
+  const ok = new Map<string, boolean>();
+  for (const c of consents ?? []) {
+    const id = c.user_id as string;
+    ok.set(id, ok.get(id) === true || String(c.doc_version) >= AI_HEALTH_DETAILS_SINCE);
+  }
   return new Map(
-    (athletes ?? []).filter((a) => ok.has(a.id as string)).map((a) => [a.id as string, a as AllowedAthlete]),
+    (athletes ?? [])
+      .filter((a) => ok.has(a.id as string))
+      .map((a) => [a.id as string, { ...a, health_details: ok.get(a.id as string) === true } as AllowedAthlete]),
   );
 }
 
@@ -371,10 +381,12 @@ async function getSummary(admin: SupabaseClient, caller: Caller, athlete: Allowe
 
   await logAccess(admin, caller, "GET /athletes/:id/summary", athlete.id);
 
-  const [{ values }, health, logs, prs, acts, days, themes, energy, comps, tests, life, injuries] = await Promise.all([
+  const [{ values }, health, details, logs, prs, acts, days, themes, energy, comps, tests, life, injuries] = await Promise.all([
     appData(admin, athlete.id, ["asp:goals", "asp:prog"]),
     // Wellness (archives comprises), pesées, objectif de poids : tables santé.
     readSummaryHealth(admin, athlete.id, from, to),
+    // Douleur, maladie, bilan hebdo : seulement sous le texte IA qui les nomme.
+    athlete.health_details ? readHealthDetails(admin, athlete.id, from, to) : Promise.resolve(null),
     admin.from("workout_logs")
       .select("scheduled_date, session_id, session_name, status, rpe_score, duration_s, athlete_modifications")
       .eq("athlete_id", athlete.id).gte("scheduled_date", from).lte("scheduled_date", to)
@@ -430,6 +442,7 @@ async function getSummary(admin: SupabaseClient, caller: Caller, athlete: Allowe
     to,
     appData: values,
     health,
+    healthDetails: details,
     prog: values["asp:prog"],
     workoutLogs: logs.data ?? [],
     prs: prs.data ?? [],

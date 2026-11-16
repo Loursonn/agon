@@ -1,12 +1,12 @@
 /** Volume de course à pied : agrégation par semaine (pur, testable). */
-import { summarizeKm, type RunEntry } from "@/lib/watchRunMatching";
+import { summarizeKm, type RunEntry, type RunOuting, type WatchActivityInput } from "@/lib/watchRunMatching";
 import { watchOrigins } from "@/lib/watchRunLabel";
 
 /** Une sortie comptée dans le volume (déjà dédoublonnée : voir `buildRunLedger`) */
 export type { RunEntry } from "@/lib/watchRunMatching";
 
 /** Nombre de semaines d'historique (graphique) */
-export const RUNNING_WEEKS = 8;
+export const RUNNING_WEEKS = 12;
 
 export interface RunningWeek {
   monday: string; // yyyy-MM-dd
@@ -66,5 +66,67 @@ export function computeRunningVolume(runs: RunEntry[], now = new Date()): Runnin
     weeks,
     watchKm:    summarizeKm(runs, weeks[0].monday, windowEnd).watchKm,
     watchOrigins: watchOrigins(runs, weeks[0].monday, windowEnd),
+  };
+}
+
+/** Sorties d'une semaine (lundi → dimanche), pour la liste sous le graphique. */
+export interface RunningWeekDetail {
+  monday: string;
+  sunday: string;
+  /** Sorties de course comptées, dans l'ordre du calendrier */
+  runs: RunOuting[];
+  /** Autres activités de montre (vélo, natation…), hors total */
+  others: WatchActivityInput[];
+  km: number;
+  /** Durée cumulée des sorties dont la durée est connue, null si aucune */
+  durationS: number | null;
+  /** D+ cumulé des sorties qui l'ont mesuré, null si aucune */
+  elevationGainM: number | null;
+  /** Km de la semaine précédente (0 = aucune course) ; semaine en cours : jusqu'au même jour */
+  prevKm: number;
+  /** Semaine en cours : la comparaison s'arrête au même jour de la semaine précédente */
+  prevToSameDay: boolean;
+  /** Écart avec la semaine précédente, null s'il n'y a rien à comparer */
+  deltaKm: number | null;
+  /** Écart en %, null si la semaine précédente est vide */
+  deltaPct: number | null;
+}
+
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
+/** Détail d'une semaine — pur, testable. `monday` au format yyyy-MM-dd. */
+export function weekDetail(
+  outings: RunOuting[],
+  others: WatchActivityInput[],
+  monday: string,
+  /** Jour courant (yyyy-MM-dd) : une semaine en cours se compare au même jour de la précédente */
+  today?: string,
+): RunningWeekDetail {
+  const mon = new Date(`${monday}T12:00:00`);
+  const sunday = iso(addDays(mon, 6));
+  const prevMonday = iso(addDays(mon, -7));
+  // Lundi matin, « −100 % » face à une semaine complète ne veut rien dire (Hugo, 16/11/2026).
+  const prevToSameDay = today != null && today >= monday && today < sunday;
+  const prevEnd = prevToSameDay ? iso(addDays(new Date(`${today}T12:00:00`), -7)) : iso(addDays(mon, -1));
+  const runs = outings.filter((o) => o.date >= monday && o.date <= sunday);
+  const km = summarizeKm(runs, monday, sunday).km;
+  const prevKm = summarizeKm(outings, prevMonday, prevEnd).km;
+  const sumKnown = (vals: Array<number | null>) => {
+    const known = vals.filter((v): v is number => v != null && Number.isFinite(v));
+    return known.length ? known.reduce((a, b) => a + b, 0) : null;
+  };
+  const hasAny = km > 0 || prevKm > 0;
+  return {
+    monday,
+    sunday,
+    runs,
+    others: others.filter((a) => a.localDate >= monday && a.localDate <= sunday),
+    km,
+    durationS: sumKnown(runs.map((r) => r.durationS)),
+    elevationGainM: sumKnown(runs.map((r) => r.elevationGainM)),
+    prevKm,
+    prevToSameDay,
+    deltaKm: hasAny ? round1(km - prevKm) : null,
+    deltaPct: prevKm > 0 ? Math.round(((km - prevKm) / prevKm) * 100) : null,
   };
 }

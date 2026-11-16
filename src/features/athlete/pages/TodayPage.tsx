@@ -36,6 +36,7 @@ import { calcScore, getReco, wellnessColor } from "@/lib/wellness";
 import { competitionAfter, eventTag, upcomingEvents } from "@/lib/athleteEvents";
 import { daysUntil } from "@/api/competitions";
 import { activeCompetitions } from "@shared/domain/competitions";
+import { COMPETITION_SESSION_TYPES, competitionSessionToFill } from "@/lib/competitionSession";
 import { fmtShortDay, haptic, localMonday } from "@/features/athlete/components/today/todayUtils";
 import { getFormeAdvice } from "@/features/athlete/components/today/todayFormeAdvice";
 import { indexDayThemesByDate } from "@/lib/dayTheme";
@@ -197,6 +198,7 @@ export default function TodayPage() {
         id: c.id, name: c.name, type: c.type, date: c.date,
         location: c.location, priority: c.priority,
         athlete_comment: c.athlete_comment ?? null,
+        athlete_id: c.athlete_id, result_text: c.result_text ?? null, result_url: c.result_url ?? null, rpe_score: c.rpe_score ?? null,
       }]);
     }
     return m;
@@ -204,8 +206,9 @@ export default function TodayPage() {
   const todayComps = competitionsByDate.get(today) ?? [];
 
   // ── Compétitions passées sans bilan : restent « à commenter » jusqu'au bilan
+  // (compétition, match : séance vide — ni bilan, ni résultat, ni RPE).
   const uncommentedComps = activeComps
-    .filter((c) => c.date < today && !c.athlete_comment)
+    .filter((c) => (COMPETITION_SESSION_TYPES.has(c.type) ? competitionSessionToFill(c, today) : c.date < today && !c.athlete_comment))
     .map((c) => competitionsByDate.get(c.date)!.find((x) => x.id === c.id)!);
 
   // ── Wellness trend (last 14 days) ────────────────────────────────────────

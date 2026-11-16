@@ -74,7 +74,7 @@ function activityFields(a: DoneActivity) {
   };
 }
 
-const KIND_BADGE: Record<PlannedKind, string> = { energy: "Énergie", workout: "Muscu", test: "Test" };
+const KIND_BADGE: Record<PlannedKind, string> = { energy: "Énergie", workout: "Muscu", test: "Test", competition: "Compétition" };
 
 /** Carte d'une séance prévue (avec ou sans activité rattachée). */
 export function plannedCard(p: PlannedItem, now: number): PlanningCardModel {
@@ -111,6 +111,15 @@ export function freeCard(a: DoneActivity, now: number): PlanningCardModel {
     planned: null,
     ...activityFields(a),
   };
+}
+
+/**
+ * Carte montrée seule, parmi les activités du jour : activité libre, ou course
+ * d'une compétition (la compétition a sa propre carte en tête du jour, la
+ * course rattachée s'affiche à côté, « à confirmer » ou réalisée).
+ */
+export function standsAlone(c: Pick<PlanningCardModel, "planned">): boolean {
+  return !c.planned || c.planned.kind === "competition";
 }
 
 /** Cartes « montre » d'un jour : séances avec activité rattachée, puis activités libres. */

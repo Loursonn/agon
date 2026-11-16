@@ -86,6 +86,19 @@ describe("charge par séance", () => {
     expect(loads).toHaveLength(1);
     expect(loads[0]).toMatchObject({ id: "r1", done: 70, km: 10 });
   });
+
+  it("compétition : la course rattachée compte (FC), l'échauffement aussi, à part", () => {
+    const loads = sessionLoads(base({
+      activities: [
+        { id: "warm", day: "2026-11-05", sport: "running", distanceM: 3000, title: "Échauffement" },
+        { id: "race", day: "2026-11-05", sport: "running", distanceM: 10000, title: "10 km" },
+      ],
+      links: [{ activityId: "race", plannedKind: "competition", plannedId: "c1" }],
+      zoneSeconds: { warm: [900, 0, 0], race: [0, 1200, 1200] },
+    }));
+    expect(loads.map((l) => l.id).sort()).toEqual(["race", "warm"]);
+    expect(loads.find((l) => l.id === "race")?.done).toBeGreaterThan(0);
+  });
 });
 
 describe("semaines", () => {

@@ -16,12 +16,13 @@ import RaceRunsEvolution from "./RaceRunsEvolution";
 /**
  * Onglet « Runs » : cette course (8 barres, écart à la croisière = médiane
  * des runs 2 à 7 ; le run 1 s'affiche sans être comparé ; repère = écart
- * habituel au niveau) ou évolution sur les courses.
+ * prévu par l'objectif de la course) ou évolution sur les courses.
  */
-export default function RaceRunsTab({ analysis, median, levelP50 = null, attribution, timeSource, evolution, raceId }: {
+export default function RaceRunsTab({ analysis, objective, levelP50 = null, attribution, timeSource, evolution, raceId }: {
   analysis: RaceWatchAnalysis;
-  median: (s: string) => number | null;
-  /** Médianes des runs du niveau : écart habituel. */
+  /** Cible de l'objectif par segment. */
+  objective: (s: string) => number | null;
+  /** Runs de l'objectif : écart prévu (forme habituelle au run moyen visé). */
   levelP50?: RunLookup | null;
   attribution: string | null;
   timeSource: string;
@@ -38,7 +39,7 @@ export default function RaceRunsTab({ analysis, median, levelP50 = null, attribu
     const i = analysis.segments.indexOf(s);
     return analysis.segments.slice(0, i).reverse().find((x) => x.kind === "station") ?? null;
   };
-  // Stations qui coûtent le plus : surcoût vs l'habituel du niveau (≥ 10 s/km), sinon coût brut vs la croisière.
+  // Stations qui coûtent le plus : surcoût vs l'écart prévu par l'objectif (≥ 10 s/km), sinon coût brut vs la croisière.
   const costs = stationRunCosts(runLookup(analysis.segments), level);
   const rank = (c: StationRunCost) => c.excessS ?? c.costS;
   const costly = [...costs].sort((x, y) => rank(y) - rank(x))
@@ -78,13 +79,13 @@ export default function RaceRunsTab({ analysis, median, levelP50 = null, attribu
               {runs.map((r, i) => {
                 const first = i === 0;
                 const d = r.officialS - cruise;
-                const m = median(r.key);
+                const m = objective(r.key);
                 const usual = level?.usual[r.key];
                 const h = (x: number) => `${12 + (Math.max(0, x) / maxDelta) * 80}%`;
                 return (
                   <div key={r.key} style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", height: "100%", gap: 4 }}>
                     <span style={{ ...MONO, fontSize: 10.5, color: first ? C.tx3 : d > 0 ? C.o : C.g }}>{first ? fmtPace(r.officialS) : `${d >= 0 ? "+" : "−"}${Math.abs(Math.round(d))}`}</span>
-                    <div title={[m != null ? `Médiane du niveau ${fmtPace(m)}` : null, usual != null ? `Habituel ${usual >= 0 ? "+" : "−"}${Math.abs(Math.round(usual))} s/km` : null].filter(Boolean).join(" · ") || undefined}
+                    <div title={[m != null ? `Objectif ${fmtPace(m)}` : null, usual != null ? `Prévu ${usual >= 0 ? "+" : "−"}${Math.abs(Math.round(usual))} s/km` : null].filter(Boolean).join(" · ") || undefined}
                       style={{
                         width: "70%", height: first ? "12%" : h(d), borderRadius: 4,
                         background: first ? "transparent" : hyroxPictoColor("course"),
@@ -112,7 +113,7 @@ export default function RaceRunsTab({ analysis, median, levelP50 = null, attribu
               })}
             </div>
             <div style={{ fontSize: 11, color: C.tx3, lineHeight: 1.45 }}>
-              Sous chaque barre : la station juste avant. Écart à ta croisière (médiane des runs 2 à 7){level ? " ; pointillé = écart habituel des athlètes de ton niveau au même endroit" : ""}.
+              Sous chaque barre : la station juste avant. Écart à ta croisière (médiane des runs 2 à 7){level ? " ; pointillé = écart prévu par l'objectif au même endroit" : ""}.
               Run 1 affiché sans comparaison (départ et longueur changent selon la course) ; run 8 en clair (arrivée parfois différente).
             </div>
             {cad.length > 0 && (

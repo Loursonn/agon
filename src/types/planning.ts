@@ -25,10 +25,14 @@ export interface Competition {
   cancelled_at?: string | null;
   /** Qui a annulé (coach, co-coach ou athlète) : posé par le serveur. */
   cancelled_by?: string | null;
+  /** Séance du jour J : résultat libre (« 3-1 », « 12e / 80 »), lien, RPE 1-10. */
+  result_text?: string | null;
+  result_url?: string | null;
+  rpe_score?: number | null;
   created_at: string;
 }
 
-export type CompetitionInsert = Omit<Competition, 'id' | 'created_at' | 'athlete_comment' | 'cancelled_at' | 'cancelled_by'>;
+export type CompetitionInsert = Omit<Competition, 'id' | 'created_at' | 'athlete_comment' | 'cancelled_at' | 'cancelled_by' | 'result_text' | 'result_url' | 'rpe_score'>;
 
 /** Libellé du jour dans le planning (« Jour de compétition », « Jour de match »…) */
 export function competitionDayLabel(type: string | null | undefined): string {

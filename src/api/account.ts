@@ -45,7 +45,13 @@ export const accountKeys = {
   /** Page publique du lien : pas encore d'utilisateur. */
   claimInfo: (token: string) => ["account", "_claim", token] as const,
   coachEmail: (uid: string) => ["account", uid, "coachEmail"] as const,
+  /** Invitations coach visibles par l'utilisateur connecté (admin : toutes). */
+  coachInvitations: ["account", "_coachInvitations"] as const,
 };
+
+export function invalidateCoachInvitations(qc: QueryClient): Promise<void> {
+  return qc.invalidateQueries({ queryKey: accountKeys.coachInvitations });
+}
 
 /**
  * Tout ce qui dépend du compte d'un utilisateur, dont le bandeau « accord
@@ -107,16 +113,6 @@ export async function pickFreeCoachCode(random: () => number = Math.random): Pro
   return code;
 }
 
-type NewProfile = {
-  id: string; role: Profile["role"]; full_name: string; birth_date: string;
-  coach_code?: string; coach_id?: string; profession?: string;
-};
-
-async function insertProfile(row: NewProfile): Promise<void> {
-  const res = await db().from("profiles").insert(row);
-  if (res.error) throw new AccountError("Création du profil impossible", res.error);
-}
-
 /** Rattache l'utilisateur connecté au coach de ce code (RPC). `reason` : « Code coach invalide », « …propre code… ». */
 export async function linkToCoachByCode(code: string): Promise<string> {
   return must(await db().rpc("link_to_coach_by_code", { p_code: normalizeCoachCode(code) }), "Rattachement au coach impossible") as string;
@@ -139,21 +135,30 @@ function assertBirthDate(birthDate: string): string {
   return birthDate.trim();
 }
 
+/**
+ * Inscription fermée (15/11/2026) : chaque profil se crée par une RPC qui
+ * vérifie l'invitation coach, le code coach ou l'invitation staff. La base
+ * refuse la création directe (temps 2). Le contrôle est refait AVANT de créer
+ * le compte d'authentification, pour ne pas laisser un compte sans profil.
+ */
+
+/** Coach invité : le lien est lié à son e-mail. Renvoie l'id du compte. */
 export async function registerCoach(
-  email: string, password: string, fullName: string, birthDate: string, isCoachAthlete = false,
+  email: string, password: string, fullName: string, birthDate: string, isCoachAthlete: boolean, inviteToken: string,
 ): Promise<string> {
   const birth_date = assertBirthDate(birthDate);
+  const inv = await getCoachInvitation(inviteToken);
+  if (!inv) throw plain("L'inscription coach se fait sur invitation.");
+  if (inv.status !== "valide") throw plain(COACH_INVITATION_STATUS_TEXT[inv.status]);
+  if (inv.email !== email.trim().toLowerCase()) throw plain(`Cette invitation est liée à ${inv.email} : inscris-toi avec cette adresse.`);
   const user = await signUp(email, password);
-  const code = await pickFreeCoachCode();
-  await insertProfile({
-    id: user.id,
-    role: isCoachAthlete ? "coach_athlete" : "coach",
-    full_name: fullName,
-    birth_date,
-    coach_code: code,
-    // Coach-athlète : son propre coach par défaut (apparaît dans ses athlètes)
-    ...(isCoachAthlete ? { coach_id: user.id } : {}),
-  }).catch((e) => { throw plain(reasonOf(e)); });
+  try {
+    must(await db().rpc("register_coach", {
+      p_token: inviteToken, p_full_name: fullName, p_birth_date: birth_date, p_coach_athlete: isCoachAthlete,
+    }), "Création du profil impossible");
+  } catch (e) {
+    throw plain(reasonOf(e));
+  }
   return user.id;
 }
 
@@ -165,21 +170,101 @@ export async function registerAthleteWithCode(
   const exists = await coachCodeExists(code).catch(() => false);
   if (!exists) throw plain("Code coach invalide — vérifie auprès de ton coach");
   const user = await signUp(email, password);
-  await insertProfile({ id: user.id, role: "athlete", full_name: fullName, birth_date }).catch((e) => { throw plain(reasonOf(e)); });
-  // Le rattachement au coach passe par le serveur (contrôle du code)
-  await linkToCoachByCode(code).catch((e) => {
-    throw plain("Compte créé, mais le rattachement au coach a échoué : " + reasonOf(e));
-  });
+  // Profil et rattachement au coach en une transaction, code contrôlé par le serveur.
+  try {
+    must(await db().rpc("register_athlete", { p_coach_code: code, p_full_name: fullName, p_birth_date: birth_date }), "Création du profil impossible");
+  } catch (e) {
+    throw plain(reasonOf(e));
+  }
   return user.id;
 }
 
+/** Staff invité : l'invitation staff est vérifiée par le serveur, puis acceptée par l'écran. */
 export async function registerStaff(
-  email: string, password: string, fullName: string, birthDate: string, profession: string,
+  email: string, password: string, fullName: string, birthDate: string, profession: string, staffToken: string,
 ): Promise<string> {
   const birth_date = assertBirthDate(birthDate);
   const user = await signUp(email, password);
-  await insertProfile({ id: user.id, role: "staff", full_name: fullName, birth_date, profession }).catch((e) => { throw plain(reasonOf(e)); });
+  try {
+    must(await db().rpc("register_staff", {
+      p_token: staffToken, p_full_name: fullName, p_birth_date: birth_date, p_profession: profession,
+    }), "Création du profil impossible");
+  } catch (e) {
+    throw plain(reasonOf(e));
+  }
   return user.id;
+}
+
+// ── Invitations coach (admin et coachs certifiés) ─────────────────────────────
+
+export type CoachInvitationStatus = "valide" | "utilisee" | "expiree" | "revoquee";
+
+export const COACH_INVITATION_STATUS_TEXT: Record<CoachInvitationStatus, string> = {
+  valide:   "Invitation valable.",
+  utilisee: "Cette invitation a déjà servi. Connecte-toi avec ton compte.",
+  expiree:  "Cette invitation a expiré : demande un nouveau lien à qui t'a invité.",
+  revoquee: "Cette invitation a été annulée : demande un nouveau lien à qui t'a invité.",
+};
+
+export interface CoachInvitationPreview {
+  email: string;
+  inviterName: string | null;
+  status: CoachInvitationStatus;
+}
+
+/** Invitation lue avant inscription (page publique) ; null si le lien est inconnu. */
+export async function getCoachInvitation(token: string): Promise<CoachInvitationPreview | null> {
+  if (!token || token.length < 32) return null;
+  const rows = (must(await db().rpc("get_coach_invitation", { p_token: token }), "Lecture de l'invitation impossible") ?? []) as
+    Array<{ email: string; inviter_name: string | null; status: string }>;
+  const r = rows[0];
+  return r ? { email: r.email, inviterName: r.inviter_name, status: r.status as CoachInvitationStatus } : null;
+}
+
+export interface CoachInvitation {
+  id: string;
+  email: string;
+  token: string;
+  createdAt: string;
+  expiresAt: string;
+  usedAt: string | null;
+  revokedAt: string | null;
+  invitedBy: string | null;
+}
+
+/** État d'une invitation de la liste, à une date donnée. */
+export function coachInvitationStatus(i: Pick<CoachInvitation, "usedAt" | "revokedAt" | "expiresAt">, now = Date.now()): CoachInvitationStatus {
+  if (i.usedAt) return "utilisee";
+  if (i.revokedAt) return "revoquee";
+  return new Date(i.expiresAt).getTime() <= now ? "expiree" : "valide";
+}
+
+/** Lien à envoyer au coach invité. */
+export const coachInvitationLink = (origin: string, token: string) => `${origin}/coach-invite/${token}`;
+
+/** Invitations visibles : les siennes (coach certifié), toutes (admin). Plus récente d'abord. */
+export async function listCoachInvitations(): Promise<CoachInvitation[]> {
+  const rows = unwrapRows(
+    await db().from("coach_invitations").select("id, email, token, created_at, expires_at, used_at, revoked_at, invited_by")
+      .order("created_at", { ascending: false }).limit(100),
+    "Lecture des invitations impossible",
+  );
+  return rows.map((r) => ({
+    id: r.id, email: r.email, token: r.token, createdAt: r.created_at, expiresAt: r.expires_at,
+    usedAt: r.used_at, revokedAt: r.revoked_at, invitedBy: r.invited_by,
+  }));
+}
+
+export async function createCoachInvitation(email: string): Promise<CoachInvitation> {
+  const rows = (must(await db().rpc("create_coach_invitation", { p_email: email }), "Création de l'invitation impossible") ?? []) as
+    Array<{ id: string; token: string; email: string; expires_at: string }>;
+  const r = rows[0];
+  if (!r) throw plain("Création de l'invitation impossible");
+  return { id: r.id, email: r.email, token: r.token, createdAt: new Date().toISOString(), expiresAt: r.expires_at, usedAt: null, revokedAt: null, invitedBy: null };
+}
+
+export async function revokeCoachInvitation(id: string): Promise<void> {
+  must(await db().rpc("revoke_coach_invitation", { p_id: id }), "Révocation impossible");
 }
 
 /**

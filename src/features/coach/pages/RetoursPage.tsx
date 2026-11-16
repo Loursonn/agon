@@ -48,7 +48,9 @@ import { useWeeklyCoachRetour, useUpsertWeeklyRetour, reactionEmoji } from "@/fe
 import { useAuth } from "@/hooks/useAuth";
 import { useMedicalEntries } from "@/features/shared/hooks/useMedicalEntries";
 import { activeInjuries, fmtInjuryDate, injuryFacts, injurySummary } from "@/lib/injuryDetails";
-import { DECLARED_BY_LABEL, MEDICAL_STATUS_LABEL } from "@/features/shared/types/medical";
+import { DECLARED_BY_LABEL, RECOVERY_STAGE_LABEL } from "@/features/shared/types/medical";
+import { InjuryStageTrack } from "@/features/shared/components/medical/InjuryStageTrack";
+import { stageOf } from "@/lib/injuryStage";
 import type { EnergySessionDetail } from "@/features/shared/types/retours.types";
 import { watchOrigins } from "@/lib/watchRunLabel";
 
@@ -630,9 +632,14 @@ export default function RetoursPage() {
                       "flex-none rounded-[5px] px-2 py-0.5 text-[10px] font-bold",
                       ongoing ? "bg-agon-erreur/[0.082] text-agon-erreur" : "bg-agon-succes/[0.082] text-agon-succes",
                     )}>
-                      {MEDICAL_STATUS_LABEL[inj.status]}
+                      {RECOVERY_STAGE_LABEL[stageOf(inj)]}
                     </span>
                   </div>
+                  {ongoing && (
+                    <div className="mt-2">
+                      <InjuryStageTrack entry={inj} athleteId={inj.athlete_id} canEdit />
+                    </div>
+                  )}
                   {injuryFacts(inj).length > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
                       {injuryFacts(inj).map(({ l, v }) => (
