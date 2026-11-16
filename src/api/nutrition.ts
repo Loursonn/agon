@@ -5,6 +5,7 @@ import {
   type NutritionDailyLog, type NutritionDay, type NutritionStrategy,
 } from "@shared/domain/nutrition";
 import { ApiError, check, db, unwrap } from "./client";
+import { readAppDataValue } from "./appData";
 
 /**
  * Nutrition : stratégie du coach + journal de l'athlète.
@@ -31,13 +32,8 @@ export const nutritionKeys = {
   days: (athleteId: string, from: IsoDay, to: IsoDay) => ["nutrition", athleteId, "days", from, to] as const,
 };
 
-async function readValue(athleteId: string, key: string, what: string): Promise<unknown> {
-  const row = unwrap(
-    await db().from("app_data").select("value").eq("athlete_id", athleteId).eq("key", key).maybeSingle(),
-    what,
-  );
-  return row?.value ?? null;
-}
+// Regroupée avec les autres lectures `app_data` de la même passe.
+const readValue = readAppDataValue;
 
 /** Stratégie du coach ; null si aucune n'a été définie. Lève si la lecture échoue. */
 export async function getStrategy(athleteId: string): Promise<NutritionStrategy | null> {

@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { QK } from "@/lib/queryKeys";
 import type { Goals } from "@/features/shared/types/athlete";
@@ -23,10 +24,9 @@ export function useCoachApiDrafts(athleteId: string | undefined) {
   return useQuery<CoachApiDraft[]>({
     queryKey: coachKeys.apiDrafts(athleteId ?? ""),
     enabled: !!athleteId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     // L'assistant dépose pendant que l'app est ouverte : un retour sur
     // l'onglet suffit à voir ce qu'il vient de proposer.
-    refetchOnWindowFocus: true,
     queryFn: () => listPendingDrafts(athleteId!),
   });
 }
@@ -40,8 +40,7 @@ export function useCoachApiHistory(athleteId: string | undefined) {
   return useQuery<CoachApiDraft[]>({
     queryKey: coachKeys.apiHistory(athleteId ?? ""),
     enabled: !!athleteId,
-    staleTime: 30_000,
-    refetchOnWindowFocus: true,
+    staleTime: STALE_MS,
     queryFn: () => listDraftHistory(athleteId!),
   });
 }

@@ -3,6 +3,7 @@
  * `src/api/staff.ts`. La RLS (staff_can) filtre : un domaine fermé renvoie
  * simplement une liste vide.
  */
+import { STALE_MS } from "@/lib/queryCache";
 import { useQuery } from "@tanstack/react-query";
 import { localIsoDay } from "@shared/domain/dates";
 import {
@@ -20,7 +21,7 @@ export function useStaffWorkoutLogs(athleteId: string, enabled: boolean) {
   return useQuery<StaffWorkoutLog[]>({
     queryKey: staffKeys.logs(athleteId),
     enabled,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     // Jour local (avant : jour UTC → entre minuit et 1 h, 2 h l'été, la séance du jour manquait).
     queryFn: () => listStaffWorkoutLogs(athleteId, localIsoDay()),
   });
@@ -30,7 +31,7 @@ export function useStaffPlanning(athleteId: string, enabled: boolean) {
   return useQuery<StaffPlanItem[]>({
     queryKey: staffKeys.planning(athleteId),
     enabled,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => listStaffPlanning(athleteId),
   });
 }
@@ -39,7 +40,7 @@ export function useStaffWeeklyRetours(athleteId: string, enabled: boolean) {
   return useQuery<StaffWeeklyRetour[]>({
     queryKey: staffKeys.retours(athleteId),
     enabled,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => listStaffWeeklyRetours(athleteId),
   });
 }

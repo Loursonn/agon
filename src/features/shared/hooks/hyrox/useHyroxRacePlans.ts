@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -11,7 +12,7 @@ export function useHyroxRacePlans(athleteId: string | undefined) {
   return useQuery<HyroxRacePlan[]>({
     queryKey: hyroxKeys.plans(athleteId ?? ""),
     enabled: !!athleteId,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => listHyroxRacePlans(athleteId as string),
   });
 }

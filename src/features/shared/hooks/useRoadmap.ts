@@ -5,6 +5,7 @@
  * Accès : is_certified_coach OU is_admin (géré côté RLS).
  * Mutations admin uniquement pour phases ; coaches peuvent suggérer des items (status='idea').
  */
+import { STALE_MS } from "@/lib/queryCache";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -24,7 +25,7 @@ export function useRoadmapPhases() {
   return useQuery<RoadmapPhase[]>({
     queryKey: K.roadmapPhases,
     queryFn:  listRoadmapPhases,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
   });
 }
 
@@ -34,7 +35,7 @@ export function useRoadmapItems() {
   return useQuery<RoadmapItem[]>({
     queryKey: K.roadmapItems,
     queryFn:  listRoadmapItems,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
   });
 }
 
@@ -45,7 +46,7 @@ export function useMyRoadmapVotes(userId: string | undefined) {
     queryKey: K.roadmapVotes(userId ?? ""),
     queryFn:  () => listMyRoadmapVotes(userId!),
     enabled:  !!userId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
   });
 }
 
@@ -189,7 +190,7 @@ export function useVoteCounts() {
   return useQuery<Record<string, number>>({
     queryKey: K.roadmapVoteCounts,
     queryFn:  roadmapVoteCounts,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
   });
 }
 

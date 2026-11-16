@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { invalidateWorkouts, listWorkoutLogs, removeWorkout } from "@/api/workouts";
@@ -31,7 +32,7 @@ export function useHistorique(athleteId: string) {
   return useQuery({
     queryKey: cycleKeys.history(athleteId),
     enabled: !!athleteId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     queryFn: async (): Promise<HistoriqueData> => {
       const [tree, logs] = await Promise.all([
         getCycleTree(athleteId, { withMicrocycles: false }),

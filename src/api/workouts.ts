@@ -780,6 +780,8 @@ export async function countSessionOccurrence(athleteId: string, sessionId: strin
   return Math.max(n || 1, 1);
 }
 
+const OCCURRENCE_PAGE = 1000;
+
 /** Séances non annulées de ces séances-types jusqu'à `upTo` inclus, par date. */
 export async function listSessionOccurrenceLogs(
   athleteId: string,
@@ -788,18 +790,26 @@ export async function listSessionOccurrenceLogs(
 ): Promise<{ id: string; session_id: string; scheduled_date: IsoDay }[]> {
   const ids = [...new Set(sessionIds.filter(Boolean))];
   if (ids.length === 0) return [];
-  // Une requête par séance : reste loin de la limite de 1000 lignes de PostgREST.
-  const results = await Promise.all(ids.map(async (sid) => unwrapRows<RawRow>(
-    (await db().from("workout_logs")
-      .select("id, session_id, scheduled_date")
-      .eq("athlete_id", athleteId)
-      .eq("session_id", sid)
-      .neq("status", "skipped")
-      .lte("scheduled_date", upTo)
-      .order("scheduled_date")) as never,
-    "Lecture des occurrences impossible",
-  )));
-  return results.flat().map((r) => ({
+  // Une requête pour toutes les séances (avant : une par séance), lue par pages
+  // de 1000 lignes (limite de PostgREST) : rien n'est tronqué.
+  const rows: RawRow[] = [];
+  for (let from = 0; ; from += OCCURRENCE_PAGE) {
+    const page = unwrapRows<RawRow>(
+      (await db().from("workout_logs")
+        .select("id, session_id, scheduled_date")
+        .eq("athlete_id", athleteId)
+        .in("session_id", ids)
+        .neq("status", "skipped")
+        .lte("scheduled_date", upTo)
+        .order("scheduled_date")
+        .order("id")
+        .range(from, from + OCCURRENCE_PAGE - 1)) as never,
+      "Lecture des occurrences impossible",
+    );
+    rows.push(...page);
+    if (page.length < OCCURRENCE_PAGE) break;
+  }
+  return rows.map((r) => ({
     id: String(r.id), session_id: String(r.session_id), scheduled_date: String(r.scheduled_date).slice(0, 10),
   }));
 }

@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { IsoDay } from "@shared/domain/dates";
@@ -15,7 +16,7 @@ export function usePlannedVsDone(athleteId: string | undefined, from: IsoDay | u
   return useQuery({
     queryKey: planLinkKeys.week(athleteId ?? "none", (from ?? "") as IsoDay, (to ?? "") as IsoDay),
     enabled: !!athleteId && !!from && !!to,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => getPlannedVsDone(athleteId!, from!, to!),
   });
 }

@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -38,7 +39,7 @@ export interface MissedSession {
   date: string;
 }
 
-const COMMON = { staleTime: 30_000, refetchOnWindowFocus: true } as const;
+const COMMON = { staleTime: STALE_MS } as const;
 
 export function useCoachDashboard() {
   const { athletes, user } = useAuth();
@@ -70,8 +71,7 @@ export function useCoachDashboard() {
     queryKey: coachKeys.dashboardMissed(user?.id ?? "", yesterday),
     queryFn: () => listWorkoutLogs({ athleteIds, from: yesterday, to: yesterday, statuses: ["missed"], withMods: false }),
     enabled: !!user && athleteIds.length > 0,
-    staleTime: 60_000,
-    refetchOnWindowFocus: true,
+    staleTime: STALE_MS,
   });
 
   // ── 4. Upcoming test sessions ──────────────────────────────────────────────
@@ -79,8 +79,7 @@ export function useCoachDashboard() {
     queryKey: coachKeys.dashboardUpcomingTests(user?.id ?? "", today),
     queryFn: () => listUpcomingTestSessions(testAthleteIds, today),
     enabled: !!user && testAthleteIds.length > 0,
-    staleTime: 60_000,
-    refetchOnWindowFocus: true,
+    staleTime: STALE_MS,
   });
 
   // ── Merge: today's athletes ─────────────────────────────────────────────────

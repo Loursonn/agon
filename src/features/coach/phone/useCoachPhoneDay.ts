@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,7 +16,7 @@ export function useCoachDayWorkouts(day: IsoDay) {
   return useQuery<WorkoutLog[]>({
     queryKey: ["coachDashboard", "day", user?.id ?? "", day, ids.join(",")],
     enabled: !!user && ids.length > 0,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => listWorkoutLogs({ athleteIds: ids, from: day, to: day, withMods: false }),
   });
 }

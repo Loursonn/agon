@@ -3,6 +3,7 @@
  * `src/api/docs.ts`. Lues par l'athlète, son coach et le staff (fiches: read) ;
  * posées par un pro (fiches: write) ou le coach. La RLS tranche.
  */
+import { STALE_MS } from "@/lib/queryCache";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { docsKeys, invalidateDocs, listDocSchedule, scheduleDoc, unscheduleDoc, type ScheduledDoc } from "@/api/docs";
 
@@ -14,7 +15,7 @@ export function useDocSchedule(athleteId: string | null | undefined, range: { st
   return useQuery<ScheduledDoc[]>({
     queryKey: docsKeys.scheduleRange(athleteId ?? "", range.start, range.end),
     enabled: !!athleteId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     queryFn: () => listDocSchedule(athleteId!, range),
   });
 }

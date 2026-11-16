@@ -7,6 +7,7 @@
  * Côté athlète : bandeau de rappel. Côté coach : liste de relance.
  * « Saisie » = même règle que le cron de nuit (`hasLoggedEntries`).
  */
+import { STALE_MS } from "@/lib/queryCache";
 import { useQuery } from "@tanstack/react-query";
 import { listUnfinishedWorkouts, workoutKeys, type UnfinishedWorkout } from "@/api/workouts";
 
@@ -24,7 +25,7 @@ export function useUnfinishedWorkouts(athleteIds: string[] | string | null | und
   return useQuery({
     queryKey: workoutKeys.unfinished(ids),
     enabled: ids.length > 0,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => listUnfinishedWorkouts(ids),
   });
 }

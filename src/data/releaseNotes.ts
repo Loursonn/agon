@@ -38,6 +38,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-16-fix-moins-de-requetes",
+    date: "2026-11-16",
+    kind: "fix",
+    title: "Ouverture plus rapide, serveur moins sollicité",
+    summary:
+      "L'accueil de l'athlète et la fiche athlète demandent beaucoup moins de choses au serveur à l'ouverture : l'app s'affiche plus vite et reste plus stable aux heures chargées.",
+    sections: [
+      {
+        title: "Ce qui change pour vous",
+        points: [
+          "Les données de l'athlète arrivent en quelques requêtes groupées au lieu de plusieurs dizaines.",
+          "Revenir sur l'onglet de l'app ne recharge plus tout : seules les données de plus de 5 minutes sont relues.",
+          "Une modification faite par votre athlète peut mettre jusqu'à 5 minutes à apparaître chez vous (et inversement). Pour la voir tout de suite : rechargez la page.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-16-hyrox-verdict-carte-partage",
     date: "2026-11-16",
     kind: "feature",

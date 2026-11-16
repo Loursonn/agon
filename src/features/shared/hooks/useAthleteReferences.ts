@@ -6,6 +6,7 @@
  * Même requête (et même cache) que `useActiveReferences` : une référence
  * modifiée n'importe où rafraîchit tout de suite les séances énergie.
  */
+import { STALE_MS } from "@/lib/queryCache";
 import { useQuery } from "@tanstack/react-query";
 import { getActiveReferences, referenceKeys, referenceValues } from "@/api/references";
 
@@ -16,7 +17,7 @@ export function useAthleteReferences(athleteId: string | null | undefined) {
     queryKey: referenceKeys.active(athleteId ?? ""),
     queryFn: () => getActiveReferences(athleteId!),
     enabled: !!athleteId,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     select: referenceValues,
   });
 }

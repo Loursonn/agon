@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { hyroxKeys, invalidateHyrox, linkRaceWatch, listRaceActivityCandidates } from "@/api/hyrox";
@@ -18,14 +19,14 @@ export function useRaceWatch(race: HyroxResult | null, chosenId: string | null =
   const candidates = useQuery({
     queryKey: hyroxKeys.raceActivities(athleteId ?? "none", race?.date ?? ""),
     enabled: !!athleteId && !!race?.date,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => listRaceActivityCandidates(athleteId!, race!.date),
   });
   const competitionId = race?.competition_id ?? null;
   const compLink = useQuery({
     queryKey: planLinkKeys.competition(athleteId ?? "none", competitionId ?? "none"),
     enabled: !!athleteId && !!competitionId && !race?.watch_activity_id,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => getCompetitionLink(competitionId!),
   });
   const linkedId = race?.watch_activity_id ?? null;

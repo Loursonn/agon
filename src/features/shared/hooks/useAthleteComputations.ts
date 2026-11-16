@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getWorkoutStats, workoutKeys } from "@/api/workouts";
@@ -34,7 +35,7 @@ export function useAthleteComputations(s: ComputationInput) {
   const { data: workoutStats } = useQuery({
     queryKey: workoutKeys.stats(athleteId ?? ""),
     enabled: !!athleteId,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => getWorkoutStats(athleteId!),
   });
 

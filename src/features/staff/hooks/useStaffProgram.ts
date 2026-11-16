@@ -4,6 +4,7 @@
  * (pour les paramètres semaine par semaine) et fiches posées sur les jours.
  * Tout passe par la RLS staff : un domaine fermé renvoie simplement du vide.
  */
+import { STALE_MS } from "@/lib/queryCache";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getStaffOccurrences, staffKeys } from "@/api/staff";
@@ -17,7 +18,7 @@ function useOccurrences(athleteId: string) {
   return useQuery({
     queryKey: staffKeys.occurrences(athleteId),
     enabled: !!athleteId,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => getStaffOccurrences(athleteId),
   });
 }

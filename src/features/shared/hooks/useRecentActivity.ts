@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -26,8 +27,7 @@ export function useRecentActivity(limit = 10) {
     queryKey: appContentKeys.recentActivity(user?.id, limit),
     queryFn: () => listRecentActivity(athleteIds, limit),
     enabled: athleteIds.length > 0,
-    staleTime: 60_000,
-    refetchOnWindowFocus: true,
+    staleTime: STALE_MS,
   });
 
   const activities = useMemo<ActivityItem[]>(() => {

@@ -1,4 +1,4 @@
-import { readAppData, writeAppData } from "@/api/appData";
+import { readAppData, readAppDataKeys, writeAppData } from "@/api/appData";
 
 export const SKEYS = {
   exos:           "asp:exos",
@@ -112,6 +112,32 @@ export async function sLoadResult<T>(k: string, aid: string | null | undefined):
     markLoad(k, aid, false);
     return { ok: false };
   }
+}
+
+/**
+ * Plusieurs clés en UNE requête (au lieu d'une par clé), même garde que
+ * `sLoadResult` : succès → toutes les clés lisibles (une clé absente de
+ * `values` n'existe pas en base) ; erreur → toutes marquées non chargées.
+ */
+export async function sLoadManyResult(
+  keys: readonly string[],
+  aid: string | null | undefined,
+): Promise<{ ok: boolean; values: Record<string, unknown> }> {
+  if (!aid) return { ok: false, values: {} };
+  try {
+    const values = await readAppDataKeys(aid, keys);
+    keys.forEach((k) => markLoad(k, aid, true));
+    return { ok: true, values };
+  } catch {
+    keys.forEach((k) => markLoad(k, aid, false));
+    return { ok: false, values: {} };
+  }
+}
+
+/** Résultat d'une clé tiré d'une lecture groupée, au format de `sLoadResult`. */
+export function pickResult<T>(r: { ok: boolean; values: Record<string, unknown> }, k: string): { ok: boolean; value?: T } {
+  if (!r.ok) return { ok: false };
+  return { ok: true, value: k in r.values ? (r.values[k] as T) : undefined };
 }
 
 export async function sSave(k: string, v: unknown, aid: string | null | undefined): Promise<void> {

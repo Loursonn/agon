@@ -5,9 +5,20 @@ import { appBuster, authStorageKey, readStoredAuthUserId } from "./offlineCache"
 import { pendingWrites } from "./writes";
 import {
   createPersistenceController,
+  RESTORED_FRESH_MS,
   type OfflineStore,
   type PersistenceController,
 } from "./persistenceController";
+
+/** Chargement de la page = rechargement explicite (bouton, tirer-pour-rafraîchir). */
+export function pageWasReloaded(): boolean {
+  try {
+    const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+    return nav?.type === "reload";
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Branchement du cache hors ligne : IndexedDB + session Supabase.
@@ -72,6 +83,8 @@ export function startOfflinePersistence(queryClient: QueryClient): PersistenceCo
     // pourrait écraser le cache avec du vide), SAUF si des saisies attendent :
     // leur affichage optimiste (séance validée…) doit survivre à un rechargement.
     canPersist: () => onlineManager.isOnline() || pendingWrites() > 0,
+    // Page rechargée (bouton, tirer-pour-rafraîchir) : tout est relu.
+    restoredFreshMs: () => (pageWasReloaded() ? 0 : RESTORED_FRESH_MS),
     onError: (err) => {
       if (import.meta.env.DEV) console.warn("[offline] cache hors ligne :", err);
     },

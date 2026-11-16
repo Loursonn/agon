@@ -6,6 +6,7 @@
  *   NEW: ProgSession UUID — blocs/exercices stored in app_data (key=asp:prog)
  *   LEGACY: session id like "s_TIMESTAMP_x" — exercises in app_data (key=asp:exos::cycleId)
  */
+import { STALE_MS } from "@/lib/queryCache";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { getWorkoutLog } from "@/api/workouts";
@@ -234,7 +235,7 @@ export function useWorkoutSession(workoutLogId: string | undefined): WorkoutSess
   } = useQuery({
     queryKey: ["workout-log-detail", workoutLogId],
     enabled: !!workoutLogId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     // L'erreur DOIT remonter : avant, elle était avalée (data = null) et la page
     // prenait « pas de saisie » pour la vérité → la 1re série envoyée au retour
     // du réseau effaçait coachOverride et commentaires. Ici React Query réessaie.
@@ -274,7 +275,7 @@ export function useWorkoutSession(workoutLogId: string | undefined): WorkoutSess
   const { data: sessionRank, isLoading: loadingRank } = useQuery({
     queryKey: planningKeys.occurrence(athleteId, wlog?.session_id, wlog?.scheduled_date),
     enabled: !!athleteId && !!wlog?.session_id && !!wlog?.scheduled_date,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     queryFn: () => fetchSessionOccurrence(athleteId!, wlog!.session_id, wlog!.scheduled_date),
   });
 

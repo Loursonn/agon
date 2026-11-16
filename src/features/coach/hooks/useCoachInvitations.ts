@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -10,7 +11,7 @@ export function useCoachInvitations(enabled: boolean) {
     queryKey: accountKeys.coachInvitations,
     queryFn: listCoachInvitations,
     enabled,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
   });
 }
 

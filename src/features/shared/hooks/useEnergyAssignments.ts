@@ -7,6 +7,7 @@
  * l'écran la montre tout de suite (mise à jour optimiste de toutes les listes
  * de l'athlète) ; la file rafraîchit tout une fois envoyée.
  */
+import { STALE_MS } from "@/lib/queryCache";
 import { useQuery, useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -49,7 +50,7 @@ export function useEnergyAssignments(athleteId: string | null | undefined, dateR
     queryKey: energyKeys.assignments(athleteId ?? "", dateRange),
     queryFn: () => listAthleteEnergyAssignments(athleteId!, dateRange),
     enabled: !!athleteId,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
   });
 }
 

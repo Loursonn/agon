@@ -3,6 +3,7 @@
  * adaptateurs de `src/api/energy.ts`. Les totaux (durée, distance) sont
  * calculés par le module à chaque création / modification des intervalles.
  */
+import { STALE_MS } from "@/lib/queryCache";
 import { useQuery, useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -37,7 +38,7 @@ export function useEnergySessions(filters?: EnergySessionFilters) {
     queryKey: energyKeys.library(owner, filters),
     queryFn: () => listEnergySessions(filters),
     enabled: !!owner,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
   });
 }
 
@@ -48,7 +49,7 @@ export function useEnergySession(id: string | null | undefined) {
     queryKey: energyKeys.session(owner, id ?? ""),
     queryFn: () => getEnergySession(id!),
     enabled: !!id && !!owner,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
   });
 }
 
