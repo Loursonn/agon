@@ -38,6 +38,31 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-16-competition-courbe-fc",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "Compétition : la sortie de la montre et sa courbe FC, directement depuis la compétition",
+    summary:
+      "Le jour J et après, la compétition affiche la sortie de la montre (Garmin, COROS ou fichier) avec sa courbe de fréquence cardiaque. On peut choisir une autre sortie, et l'analyse HYROX suit.",
+    sections: [
+      {
+        title: "Dans la compétition",
+        points: [
+          "Coach : fiche de la compétition et panneau du jour du planning. Athlète : carte de la compétition (Aujourd'hui, Programme).",
+          "La sortie proposée est la plus longue du jour ou la plus proche du chrono HYROX ; « C'est bien la course » la confirme, « Choisir une autre sortie » en prend une autre (l'échauffement par exemple).",
+          "Mini-courbe de FC avec FC moyenne et maximale ; « Voir la séance » ouvre la séance complète (zones, tours).",
+        ],
+      },
+      {
+        title: "HYROX : une seule saisie",
+        points: [
+          "La sortie choisie depuis la compétition est celle de l'analyse de course HYROX, et inversement.",
+          "Le dernier choix gagne : changer de sortie depuis la compétition remet le recalage de la montre en automatique (réglable ensuite dans l'analyse).",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-16-fix-bilan-semaine-course-velo",
     date: "2026-11-16",
     kind: "fix",

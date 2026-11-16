@@ -1,5 +1,6 @@
 import { format, isPast, parseISO } from "date-fns";
 import { CompetitionResultLine } from "@/features/shared/components/CompetitionResultLine";
+import { CompetitionWatchPanel } from "@/features/shared/components/competition/CompetitionWatchPanel";
 import { fr } from "date-fns/locale";
 import { MapPin, Trophy } from "lucide-react";
 import { C } from "@/lib/theme";
@@ -69,6 +70,15 @@ export function CompetitionDrawer({ comp, onEdit, onDelete }: Props) {
         </div>
       ) : isPast(parseISO(comp.date)) && (
         <div style={{ fontSize: 12, color: C.tx3, fontStyle: "italic" }}>Pas encore de retour de l'athlète</div>
+      )}
+
+      {/* Sortie de la montre : courbe FC, choix de la sortie */}
+      {comp.athlete_id && (
+        <CompetitionWatchPanel
+          athleteId={comp.athlete_id}
+          competition={{ id: comp.id, date: comp.date, type: comp.type ?? "competition" }}
+          seancePath={(id) => `/coach/athletes/${comp.athlete_id}/seance/${id}`}
+        />
       )}
 
       {/* Actions */}
