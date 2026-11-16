@@ -40,12 +40,16 @@ export interface StrategyLever {
   gainS: number;
   /** Phrase calculée, sans jargon. */
   detail: string;
+  /** Course après les sleds : la station dont le run suivant a le plus perdu. */
+  focus?: StationKey;
 }
 
 export interface StrategyResult {
   currentS: number;
   possibleS: number;
   levers: StrategyLever[];
+  /** Perte de chaque run (1 à 8) au-delà du niveau et de la tolérance, avant le départ rapide (s). */
+  runLoss: Record<number, number>;
 }
 
 const STATION_LABEL: Record<StationKey, string> = {
@@ -63,6 +67,23 @@ function sustainedGap(xs: number[]): number | null {
   if (xs.length < 3) return null;
   const s = [...xs].sort((a, b) => a - b);
   return s[Math.floor((s.length - 1) / 4)];
+}
+
+/**
+ * Les 3 passages en Roxzone les plus coûteux, si les 8 sont saisis : passage
+ * i = autour de la i-ème station ; cible = 1/8 de la Roxzone de l'objectif.
+ */
+function worstTransitions(r: HyroxResult, roxTarget: number): string {
+  const sp = Array.isArray(r.roxzone_splits) && r.roxzone_splits.length === 8 ? r.roxzone_splits : null;
+  if (!sp) return "";
+  const per = roxTarget / 8;
+  const top = sp
+    .map((v, i) => ({ k: GRID_STATIONS[i], d: Math.round(v - per) }))
+    .filter((x) => x.d >= 3)
+    .sort((a, b) => b.d - a.d)
+    .slice(0, 3);
+  if (!top.length) return "";
+  return ` Passages les plus longs : ${top.map((x) => `${STATION_LABEL[x.k]} (+${x.d} s)`).join(", ")}.`;
 }
 
 const runName = (ks: number[]) => (ks.length === 1 ? `run ${ks[0]}` : `runs ${ks.slice(0, -1).join(", ")} et ${ks[ks.length - 1]}`);
@@ -87,6 +108,8 @@ export function raceStrategy(r: HyroxResult, objective: PlanSegments): StrategyR
     levelLoss += Math.min(Math.max(0, d), level);
     loss[i] = Math.max(0, d - level - segmentTolerance(target(i)));
   }
+
+  const runLoss = { ...loss };
 
   // Départ trop rapide : avance du run 1 (corrigée du niveau), coût net plafonné par les pertes suivantes.
   const a1 = run(1);
@@ -113,7 +136,8 @@ export function raceStrategy(r: HyroxResult, objective: PlanSegments): StrategyR
   push({ key: "regularite", group: "strategie", label: "Régularité des runs", gainS: sumOf(reg),
     detail: `${runName(slow(reg))} au-dessus de l'objectif.` });
   push({ key: "apres_sleds", group: "strategie", label: "Course après les sleds", gainS: sumOf([3, 4]),
-    detail: `${runName(slow([3, 4]))}, après le sled push et le sled pull, au-delà du ralentissement habituel.` });
+    detail: `${runName(slow([3, 4]))}, après le sled push et le sled pull, au-delà du ralentissement habituel.`,
+    focus: (loss[4] ?? 0) > (loss[3] ?? 0) ? "sled_pull" : "sled_push" });
   push({ key: "run_8", group: "strategie", label: "Run 8", gainS: sumOf([8]),
     detail: "Après les fentes (parcours du run 8 parfois différent)." });
 
@@ -122,7 +146,7 @@ export function raceStrategy(r: HyroxResult, objective: PlanSegments): StrategyR
   if (rox != null) {
     const d = rox - objective.roxzone_total;
     push({ key: "roxzone", group: "strategie", label: "Roxzone", gainS: Math.max(0, d - segmentTolerance(objective.roxzone_total)),
-      detail: `Transitions : ${Math.round(d)} s de plus que l'objectif.` });
+      detail: `Transitions : ${Math.round(d)} s de plus que l'objectif.${worstTransitions(r, objective.roxzone_total)}` });
   }
 
   // ── No reps (chaque no rep coûte une répétition, au rythme de la station) ──
@@ -150,6 +174,6 @@ export function raceStrategy(r: HyroxResult, objective: PlanSegments): StrategyR
   const order: Record<LeverGroup, number> = { strategie: 0, capacite: 1 };
   levers.sort((a, b) => order[a.group] - order[b.group] || b.gainS - a.gainS);
   const total = levers.reduce((s, l) => s + l.gainS, 0);
-  return { currentS: r.total_s, possibleS: r.total_s - total, levers };
+  return { currentS: r.total_s, possibleS: r.total_s - total, levers, runLoss };
 }
 

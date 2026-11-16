@@ -15,8 +15,9 @@ vi.mock("@/features/shared/hooks/hyrox/useRaceWatch", () => ({
   useRaceWatch: () => ({ linked: false, candidates: [], ...watch }),
   useLinkRaceWatch: () => ({ mutate: vi.fn(), isPending: false }),
 }));
-vi.mock("@/features/shared/hooks/hyrox/useHyroxReferences", () => ({
-  useHyroxReferences: () => ({ data: [{ division: "all", bracket: "all", segment: "ski", p1_s: 200, p10_s: 220, p50_s: 240, p90_s: 300 }] }),
+// Dernier bilan de tests validé : la règle « seuils » est déclenchée.
+vi.mock("@/features/shared/hooks/hyrox/useHyroxTests", () => ({
+  useHyroxAnalyses: () => ({ data: [{ id: "t1", date: "2026-09-01", validated_at: "2026-09-02", outputs: { rules: [{ id: "run_seuils", axis: "Seuils de course", means: "" }] } }] }),
 }));
 vi.mock("@/features/shared/hooks/hyrox/useHyroxRacePlans", () => ({ useHyroxRacePlans: () => ({ data: plans }) }));
 vi.mock("@/features/shared/hooks/hyrox/useHyroxResults", () => ({ useHyroxResults: () => ({ data: [] }), useUpdateHyroxResult: () => ({ mutate: vi.fn(), isPending: false }) }));
@@ -48,8 +49,10 @@ describe("RaceAnalysis", () => {
     expect(screen.getAllByText(/Top \d+ %/)).toHaveLength(1); // rang officiel 120 / 800, rien d'autre
     expect(screen.getByText("Rang")).toBeTruthy();
     expect(screen.getAllByText(/Aucune activité de montre/).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole("tab", { name: "Gains" }));
-    expect(screen.getAllByText("SkiErg").length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("tab", { name: "Stratégie" }));
+    expect(screen.getByText("Et avec une meilleure stratégie ?")).toBeTruthy();
+    expect(screen.getAllByText("Roxzone").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Déjà dans ses axes/)).toBeNull(); // l'axe du bilan : coach seulement
     fireEvent.click(screen.getByRole("tab", { name: "Runs" }));
     expect(screen.getByText(/Allure par km/)).toBeTruthy();
   });
@@ -73,6 +76,9 @@ describe("RaceAnalysis", () => {
     expect((screen.getByRole("radio", { name: /Course précédente/ }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText(/Leviers · quoi travailler/)).toBeTruthy();
     expect(screen.getAllByRole("button", { name: "Ajouter au programme" }).length).toBeGreaterThan(0);
+    // Runs tous 5 s au-dessus du plan : allure de course, reliée à l'axe « seuils » du bilan validé.
+    expect(screen.getAllByText("Allure de course").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Seuils de course").length).toBeGreaterThan(0);
     expect(screen.getByText("Objectif")).toBeTruthy();
     expect(screen.queryByText("Médiane")).toBeNull();
     plans = [];

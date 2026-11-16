@@ -38,6 +38,33 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-16-hyrox-meilleure-strategie",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "HYROX : « Et avec une meilleure stratégie ? »",
+    summary:
+      "Pour chaque course, le chrono possible en revenant à l'objectif, levier par levier, en secondes : ce qui se gagne le jour J et ce qui se construit à l'entraînement.",
+    sections: [
+      {
+        title: "Dans l'analyse de course",
+        points: [
+          "L'onglet Gains devient « Stratégie » : ton chrono, le chrono possible et la cascade de l'un à l'autre, en deux groupes, Stratégie (départ trop rapide, régularité des runs, course après les sleds, run 8, Roxzone, no reps) puis Capacité (chaque station, allure de course).",
+          "Chaque seconde de retard n'est comptée qu'une fois, et un point sous 10 s n'est pas cité. Un départ trop rapide se paie environ 2,5 fois plus tard : il est chiffré à part.",
+          "Si les 8 passages en Roxzone sont saisis, les 3 plus longs sont cités.",
+          "Montre liée : la FC (au-dessus de SV2) et la cadence expliquent un levier (pastille « Indice montre »), sans ajouter de secondes.",
+        ],
+      },
+      {
+        title: "Côté coach",
+        points: [
+          "Les leviers de l'onglet Course sont désormais calculés contre l'objectif de la course (plus contre la médiane de la catégorie), avec une proposition de travail et « Ajouter au programme ».",
+          "Si un bilan de tests validé existe, le levier affiche l'axe qui dit la même chose (« Déjà dans ses axes »).",
+          "Le débrief et Ma saison de l'athlète reprennent les leviers qui rapportent le plus et le chrono possible.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-16-competition-seance",
     date: "2026-11-16",
     kind: "feature",

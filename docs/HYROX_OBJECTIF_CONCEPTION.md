@@ -482,7 +482,8 @@ Chaque lot : Nouveautés, `npm run check`, push sur `dev`.
 **Avancement**
 - Lot 1 (15/11/2026) : fait. Migration `20261116180000` en prod, grille obj@1 (60 lignes).
 - Lot 2 (15/11/2026) : fait pour l'analyse de course et Ma saison. `objective/forRace.ts` (plan, sinon run du jour) ; en-tête, frise, débrief, tableau des 17 segments, onglets Runs et Gains, montre, « Comparer à » (objectif / course précédente) lisent l'objectif. Supprimés : `RaceCategoryCard`, `categoryEquivalence.ts`, `profilePercentiles`, `stationProfile`, `ownTotalPct`, positions dans « Comparer », profil runner / hybride de l'en-tête.
-- Restent sur la médiane jusqu'à leur lot : leviers coach (`raceLevers`, lot 3, l'onglet Gains passe alors à `raceStrategy`) ; vues coach Stations, Radar, Évolution (`standing()`, `segmentPositions`, lot 5). `hyrox_reference_segments` n'est plus lue que par ces vues.
+- Lot 3 (16/11/2026) : fait. `objective/strategy.ts` (leviers §9.1, `focus` de la course après les sleds, pertes par run, 3 passages Roxzone les plus longs) ; `objective/levers.ts` (propositions et règles d'axes §9.2, dernier bilan validé avant la course, indices montre §9.3, marches de la cascade). Onglet « Stratégie » (ex-Gains), débrief « Où gagner du temps », Ma saison bloc 04 et leviers coach de l'onglet Course lisent `raceStrategy`. Supprimé : `raceLevers.ts` (médiane × poids). Textes « Allure » et « Technique » des propositions : à relire par Hugo. §9.4 (leviers cumulés sur la saison) : lot 4/5.
+- Restent sur la médiane jusqu'au lot 5 : vues coach Stations, Radar, Évolution (`standing()`, `segmentPositions`, `raceGains` dans `EvolutionView`). `hyrox_reference_segments` n'est plus lue que par ces vues.
 
 ---
 

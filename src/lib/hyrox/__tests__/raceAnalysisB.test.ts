@@ -4,7 +4,6 @@ import type { HyroxReferenceSegment, HyroxResult } from "@/features/shared/types
 import type { RefLookup } from "@/lib/hyrox/calc";
 import { PLAN_SEGMENTS, parseClock, planForRace, planFromTarget, planSegments, planTargets, planTotal } from "@/lib/hyrox/racePlan";
 import { compareAvailable, compareTarget, defaultCompare } from "@/lib/hyrox/raceCompare";
-import { RUN_AFTER_STATION_WEIGHT, raceLevers } from "@/lib/hyrox/raceLevers";
 import { HYROX_WORK_PROPOSALS } from "@/lib/hyrox/workProposals";
 import { evolutionRaces, nextHyroxCompetition, raceProjection, runEfficiencySeries } from "@/lib/hyrox/raceProjection";
 import { crossRaceWithWatch } from "@/lib/hyrox/raceWatch";
@@ -99,49 +98,6 @@ describe("comparer à", () => {
     expect(defaultCompare(src)).toBe("objective");
     expect(defaultCompare({ ...src, previous: prev })).toBe("previous");
     expect(defaultCompare({ previous: prev, objective })).toBe("objective");
-  });
-});
-
-describe("leviers", () => {
-  it("garde les points ≥ 10 s derrière la médiane, triés par score, avec une proposition", () => {
-    const l = raceLevers({ race: lyon(), refs, analysis: null });
-    const keys = l.map((x) => x.key);
-    // wall balls +28 s, roxzone +46 s, sled push +22 s ; ski, rameur… au niveau
-    expect(keys).toEqual(expect.arrayContaining(["wall_balls", "roxzone", "sled_push"]));
-    expect(keys).not.toContain("ski");
-    expect(l.every((x) => x.proposal.length > 0)).toBe(true);
-    expect(l.map((x) => x.score)).toEqual([...l.map((x) => x.score)].sort((a, b) => b - a));
-    expect(l.find((x) => x.key === "wall_balls")?.proposal).toBe(HYROX_WORK_PROPOSALS.wall_balls);
-    expect(l.find((x) => x.key === "roxzone")?.reason).toBe("8 % du chrono");
-    expect(l.some((x) => x.watch)).toBe(false);
-  });
-
-  it("avec la montre : FC la plus haute, cadence du run suivant, levier « Course après »", () => {
-    const race = lyon();
-    const base = crossRaceWithWatch(race, null)!;
-    const wb = base.segments.find((s) => s.key === "wall_balls")!;
-    const sp = base.segments.find((s) => s.key === "sled_push")!;
-    const run3 = base.segments.find((s) => s.key === "run_3")!;
-    const st = stream(race.total_s + 5,
-      (t) => (t >= wb.startS && t < wb.endS ? 184 : 165),
-      (t) => (t >= run3.startS && t < run3.endS ? 82 : 88));
-    const a = crossRaceWithWatch(race, st)!;
-    expect(sp.key).toBe("sled_push");
-    // Niveau où la course après les farmers ralentit peu d'habitude : run 7 à 285.
-    const levelP50 = (k: string) => (k === "run_7" ? 285 : P50[k] ?? null);
-    const l = raceLevers({ race, refs, analysis: a, roxzoneRecoveryBpm: 10, levelP50 });
-    expect(l.find((x) => x.key === "wall_balls")?.reason).toBe("FC moy. 184 bpm, la plus haute de la course");
-    expect(l.find((x) => x.key === "sled_push")?.reason).toMatch(/^Cadence du run suivant −\d+ pas\/min$/);
-    expect(l.find((x) => x.key === "roxzone")?.reason).toBe("8 % du chrono · récupération −10 bpm en 60 s");
-    const ra = l.find((x) => x.watch)!;
-    // Lyon : croisière 294 ; run 7 = +9 vs croisière, habituel −4 au niveau (croisière 289) → surcoût 13.
-    expect(ra.key).toBe("run_after_farmers");
-    expect(ra.label).toBe("Course après farmers");
-    expect(ra.weight).toBe(RUN_AFTER_STATION_WEIGHT);
-    expect(ra.gainS).toBe(13);
-    expect(ra.reason).toBe("Run 7 : +9 s/km vs ta croisière, habituel −4");
-    // Sans l'habituel du niveau : pas de levier « Course après ».
-    expect(raceLevers({ race, refs, analysis: a }).some((x) => x.watch)).toBe(false);
   });
 });
 

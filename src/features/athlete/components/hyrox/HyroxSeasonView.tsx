@@ -7,12 +7,11 @@ import { useHyroxRacePlans } from "@/features/shared/hooks/hyrox/useHyroxRacePla
 import { STATION_KEYS, type HyroxResult } from "@/features/shared/types/hyrox";
 import { CATEGORY_LABEL, RACE_FORMAT_LABEL, raceCategory, type RaceFormat } from "@/lib/hyrox/categories";
 import { chronoByFormat, fmtPace, raceCruise, raceDebrief, segmentLabel, type ChronoPoint } from "@/lib/hyrox/raceDebrief";
-import { raceGains } from "@/lib/hyrox/raceWatch";
+import { raceStrategy } from "@/lib/hyrox/objective/strategy";
 import { fmtClock } from "@/lib/seance";
 import { ObjectiveLegend } from "@/features/shared/components/hyrox/RaceDebriefView";
 import { fmtGap, objectiveColor } from "@/features/shared/components/hyrox/raceAnalysisShared";
 import { objectiveForRace } from "@/lib/hyrox/objective/forRace";
-import { objectiveLookup } from "@/lib/hyrox/objective/vsObjective";
 
 /**
  * « Ma saison » (athlète, planche validée par Hugo le 15/11/2026) : la
@@ -77,11 +76,11 @@ export default function HyroxSeasonView({ onOpenRace }: { onOpenRace: (id: strin
     const best = finished.filter((r) => r.is_official && raceCategory(r) === cat).reduce<number | null>((m, r) => (m == null || r.total_s < m ? r.total_s : m), null);
     const isRecord = last.is_official && best != null && last.total_s <= best;
     const debrief = raceDebrief({ race: last, races: finished, objective: ov?.objective.segments ?? null, vs: ov?.vs ?? null, isRecord });
-    const gains = ov ? raceGains(last, objectiveLookup(ov.objective.segments)) : null;
+    const strategy = ov ? raceStrategy(last, ov.objective.segments) : null;
     const stations = (ov?.vs.segments ?? [])
       .filter((x): x is typeof x & { deltaS: number; actualS: number } => (STATION_KEYS as readonly string[]).includes(x.key) && x.deltaS != null && x.actualS != null)
       .sort((a, b) => a.deltaS - b.deltaS);
-    return { cat, isRecord, debrief, gains, stations, total: ov?.vs.total ?? null };
+    return { cat, isRecord, debrief, strategy, stations, total: ov?.vs.total ?? null };
   }, [last, plans, finished]);
 
   if (isLoading) return <div style={{ padding: 20, textAlign: "center", color: C.tx3, fontSize: 12 }}>Chargement…</div>;
@@ -92,7 +91,8 @@ export default function HyroxSeasonView({ onOpenRace }: { onOpenRace: (id: strin
       </div>
     );
   }
-  const { debrief, gains } = view;
+  const { debrief, strategy } = view;
+  const top = strategy ? [...strategy.levers].sort((a, b) => b.gainS - a.gainS).slice(0, 3) : [];
   const prev = debrief.previous;
   const chronoRow = debrief.since.find((r) => r.key === "chrono");
   const cruise = raceCruise(last);
@@ -194,17 +194,16 @@ export default function HyroxSeasonView({ onOpenRace }: { onOpenRace: (id: strin
         </section>
       )}
 
-      {gains && gains.items.length > 0 && (
+      {strategy && top.length > 0 && (
         <section aria-label="Où gagner du temps" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <h2 style={H2}>04 — Ce qui te fera gagner du temps</h2>
-          {gains.items.slice(0, 3).map((g) => (
+          <div style={{ fontSize: 13, color: C.tx2 }}>Avec une meilleure stratégie : <span style={{ ...MONO, color: C.ac }}>{fmtClock(strategy.possibleS)}</span> possible sur cette course.</div>
+          {top.map((g) => (
             <div key={g.key} style={{ display: "flex", alignItems: "center", gap: 14, borderRadius: 14, padding: 14, background: alpha(C.o, 0.08), border: `1px solid ${alpha(C.o, 0.3)}` }}>
-              <span style={{ ...MONO, fontSize: 20, color: C.o, minWidth: 64 }}>−{Math.round(g.gainS)} s</span>
+              <span style={{ ...MONO, fontSize: 20, color: C.o, minWidth: 64 }}>−{g.gainS} s</span>
               <span style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                 <span style={{ fontSize: 14, fontWeight: 500 }}>{g.label}</span>
-                <span style={{ fontSize: 12, color: C.tx2, lineHeight: 1.4 }}>
-                  {g.key === "runs" ? "Au-dessus de l'objectif." : `${fmtClock(g.athleteS)} pour un objectif de ${fmtClock(g.medianS)}.`}
-                </span>
+                <span style={{ fontSize: 12, color: C.tx2, lineHeight: 1.4 }}>{g.detail}</span>
               </span>
             </div>
           ))}

@@ -32,6 +32,19 @@ describe("meilleure stratégie", () => {
     expect(s.levers.every((l) => l.group === "strategie")).toBe(true);
   });
 
+  it("après les sleds : la station visée est celle dont le run a le plus perdu ; pertes par run gardées", () => {
+    const s = raceStrategy(race({ run_3_s: 310, run_4_s: 330 }), obj);
+    expect(s.levers.find((l) => l.key === "apres_sleds")?.focus).toBe("sled_pull");
+    expect(s.runLoss[4]).toBe(24); // 30 − 6
+    expect(s.runLoss[1]).toBe(0);
+  });
+
+  it("Roxzone détaillée : les passages les plus longs, cible = 1/8 de l'objectif", () => {
+    const s = raceStrategy(race({ roxzone_total_s: 444, roxzone_splits: [62, 50, 50, 50, 60, 50, 50, 72] }), obj);
+    expect(s.levers.find((l) => l.key === "roxzone")?.detail)
+      .toBe("Transitions : 44 s de plus que l'objectif. Passages les plus longs : Wall balls (+22 s), SkiErg (+12 s), Rameur (+10 s).");
+  });
+
   it("tous les runs plus lents : c'est l'allure de course (capacité), pas la régularité", () => {
     const slower = Object.fromEntries([1, 2, 3, 4, 5, 6, 7, 8].map((i) => [`run_${i}_s`, (race() as unknown as Record<string, number>)[`run_${i}_s`] + 20]));
     const s = raceStrategy(race(slower), obj);

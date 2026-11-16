@@ -4,26 +4,22 @@ import { useIsPhone } from "@/hooks/useIsPhone";
 import { C, alpha } from "@/lib/theme";
 import { DISPLAY, KICKER, MONO, buttonStyle } from "@/features/shared/components/seance/seanceUi";
 import { useLinkRaceWatch, useRaceWatch } from "@/features/shared/hooks/hyrox/useRaceWatch";
-import { useHyroxReferences } from "@/features/shared/hooks/hyrox/useHyroxReferences";
-import { pickRef } from "@/api/hyrox";
 import { useHyroxResults } from "@/features/shared/hooks/hyrox/useHyroxResults";
 import { useAthleteCoaches } from "@/features/shared/hooks/useCoCoach";
-import { DIVISION_LABEL, type HyroxDivision, type HyroxResult } from "@/features/shared/types/hyrox";
-import { alerts as raceAlerts, bracketOf, type RefLookup } from "@/lib/hyrox/calc";
+import { DIVISION_LABEL, STATION_KEYS, type HyroxDivision, type HyroxResult } from "@/features/shared/types/hyrox";
+import { alerts as raceAlerts } from "@/lib/hyrox/calc";
 import { useHyroxRacePlans } from "@/features/shared/hooks/hyrox/useHyroxRacePlans";
 import { compareAvailable, compareTarget, defaultCompare, type CompareKind, type CompareSources } from "@/lib/hyrox/raceCompare";
-import { raceLevers } from "@/lib/hyrox/raceLevers";
 import { previousRace, raceShortName, recordGap, runPaceEvolution } from "@/lib/hyrox/raceEvolution";
 import {
-  athleteFindings, compromisedFromTimes, crossRaceWithWatch, defaultRaceOffset, raceGains, roxzoneRecovery,
-  stationsAtLevel, timeAboveHr,
+  athleteFindings, compromisedFromTimes, crossRaceWithWatch, defaultRaceOffset, raceGains, roxzoneRecovery, timeAboveHr,
 } from "@/lib/hyrox/raceWatch";
 import { fmtClock } from "@/lib/seance";
 import { ddmm, fmtGap, objectiveColor, objectiveText, type RaceAudience } from "./raceAnalysisShared";
 import { RaceComments, TalkToCoach } from "./RaceComments";
 import { Stat } from "./raceAnalysisUi";
 import RaceCourseTab from "./RaceCourseTab";
-import RaceGainsTab from "./RaceGainsTab";
+import RaceStrategyTab from "./RaceStrategyTab";
 import RaceRunsTab from "./RaceRunsTab";
 import RaceShareTab from "./RaceShareTab";
 import { CATEGORY_LABEL, raceCategory } from "@/lib/hyrox/categories";
@@ -36,6 +32,9 @@ import { autoRaceOffset } from "@/lib/hyrox/watchAlign";
 import { fmtNoReps, wallBallNoReps } from "@/lib/hyrox/noReps";
 import { objectiveForRace } from "@/lib/hyrox/objective/forRace";
 import { STATE_LABEL, objectiveLookup } from "@/lib/hyrox/objective/vsObjective";
+import { raceStrategy } from "@/lib/hyrox/objective/strategy";
+import { leverHints, leverViews, validatedRules } from "@/lib/hyrox/objective/levers";
+import { useHyroxAnalyses } from "@/features/shared/hooks/hyrox/useHyroxTests";
 
 /**
  * Analyse de course HYROX (planches HyroxAnaTel et HyroxAnaCoachOrdi) :
@@ -51,7 +50,7 @@ const TABS = [
   { key: "debrief", label: "Débrief" },
   { key: "course", label: "Course" },
   { key: "runs", label: "Runs" },
-  { key: "gains", label: "Gains" },
+  { key: "strategie", label: "Stratégie" },
   { key: "comparer", label: "Comparer" },
 ] as const;
 type TabKey = typeof TABS[number]["key"] | "partager";
@@ -83,10 +82,10 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
   const [draftOffset, setDraftOffset] = useState<number | null>(null);
   const watch = useRaceWatch(race, chosenActivity);
   const linkWatch = useLinkRaceWatch(race);
-  const { data: refs = [] } = useHyroxReferences();
   const { data: allRaces = [] } = useHyroxResults(race.athlete_id);
   const { data: coaches } = useAthleteCoaches(race.athlete_id);
   const { data: plans = [] } = useHyroxRacePlans(race.athlete_id);
+  const coachAnalyses = useHyroxAnalyses(coach ? race.athlete_id : undefined);
   const [compareChoice, setCompareChoice] = useState<CompareKind | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [versusId, setVersusId] = useState<string | null>(null);
@@ -119,12 +118,21 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
   const objOf = useMemo(() => (objSegs ? objectiveLookup(objSegs) : () => null), [objSegs]);
   const objLevel = objSegs ? objOf : null;
   const objText = objectiveText(ov?.objective ?? null);
+  // Constat Roxzone de l'athlète : écarts bruts à l'objectif.
   const gains = useMemo(() => (objSegs ? raceGains(race, objOf) : null), [race, objOf, objSegs]);
-  const atLevel = useMemo(() => (gains ? stationsAtLevel(race, objOf, gains) : []), [race, objOf, gains]);
+  const onObjective = (vsObj?.segments ?? []).filter((x) => (STATION_KEYS as readonly string[]).includes(x.key) && (x.state === "on" || x.state === "ahead")).length;
   const evolution = useMemo(() => runPaceEvolution(allRaces), [allRaces]);
   const above = analysis ? timeAboveHr(analysis, stream, sv2, offset) : null;
   const findings = analysis ? athleteFindings({ analysis, above, gains, sv2, levelP50: objLevel }) : [];
   const recov = analysis ? roxzoneRecovery(analysis, stream, offset) : null;
+  // « Et avec une meilleure stratégie ? » : leviers contre l'objectif, proposition, axe du bilan (coach), indice montre.
+  const strategy = useMemo(() => (objSegs ? raceStrategy(race, objSegs) : null), [race, objSegs]);
+  const rules = useMemo(() => (coach ? validatedRules(coachAnalyses.data ?? [], race.date) : []), [coach, coachAnalyses.data, race.date]);
+  const levers = useMemo(() => {
+    if (!strategy) return [];
+    const hints = leverHints({ strategy, analysis: stream ? analysis : null, stream, sv2, offset, roxzoneRecoveryBpm: recov?.avgDrop ?? null });
+    return leverViews(strategy, rules, hints);
+  }, [strategy, rules, stream, analysis, sv2, offset, recov?.avgDrop]);
 
   const best = allRaces
     .filter((r) => r.is_official && r.division === race.division && r.status === race.status)
@@ -145,7 +153,7 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
   const noReps = wallBallNoReps(race);
   const noRepsText = noReps ? `Wall balls ${race.wall_balls_s ? fmtClock(race.wall_balls_s) : "—"} · ${fmtNoReps(noReps)}` : null;
   const debriefView = (layout: "phone" | "desktop") => (
-    <RaceDebriefView debrief={debrief} strip={strip} gains={gains?.items ?? []} possibleS={gains && gains.items.length ? gains.possibleS : null}
+    <RaceDebriefView debrief={debrief} strip={strip} levers={levers} possibleS={strategy && levers.length ? strategy.possibleS : null}
       layout={layout} coach={coach} previousName={debrief.previous ? raceShortName(debrief.previous) : null} noReps={noRepsText} />
   );
   // « Comparer » : n'importe quelle autre course, par défaut la précédente du même format.
@@ -156,13 +164,6 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
   const compareKind: CompareKind = compareChoice && compareAvailable(compareChoice, compareSrc) ? compareChoice : defaultCompare(compareSrc);
   const target = useMemo(() => compareTarget(compareKind, compareSrc), [compareKind, compareSrc]);
 
-  // Leviers coach : encore contre la médiane du niveau, remplacés par « meilleure stratégie » (lot 3).
-  const refLookup: RefLookup = useMemo(() => (d, s, b) => pickRef(refs, d, s, b) ?? undefined, [refs]);
-  const median = useMemo(() => (seg: string) => pickRef(refs, ownCategory, seg, bracketOf(race.total_s))?.p50_s ?? null, [refs, ownCategory, race.total_s]);
-  const levers = useMemo(
-    () => (coach && refs.length ? raceLevers({ race, refs: refLookup, analysis: stream ? analysis : null, roxzoneRecoveryBpm: recov?.avgDrop ?? null, levelP50: median }) : []),
-    [coach, refs.length, race, refLookup, stream, analysis, recov?.avgDrop, median],
-  );
   const division = CATEGORY_LABEL[ownCategory] ?? DIVISION_LABEL[race.division as HyroxDivision] ?? race.division;
   const dateLabel = new Date(race.date + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
   const timeSource = race.is_official ? "résultat officiel" : "temps saisis";
@@ -328,21 +329,21 @@ export default function RaceAnalysis({ race, onBack, audience: forced, onEdit, o
         <RaceCourseTab audience={audience} analysis={analysis} stream={stream} watchLoading={watch.loading} offset={offset}
           sv1={sv1} sv2={sv2} attribution={attribution} findings={findings} above={above} recov={recov} previous={previous}
           objective={objOf} vs={vsObj} levelP50={objLevel} totalS={race.total_s} timeSource={timeSource} objectiveText={objText}
-          leversRefText={`médiane ${division} · ${fmtClock(race.total_s)}`}
           compare={{
             kind: compareKind, onChange: setCompareChoice, target, alerts: raceAlerts(race),
             options: ([["objective", ov?.objective.source === "plan" ? "Objectif · plan de course" : "Objectif · run du jour"], ["previous", prev ? `Course précédente · ${raceShortName(prev)}` : "Course précédente"]] as const)
               .map(([key, label]) => ({ key, label, available: compareAvailable(key, compareSrc) })),
           }}
-          levers={levers} athleteId={race.athlete_id} atLevel={atLevel.length} />
+          levers={coach && strategy ? levers : undefined} athleteId={race.athlete_id} onObjective={onObjective} />
       )}
       {tab === "runs" && (
         <RaceRunsTab analysis={analysis} objective={objOf} levelP50={objLevel} attribution={attribution} timeSource={timeSource} evolution={evolution} raceId={race.id} />
       )}
-      {tab === "gains" && (
-        <RaceGainsTab gains={gains} atLevel={atLevel} objectiveText={objText} timeSource={timeSource} startLabel={raceShortName(race)} />
+      {tab === "strategie" && (
+        <RaceStrategyTab strategy={strategy} levers={levers} coach={coach} onObjective={onObjective} objectiveText={objText}
+          timeSource={timeSource} startLabel={raceShortName(race)} watchLinked={!!stream} />
       )}
-      {tab === "gains" && !coach && <TalkToCoach race={race} coachFirstName={coaches?.referent?.full_name?.split(" ")[0] ?? null} />}
+      {tab === "strategie" && !coach && <TalkToCoach race={race} coachFirstName={coaches?.referent?.full_name?.split(" ")[0] ?? null} />}
       {tab === "comparer" && (
         candidates.length === 0 || !comparison || !versus
           ? <div style={{ fontSize: 13, color: C.tx3 }}>Aucune autre course terminée à comparer pour l'instant.</div>

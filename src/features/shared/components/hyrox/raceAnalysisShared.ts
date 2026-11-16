@@ -4,6 +4,7 @@ import { hyroxPictoColor, type HyroxStation } from "@/features/shared/components
 import { DASH, fmtClock } from "@/lib/seance";
 import { fmtPace } from "@/lib/hyrox/raceDebrief";
 import type { RaceObjective } from "@/lib/hyrox/objective/model";
+import type { CascadeStep } from "@/lib/hyrox/objective/levers";
 
 /** Constantes et formats communs de l'analyse de course HYROX. */
 
@@ -69,3 +70,24 @@ export function objectiveText(o: RaceObjective | null): string {
   if (o.estimate) parts.push("estimé");
   return parts.join(" · ");
 }
+
+/** Pictogramme d'un levier « meilleure stratégie » : la station, sinon course / Roxzone. */
+export function leverPicto(key: string): HyroxStation {
+  if (STATION_PICTO[key]) return STATION_PICTO[key];
+  if (key === "roxzone") return "roxzone";
+  if (key === "no_reps") return "wall_balls";
+  return "course";
+}
+
+/** Pastille « Indice montre » (la FC ou la cadence explique un levier sans le chiffrer). */
+export const WATCH_PILL = {
+  fontFamily: "var(--agon-font-data)", fontSize: 9.5, letterSpacing: "0.1em", color: C.ame,
+  border: `1px solid ${alpha(C.ame, 0.5)}`, borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap" as const,
+};
+
+/** Couleur des marches : stratégie (le jour J), capacité (à l'entraînement), autres. */
+export const CASCADE_COLOR: Record<CascadeStep["group"], string> = {
+  strategie: C.b,
+  capacite: hyroxPictoColor("skierg"),
+  autres: C.brdL,
+};

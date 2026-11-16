@@ -19,7 +19,7 @@ import RaceCompareBar from "./RaceCompareBar";
 import RaceLevers from "./RaceLevers";
 import type { HyroxAlert } from "@/features/shared/types/hyrox";
 import { COMPARE_SHORT, type CompareKind } from "@/lib/hyrox/raceCompare";
-import type { RaceLever } from "@/lib/hyrox/raceLevers";
+import type { LeverView } from "@/lib/hyrox/objective/levers";
 import { levelRunPattern } from "@/lib/hyrox/runPacing";
 
 /**
@@ -50,8 +50,6 @@ export default function RaceCourseTab(props: {
   timeSource: string;
   /** « objectif 1:22:45 (run moyen 5:00) » pour les sources. */
   objectiveText: string;
-  /** Leviers coach (encore contre la médiane du niveau, lot 3). */
-  leversRefText?: string;
   /** Coach : « Comparer à » (référence de la colonne Écart et du pointillé d'allure). */
   compare?: {
     kind: CompareKind;
@@ -60,9 +58,11 @@ export default function RaceCourseTab(props: {
     options: Array<{ key: CompareKind; label: string; available: boolean }>;
     alerts: HyroxAlert[];
   };
-  levers?: RaceLever[];
+  /** Leviers « meilleure stratégie » (coach). */
+  levers?: LeverView[];
   athleteId?: string;
-  atLevel?: number;
+  /** Stations dans l'objectif ou devant. */
+  onObjective?: number;
 }) {
   const { audience, analysis, stream, offset, sv1, sv2, attribution } = props;
   const coach = audience === "coach";
@@ -159,7 +159,7 @@ export default function RaceCourseTab(props: {
 
       {leversTitle && props.athleteId && (
         <RaceLevers title={leversTitle} levers={props.levers ?? []} athleteId={props.athleteId}
-          refText={props.leversRefText ?? ""} atLevel={props.atLevel ?? 0} />
+          objectiveText={props.objectiveText} onObjective={props.onObjective ?? 0} />
       )}
 
       <RaceSegmentsTable analysis={analysis} objective={props.objective} vs={props.vs} levelP50={props.levelP50} stream={stream} sv2={sv2} offset={offset}
