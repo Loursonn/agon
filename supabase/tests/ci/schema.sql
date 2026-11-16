@@ -277,6 +277,64 @@ $$;
 ALTER FUNCTION "public"."_signup_name"("p_full_name" "text") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."_sync_competition_link_from_race"("p_competition" "uuid", "p_activity" "uuid", "p_previous" "uuid") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_comp record;
+  v_act record;
+BEGIN
+  SELECT id, athlete_id, date INTO v_comp FROM public.competitions WHERE id = p_competition;
+  IF NOT FOUND THEN RETURN; END IF;
+
+  IF p_activity IS NULL THEN
+    -- Course déliée : son lien confirmé tombe, la proposition automatique reprend.
+    IF p_previous IS NOT NULL THEN
+      DELETE FROM public.activity_plan_links
+       WHERE planned_kind = 'competition' AND planned_id = p_competition
+         AND activity_id = p_previous AND status = 'confirmed';
+      PERFORM public.auto_link_day(v_comp.athlete_id, v_comp.date);
+    END IF;
+    RETURN;
+  END IF;
+
+  SELECT id, athlete_id, source, local_date INTO v_act FROM public.provider_activities WHERE id = p_activity;
+  IF NOT FOUND OR v_act.athlete_id <> v_comp.athlete_id THEN RETURN; END IF;
+  IF EXISTS (SELECT 1 FROM public.activity_plan_links
+              WHERE planned_kind = 'competition' AND planned_id = p_competition
+                AND activity_id = p_activity AND status = 'confirmed') THEN
+    RETURN;
+  END IF;
+
+  PERFORM pg_advisory_xact_lock(hashtextextended(v_act.athlete_id::text || v_act.local_date::text, 41));
+  -- Le dernier choix gagne : l'ancien lien confirmé de la compétition, et celui
+  -- de l'activité vers une autre séance, sont refusés (le couple n'est plus reproposé).
+  UPDATE public.activity_plan_links
+     SET status = 'rejected', confirmed_by = auth.uid(), confirmed_at = now(), updated_at = now()
+   WHERE status = 'confirmed'
+     AND ((planned_kind = 'competition' AND planned_id = p_competition)
+       OR activity_id = p_activity);
+  DELETE FROM public.activity_plan_links
+   WHERE status = 'auto'
+     AND (activity_id = p_activity OR (planned_kind = 'competition' AND planned_id = p_competition));
+  INSERT INTO public.activity_plan_links (athlete_id, activity_id, source, planned_kind, planned_id, local_date,
+                                          status, confirmed_by, confirmed_at)
+  VALUES (v_act.athlete_id, p_activity, v_act.source, 'competition', p_competition, v_act.local_date,
+          'confirmed', auth.uid(), now())
+  ON CONFLICT (activity_id, planned_kind, planned_id) DO UPDATE
+    SET status = 'confirmed', confirmed_by = auth.uid(), confirmed_at = now(), updated_at = now();
+  PERFORM public.auto_link_day(v_act.athlete_id, v_act.local_date);
+  IF v_act.local_date <> v_comp.date THEN
+    PERFORM public.auto_link_day(v_comp.athlete_id, v_comp.date);
+  END IF;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."_sync_competition_link_from_race"("p_competition" "uuid", "p_activity" "uuid", "p_previous" "uuid") OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."workout_logs" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "athlete_id" "uuid" NOT NULL,
@@ -6495,6 +6553,41 @@ $$;
 ALTER FUNCTION "public"."tg_activity_streams_zones"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."tg_competition_link_to_race"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+BEGIN
+  -- Lien confirmé (créé, confirmé ou déplacé) : la course suit, recalage automatique.
+  IF TG_OP <> 'DELETE' AND NEW.planned_kind = 'competition' AND NEW.status = 'confirmed'
+     AND (TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM 'confirmed' OR OLD.activity_id IS DISTINCT FROM NEW.activity_id) THEN
+    UPDATE public.hyrox_results
+       SET watch_activity_id = NEW.activity_id, watch_offset_s = NULL
+     WHERE competition_id = NEW.planned_id
+       AND athlete_id = NEW.athlete_id
+       AND watch_activity_id IS DISTINCT FROM NEW.activity_id;
+  END IF;
+
+  -- Lien confirmé défait (refusé, supprimé, déplacé) : la course qui pointait
+  -- sur cette activité revient à la proposition d'office.
+  IF TG_OP <> 'INSERT' AND OLD.planned_kind = 'competition' AND OLD.status = 'confirmed'
+     AND (TG_OP = 'DELETE' OR NEW.status <> 'confirmed' OR NEW.activity_id IS DISTINCT FROM OLD.activity_id) THEN
+    UPDATE public.hyrox_results
+       SET watch_activity_id = NULL, watch_offset_s = NULL
+     WHERE competition_id = OLD.planned_id
+       AND watch_activity_id = OLD.activity_id
+       AND NOT EXISTS (SELECT 1 FROM public.activity_plan_links l
+                        WHERE l.planned_kind = 'competition' AND l.planned_id = OLD.planned_id
+                          AND l.activity_id = OLD.activity_id AND l.status = 'confirmed');
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."tg_competition_link_to_race"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."tg_fczone_refresh"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -6605,6 +6698,25 @@ $$;
 
 
 ALTER FUNCTION "public"."tg_plan_links_relink_hyrox"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."tg_race_watch_to_competition"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+BEGIN
+  IF NEW.competition_id IS NULL THEN RETURN NULL; END IF;
+  IF TG_OP = 'UPDATE' AND NEW.watch_activity_id IS NOT DISTINCT FROM OLD.watch_activity_id THEN RETURN NULL; END IF;
+  IF TG_OP = 'INSERT' AND NEW.watch_activity_id IS NULL THEN RETURN NULL; END IF;
+  PERFORM public._sync_competition_link_from_race(
+    NEW.competition_id, NEW.watch_activity_id,
+    CASE WHEN TG_OP = 'UPDATE' THEN OLD.watch_activity_id END);
+  RETURN NULL;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."tg_race_watch_to_competition"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."tg_test_values_propose_zones"() RETURNS "trigger"
@@ -11222,6 +11334,10 @@ CREATE OR REPLACE TRIGGER "activity_plan_links_ai_policy" BEFORE INSERT OR UPDAT
 
 
 
+CREATE OR REPLACE TRIGGER "activity_plan_links_race_watch" AFTER INSERT OR DELETE OR UPDATE OF "status", "activity_id" ON "public"."activity_plan_links" FOR EACH ROW EXECUTE FUNCTION "public"."tg_competition_link_to_race"();
+
+
+
 CREATE OR REPLACE TRIGGER "activity_sets_ai_policy" BEFORE INSERT OR UPDATE OF "source" ON "public"."activity_sets" FOR EACH ROW EXECUTE FUNCTION "public"."apply_source_ai_policy"();
 
 
@@ -11283,6 +11399,10 @@ CREATE OR REPLACE TRIGGER "hr_zone_models_refresh" AFTER INSERT OR UPDATE OF "st
 
 
 CREATE OR REPLACE TRIGGER "hyrox_results_plan_links" AFTER INSERT OR DELETE OR UPDATE OF "total_s", "competition_id" ON "public"."hyrox_results" FOR EACH ROW EXECUTE FUNCTION "public"."tg_plan_links_relink_hyrox"();
+
+
+
+CREATE OR REPLACE TRIGGER "hyrox_results_race_watch" AFTER INSERT OR UPDATE OF "watch_activity_id" ON "public"."hyrox_results" FOR EACH ROW EXECUTE FUNCTION "public"."tg_race_watch_to_competition"();
 
 
 
@@ -15795,6 +15915,11 @@ GRANT ALL ON FUNCTION "public"."_strict"("name", "name", "name"[]) TO "postgres"
 GRANT ALL ON FUNCTION "public"."_strict"("name", "name", "name"[]) TO "anon";
 GRANT ALL ON FUNCTION "public"."_strict"("name", "name", "name"[]) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."_strict"("name", "name", "name"[]) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."_sync_competition_link_from_race"("p_competition" "uuid", "p_activity" "uuid", "p_previous" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."_sync_competition_link_from_race"("p_competition" "uuid", "p_activity" "uuid", "p_previous" "uuid") TO "service_role";
 
 
 
@@ -22804,6 +22929,11 @@ GRANT ALL ON FUNCTION "public"."tg_activity_streams_zones"() TO "service_role";
 
 
 
+REVOKE ALL ON FUNCTION "public"."tg_competition_link_to_race"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."tg_competition_link_to_race"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."tg_fczone_refresh"() TO "anon";
 GRANT ALL ON FUNCTION "public"."tg_fczone_refresh"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."tg_fczone_refresh"() TO "service_role";
@@ -22824,6 +22954,11 @@ GRANT ALL ON FUNCTION "public"."tg_plan_links_relink"() TO "service_role";
 
 REVOKE ALL ON FUNCTION "public"."tg_plan_links_relink_hyrox"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."tg_plan_links_relink_hyrox"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."tg_race_watch_to_competition"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."tg_race_watch_to_competition"() TO "service_role";
 
 
 

@@ -6089,6 +6089,10 @@ export type Database = {
       }
       _signup_guard: { Args: never; Returns: string }
       _signup_name: { Args: { p_full_name: string }; Returns: string }
+      _sync_competition_link_from_race: {
+        Args: { p_activity: string; p_competition: string; p_previous: string }
+        Returns: undefined
+      }
       _table_privs: { Args: never; Returns: unknown[] }
       _temptypes: { Args: { "": string }; Returns: string }
       _todo: { Args: never; Returns: string }
