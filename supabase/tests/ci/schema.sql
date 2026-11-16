@@ -4927,7 +4927,7 @@ BEGIN
     FROM jsonb_array_elements(coalesce(v_s.watch_laps, '[]'::jsonb)) WITH ORDINALITY x(e, o);
 
   UPDATE public.activity_streams
-     SET laps_version = laps_version + 1, laps_edited = false, updated_at = now()
+     SET laps_version = laps_version + 1, laps_edited = false, laps_edited_by = NULL, updated_at = now()
    WHERE activity_id = p_activity;
   RETURN v_s.laps_version + 1;
 END;
@@ -5120,7 +5120,7 @@ BEGIN
   GET DIAGNOSTICS v_n = ROW_COUNT;
 
   UPDATE public.activity_streams
-     SET laps_version = laps_version + 1, laps_edited = true, updated_at = now()
+     SET laps_version = laps_version + 1, laps_edited = true, laps_edited_by = auth.uid(), updated_at = now()
    WHERE activity_id = p_activity;
   RETURN v_s.laps_version + 1;
 END;
@@ -7559,6 +7559,7 @@ CREATE TABLE IF NOT EXISTS "public"."activity_streams" (
     "ai_allowed" boolean DEFAULT false NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "laps_edited_by" "uuid",
     CONSTRAINT "activity_streams_lengths" CHECK ((("cardinality"("t") = "sample_count") AND (("timer" IS NULL) OR ("cardinality"("timer") = "sample_count")) AND (("hr" IS NULL) OR ("cardinality"("hr") = "sample_count")) AND (("speed" IS NULL) OR ("cardinality"("speed") = "sample_count")) AND (("dist" IS NULL) OR ("cardinality"("dist") = "sample_count")) AND (("alt" IS NULL) OR ("cardinality"("alt") = "sample_count")) AND (("cadence" IS NULL) OR ("cardinality"("cadence") = "sample_count")) AND (("power" IS NULL) OR ("cardinality"("power") = "sample_count")) AND (("lat" IS NULL) OR ("cardinality"("lat") = "sample_count")) AND (("lon" IS NULL) OR ("cardinality"("lon") = "sample_count")) AND (("vosc" IS NULL) OR ("cardinality"("vosc") = "sample_count")) AND (("stance" IS NULL) OR ("cardinality"("stance") = "sample_count")) AND (("vratio" IS NULL) OR ("cardinality"("vratio") = "sample_count")) AND (("step_len" IS NULL) OR ("cardinality"("step_len") = "sample_count")) AND (("temp" IS NULL) OR ("cardinality"("temp") = "sample_count")))),
     CONSTRAINT "activity_streams_normalized_from_check" CHECK (("normalized_from" = ANY (ARRAY['fit'::"text", 'garmin_json'::"text", 'tcx'::"text", 'gpx'::"text"]))),
     CONSTRAINT "activity_streams_sample_count_check" CHECK (("sample_count" >= 0))
@@ -11674,6 +11675,11 @@ ALTER TABLE ONLY "public"."activity_streams"
 
 ALTER TABLE ONLY "public"."activity_streams"
     ADD CONSTRAINT "activity_streams_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."activity_streams"
+    ADD CONSTRAINT "activity_streams_laps_edited_by_fkey" FOREIGN KEY ("laps_edited_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
 
 
 
