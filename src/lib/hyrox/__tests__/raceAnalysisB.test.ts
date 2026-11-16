@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { ActivityStream } from "@shared/activityFiles/stream";
 import type { HyroxReferenceSegment, HyroxResult } from "@/features/shared/types/hyrox";
 import type { RefLookup } from "@/lib/hyrox/calc";
-import { PLAN_SEGMENTS, parseClock, planForRace, planFromTarget, planSegments, planTargets, planTotal } from "@/lib/hyrox/racePlan";
+import { PLAN_SEGMENTS, parseClock, planForRace, planSegments, planTargets, planTotal } from "@/lib/hyrox/racePlan";
+import { objectiveForTotal } from "@/lib/hyrox/objective/model";
 import { compareAvailable, compareTarget, defaultCompare } from "@/lib/hyrox/raceCompare";
 import { HYROX_WORK_PROPOSALS } from "@/lib/hyrox/workProposals";
 import { evolutionRaces, nextHyroxCompetition, raceProjection, runEfficiencySeries } from "@/lib/hyrox/raceProjection";
@@ -42,20 +43,15 @@ function stream(total: number, hr: (t: number) => number | null, cad: (t: number
 }
 
 describe("plan de course", () => {
-  it("répartit un chrono cible sur les 17 segments, somme exacte", () => {
-    const p = planFromTarget(4770, "women", refs)!;
+  it("objectif depuis un chrono visé : 17 segments, somme exacte", () => {
+    const p = objectiveForTotal("women", 4770)!.segments;
     expect(Object.keys(p)).toHaveLength(17);
     expect(planTotal(p)).toBe(4770);
-    // au prorata des médianes : le sled push reste plus court que le SkiErg
     expect(p.sled_push).toBeLessThan(p.ski);
   });
 
-  it("sans médiane, pas de plan", () => {
-    expect(planFromTarget(4770, "women", () => undefined)).toBeNull();
-  });
-
   it("aller-retour stockage ↔ segments (Roxzone = 8 × par transition)", () => {
-    const p = planFromTarget(4770, "women", refs)!;
+    const p = objectiveForTotal("women", 4770)!.segments;
     const t = planTargets(p);
     expect(t.roxzone_per_transition * 8).toBeCloseTo(p.roxzone_total);
     expect(planSegments(t)).toEqual(p);
@@ -63,7 +59,7 @@ describe("plan de course", () => {
   });
 
   it("plan d'une course : rattaché au résultat d'abord, sinon à la compétition", () => {
-    const t = planTargets(planFromTarget(4770, "women", refs)!);
+    const t = planTargets(objectiveForTotal("women", 4770)!.segments);
     const comp = { id: "p1", result_id: null, competition_id: "c-lyon", target_total_s: 4770, targets: t, updated_at: "2026-09-01" };
     const res = { id: "p2", result_id: "lyon", competition_id: null, target_total_s: 4700, targets: t, updated_at: "2026-08-01" };
     expect(planForRace(lyon(), [comp])?.id).toBe("p1");
@@ -81,7 +77,7 @@ describe("plan de course", () => {
 
 describe("comparer à", () => {
   const prev = lyon({ id: "paris", run_1_s: 285, total_s: 5057, roxzone_total_s: 429 });
-  const objective = planFromTarget(4770, "women", refs)!;
+  const objective = objectiveForTotal("women", 4770)!.segments;
 
   it("objectif de la course ou course précédente", () => {
     expect(compareTarget("previous", { previous: prev, objective })("run_1")).toBe(285);

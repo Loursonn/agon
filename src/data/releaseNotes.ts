@@ -55,6 +55,32 @@ export const RELEASE_NOTES: ReleaseNote[] = [
     ],
   },
   {
+    id: "2026-11-16-hyrox-objectif-saison",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "HYROX : l'objectif part du run moyen, et chaque saison a le sien",
+    summary:
+      "L'onglet « Plan de course » devient « Objectif » : un run moyen visé suffit pour obtenir les 17 cibles de la course. Un objectif de saison s'ajoute, et les courses sont rangées par saison.",
+    sections: [
+      {
+        title: "Objectif d'une course",
+        points: [
+          "Choisis un run moyen (/km, hors Roxzone) ou un chrono visé : Agon en tire les 8 runs, les 8 stations et la Roxzone, d'après les athlètes qui courent à cette allure, dans la division choisie (solo et duo).",
+          "Le run moyen est proposé : objectif de saison, sinon la dernière course de la même division ou le dernier bilan de tests validé (le plus récent).",
+          "Boutons −5 s / +5 s pour ajuster l'allure, chaque cible reste modifiable. Chrono verrouillé : une cible modifiée est compensée sur les autres ; « Revenir au modèle » remet les 17 cibles calculées.",
+        ],
+      },
+      {
+        title: "Saisons",
+        points: [
+          "Une saison va du 15 août au 14 août (Saison 26/27).",
+          "Objectif de saison : un run moyen visé par division, fixé dans l'onglet Objectif. Il pré-remplit l'objectif des prochaines courses de la saison ; l'athlète le voit en haut de « Ma saison ».",
+          "La liste des courses est rangée par saison, la plus récente en haut. Une course déjà faite sans objectif reste jugée sur son run du jour.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-16-hyrox-meilleure-strategie",
     date: "2026-11-16",
     kind: "feature",

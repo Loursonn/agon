@@ -59,7 +59,7 @@ const SUB_TABS: Record<string, { key: string; label: string }[]> = {
     { key: "runs",     label: "Runs"              },
     { key: "radar",    label: "Radar"             },
     { key: "tests",    label: "Tests"             },
-    { key: "plan",     label: "Plan de course"    },
+    { key: "plan",     label: "Objectif"          },
   ],
 };
 

@@ -12,6 +12,10 @@ import { fmtClock } from "@/lib/seance";
 import { ObjectiveLegend } from "@/features/shared/components/hyrox/RaceDebriefView";
 import { fmtGap, objectiveColor } from "@/features/shared/components/hyrox/raceAnalysisShared";
 import { objectiveForRace } from "@/lib/hyrox/objective/forRace";
+import { objectiveFromRun } from "@/lib/hyrox/objective/model";
+import { useHyroxSeasonGoals } from "@/features/shared/hooks/hyrox/useHyroxSeasonGoals";
+import { seasonOf } from "@/lib/hyrox/season";
+import { localIsoDay } from "@shared/domain/dates";
 
 /**
  * « Ma saison » (athlète, planche validée par Hugo le 15/11/2026) : la
@@ -64,6 +68,10 @@ export default function HyroxSeasonView({ onOpenRace }: { onOpenRace: (id: strin
   const { athleteId } = useAthleteContext();
   const { data: races = [], isLoading } = useHyroxResults(athleteId);
   const { data: plans = [] } = useHyroxRacePlans(athleteId);
+  const { data: goals = [] } = useHyroxSeasonGoals(athleteId);
+  // Objectif de saison (fixé par le coach) : saison en cours.
+  const season = seasonOf(localIsoDay());
+  const seasonGoals = goals.filter((g) => g.season === season?.key);
 
   const finished = useMemo(() => races.filter((r) => r.status === "finished" && r.total_s > 0).sort((a, b) => b.date.localeCompare(a.date)), [races]);
   const last: HyroxResult | null = finished[0] ?? null;
@@ -101,6 +109,21 @@ export default function HyroxSeasonView({ onOpenRace }: { onOpenRace: (id: strin
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      {season && seasonGoals.length > 0 && (
+        <section aria-label="Objectif de saison" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <span style={LABEL}>{season.label} · objectif de saison</span>
+          {seasonGoals.map((g) => {
+            const o = objectiveFromRun(g.division, g.run_avg_s);
+            return (
+              <div key={g.id} style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+                <span style={{ ...MONO, fontSize: 18 }}>{fmtPace(g.run_avg_s)}<span style={{ color: C.tx3, fontSize: 12 }}> /km</span></span>
+                {o && <span style={{ ...MONO, fontSize: 14, color: C.ac }}>→ {fmtClock(o.totalS)}</span>}
+                <span style={{ fontSize: 12.5, color: C.tx2 }}>{CATEGORY_LABEL[g.division as keyof typeof CATEGORY_LABEL] ?? g.division}</span>
+              </div>
+            );
+          })}
+        </section>
+      )}
       <section aria-label="Dernière course" style={{ ...CARD, borderColor: C.brdL, borderRadius: 16, padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
           <span style={LABEL}>Dernière course · {dateLabel}</span>

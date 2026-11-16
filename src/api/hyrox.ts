@@ -209,6 +209,7 @@ export async function listHyroxRacePlans(athleteId: string): Promise<HyroxRacePl
 export type HyroxRacePlanInput = Pick<
   HyroxRacePlan,
   "athlete_id" | "competition_id" | "result_id" | "name" | "division" | "profile" | "target_total_s" | "targets" | "notes"
+  | "run_avg_s" | "model_version" | "locked_total"
 >;
 
 /** Crée (`id` absent) ou modifie un plan de course. */
