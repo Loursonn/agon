@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-16-fix-bilan-semaine-course-velo",
+    date: "2026-11-16",
+    kind: "fix",
+    title: "Bilan de la semaine : course à pied et vélo séparés",
+    summary: "Les kilomètres du bilan de la semaine ne mélangent plus la course et le vélo.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Le bilan de la semaine affiche d'abord les kilomètres de course à pied, puis ceux de vélo s'il y en a. Une sortie vélo de 40 km ne gonfle plus le volume de course.",
+          "Les bilans déjà envoyés gardent leur distance totale d'origine.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-16-modifier-tours-tableau",
     date: "2026-11-16",
     kind: "feature",

@@ -1,6 +1,7 @@
 import { addDays, type IsoDay } from "@shared/domain/dates";
 import { WELLNESS_ITEMS, type WellnessEntry, type WellnessItem } from "@shared/domain/wellness";
 import type { PlannedVsDoneDay } from "@/lib/plannedVsDone";
+import { isRunningSport } from "@/lib/watchRunMatching";
 
 export { painRequired, weekPainReports, type InjuryLike, type PainReport, type PainSource, type SessionPainLike } from "./pain";
 
@@ -145,8 +146,15 @@ export interface WeekSummary {
   sessions: { done: number; planned: number };
   /** Minutes (séances faites + activités libres), `null` si aucune durée connue. */
   durationMin: number | null;
-  /** Kilomètres, `null` si aucune distance connue. */
+  /** Kilomètres tous sports confondus, `null` si aucune distance connue. */
   distanceKm: number | null;
+  /**
+   * Course à pied, affichée en premier (Hugo, 16/11/2026 : on ne mélange plus course et vélo).
+   * Absent des bilans enregistrés avant cette date : lire `distanceKm`.
+   */
+  runKm?: number | null;
+  /** Vélo (route, home trainer, VTT…), `null` si aucun. */
+  bikeKm?: number | null;
   rpeAvg: number | null;
   hardest: HardestSession | null;
   wellness: {
@@ -160,6 +168,12 @@ export interface WeekSummary {
 }
 
 const round1 = (x: number) => Math.round(x * 10) / 10;
+
+const BIKE_SPORT = /cycl|bik|ride|velo|vélo|gravel|vtt|spinning/i;
+/** Vélo sous toutes ses formes (route, home trainer, VTT, gravel, e-bike). */
+export function isBikeSport(sport: string | null | undefined): boolean {
+  return !!sport && BIKE_SPORT.test(sport);
+}
 
 function mean(xs: readonly number[], min = 1): number | null {
   return xs.length >= min ? round1(xs.reduce((a, b) => a + b, 0) / xs.length) : null;
@@ -177,6 +191,13 @@ export function summarizeWeek(input: {
   const workouts = input.workouts ?? {};
 
   let planned = 0, done = 0, seconds = 0, hasDuration = false, meters = 0, hasDistance = false;
+  let runM = 0, hasRun = false, bikeM = 0, hasBike = false;
+  const addDistance = (sport: string | null | undefined, m: number | null | undefined) => {
+    if (m == null || !(m > 0)) return;
+    meters += m; hasDistance = true;
+    if (isRunningSport(sport)) { runM += m; hasRun = true; }
+    else if (isBikeSport(sport)) { bikeM += m; hasBike = true; }
+  };
   const rpes: number[] = [];
   let hardest: HardestSession | null = null;
 
@@ -188,7 +209,7 @@ export function summarizeWeek(input: {
       const extra = p.kind === "workout" ? workouts[p.id] : undefined;
       const dur = p.activity?.durationS ?? extra?.durationS ?? null;
       if (dur != null && dur > 0) { seconds += dur; hasDuration = true; }
-      if (p.activity?.distanceM != null && p.activity.distanceM > 0) { meters += p.activity.distanceM; hasDistance = true; }
+      addDistance(p.activity?.sport, p.activity?.distanceM);
       if (p.rpe) {
         rpes.push(p.rpe.value);
         if (!hardest || p.rpe.value > hardest.rpe) {
@@ -199,7 +220,7 @@ export function summarizeWeek(input: {
     }
     for (const a of day.free) {
       if (a.durationS != null && a.durationS > 0) { seconds += a.durationS; hasDuration = true; }
-      if (a.distanceM != null && a.distanceM > 0) { meters += a.distanceM; hasDistance = true; }
+      addDistance(a.sport, a.distanceM);
     }
   }
 
@@ -215,6 +236,8 @@ export function summarizeWeek(input: {
     sessions: { done, planned },
     durationMin: hasDuration ? Math.round(seconds / 60) : null,
     distanceKm: hasDistance ? round1(meters / 1000) : null,
+    runKm: hasRun ? round1(runM / 1000) : null,
+    bikeKm: hasBike ? round1(bikeM / 1000) : null,
     rpeAvg: mean(rpes),
     hardest,
     wellness: {
