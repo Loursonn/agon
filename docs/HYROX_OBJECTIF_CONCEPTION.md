@@ -425,10 +425,10 @@ Affichage : la cascade existante (`RaceGainsCascade`) devient deux groupes, « S
 
 | Levier | Proposition (`workProposals.ts`) | Axe des tests (`hyrox_work_axes_rules`) |
 |---|---|---|
-| Départ, régularité | nouveau texte : « Allure : 3 séances simulées avec run 1 imposé à l'allure cible, puis 6 × 1 km à allure course avec stations courtes » (à relire) | Seuils (`run_seuils`) |
+| Départ, régularité | nouveau texte : « Allure : 3 séances simulées avec run 1 imposé à l'allure cible, puis 6 × 1 km à allure course avec stations courtes » (validé le 16/11) | Seuils (`run_seuils`) |
 | Course après les sleds | `runAfterProposal("sled_push" / "sled_pull")` | Endurance de force sleds (`sled_push_endf`, `sled_pull_endf`) |
 | Roxzone | `roxzone` | — |
-| No reps | nouveau texte : « Technique : 5 × 20 wall balls à la cible, squat filmé de profil » (à relire) | Technique (`wb_tech`) |
+| No reps | nouveau texte : « Technique : 5 × 20 wall balls à la cible, squat filmé de profil » (validé le 16/11) | Technique (`wb_tech`) |
 | Wall balls (capacité) | `wall_balls` | `wb_endf` |
 | Sled push / pull | `sled_push` / `sled_pull` | `sled_*_force`, `sled_pull_gap` |
 | SkiErg / rameur | `ski` / `row` | `ergo_tech` ou `ergo_run_first` |
@@ -482,7 +482,7 @@ Chaque lot : Nouveautés, `npm run check`, push sur `dev`.
 **Avancement**
 - Lot 1 (15/11/2026) : fait. Migration `20261116180000` en prod, grille obj@1 (60 lignes).
 - Lot 2 (15/11/2026) : fait pour l'analyse de course et Ma saison. `objective/forRace.ts` (plan, sinon run du jour) ; en-tête, frise, débrief, tableau des 17 segments, onglets Runs et Gains, montre, « Comparer à » (objectif / course précédente) lisent l'objectif. Supprimés : `RaceCategoryCard`, `categoryEquivalence.ts`, `profilePercentiles`, `stationProfile`, `ownTotalPct`, positions dans « Comparer », profil runner / hybride de l'en-tête.
-- Lot 3 (16/11/2026) : fait. `objective/strategy.ts` (leviers §9.1, `focus` de la course après les sleds, pertes par run, 3 passages Roxzone les plus longs) ; `objective/levers.ts` (propositions et règles d'axes §9.2, dernier bilan validé avant la course, indices montre §9.3, marches de la cascade). Onglet « Stratégie » (ex-Gains), débrief « Où gagner du temps », Ma saison bloc 04 et leviers coach de l'onglet Course lisent `raceStrategy`. Supprimé : `raceLevers.ts` (médiane × poids). Textes « Allure » et « Technique » des propositions : à relire par Hugo. §9.4 (leviers cumulés sur la saison) : lot 4/5.
+- Lot 3 (16/11/2026) : fait. `objective/strategy.ts` (leviers §9.1, `focus` de la course après les sleds, pertes par run, 3 passages Roxzone les plus longs) ; `objective/levers.ts` (propositions et règles d'axes §9.2, dernier bilan validé avant la course, indices montre §9.3, marches de la cascade). Onglet « Stratégie » (ex-Gains), débrief « Où gagner du temps », Ma saison bloc 04 et leviers coach de l'onglet Course lisent `raceStrategy`. Supprimé : `raceLevers.ts` (médiane × poids). Textes « Allure » et « Technique » des propositions : validés par Hugo le 16/11. §9.4 (leviers cumulés sur la saison) : lot 4/5.
 - Lot 4 (16/11/2026) : fait. `src/api/hyroxObjective.ts` (objectifs de saison, `hyroxObjectiveKeys`, `invalidateHyroxObjective`) ; `objective/proposal.ts` (run proposé : plan, objectif de saison, puis le plus récent entre dernière course de la catégorie et bilan de tests validé). Onglet coach « Objectif » (ex-Plan de course) : objectif de saison (coach seul, l'athlète le lit dans Ma saison), éditeur par run moyen ou chrono visé, 9 catégories (Pro doubles estimé), ±5 s, cadenas, « Revenir au modèle ». Courses rangées par saison (`RacesView`, coach et athlète). Décisions d'Hugo (16/11) : une course faite sans plan reste jugée sur son run du jour (l'objectif de saison ne s'y applique pas). Supprimé : `planFromTarget` (prorata des médianes). Grille lue dans le code (`gridData.ts`, identique à `hyrox_objective_grid`) ; lecture en base quand une 2ᵉ version existera. Sélecteur de saison de Ma saison : lot 5.
 - Restent sur la médiane jusqu'au lot 5 : vues coach Stations, Radar, Évolution (`standing()`, `segmentPositions`, `raceGains` dans `EvolutionView`). `hyrox_reference_segments` n'est plus lue que par ces vues.
 

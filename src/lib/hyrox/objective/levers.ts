@@ -13,10 +13,10 @@ import { cadenceDrop, shareAboveHr, type RaceWatchAnalysis } from "../raceWatch"
 import { HYROX_WORK_PROPOSALS, runAfterProposal } from "../workProposals";
 import type { LeverKey, StrategyLever, StrategyResult } from "./strategy";
 
-/** Allure (départ, régularité) : nouveau texte du §9.2, à relire par Hugo. */
+/** Allure (départ, régularité) : texte du §9.2, validé par Hugo le 16/11/2026. */
 export const PACING_PROPOSAL =
   "Allure : 3 séances simulées avec run 1 imposé à l'allure cible, puis 6 × 1 km à allure course avec stations courtes";
-/** No reps : nouveau texte du §9.2, à relire par Hugo. */
+/** No reps : texte du §9.2, validé par Hugo le 16/11/2026. */
 export const NO_REPS_PROPOSAL = "Technique : 5 × 20 wall balls à la cible, squat filmé de profil";
 
 /** Règles d'axes (`hyrox_work_axes_rules`) qui disent la même chose que chaque levier. */
