@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { LapMetrics } from "@shared/domain/lapMetrics";
 import {
   anchorManualLaps, applyCellEdit, applyOverrides, cellEditFromText, canDeleteLap, canSetDuration, cleanOverrides, deleteLap,
-  distanceFromPace, hasValueEdit, insertManualLap, manualLapMetrics, parseCount, parseKm, parsePace,
+  distanceFromPace, hasValueEdit, insertManualLap, lapsEditedByCoach, manualLapMetrics, parseCount, parseKm, parsePace,
   parseSpeedAsPace, phaseLabel, setLapDuration, setOverride, timeAfter, timeBefore, totalFromLaps,
 } from "@/lib/lapEdits";
 import { hasBoundaryAfter, mergeWithNext, moveBoundary, setLapBounds } from "@/lib/seance";
@@ -249,5 +249,15 @@ describe("tour tapé à la main : valeurs tapées appliquées", () => {
     expect(r.metrics.avgCadence).toBe(176);
     expect(r.metrics.ascentM).toBe(4);
     expect(r.metrics.avgHr).toBeNull();
+  });
+});
+
+describe("« Tours modifiés par ton coach »", () => {
+  const d = (lapsEdited: boolean, lapsEditedBy: string | null) => ({ lapsEdited, lapsEditedBy, activity: { athleteId: "lea" } });
+  it("seulement quand un autre que l'athlète a enregistré les tours", () => {
+    expect(lapsEditedByCoach(d(true, "coach"))).toBe(true);
+    expect(lapsEditedByCoach(d(true, "lea"))).toBe(false);
+    expect(lapsEditedByCoach(d(true, null))).toBe(false);
+    expect(lapsEditedByCoach(d(false, "coach"))).toBe(false);
   });
 });

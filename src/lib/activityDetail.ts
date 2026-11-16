@@ -92,6 +92,8 @@ export interface ActivityDetailInput {
   laps: readonly DetailLap[];
   lapsVersion: number;
   lapsEdited: boolean;
+  /** Qui a enregistré les tours en dernier (`null` : tours de la montre, ou inconnu). */
+  lapsEditedBy?: string | null;
   sets: readonly StrengthSet[];
   bounds: { modelId: string | null; kind: ZoneModelKind; bounds: number[] } | null;
   link: PlanLinkInfo | null;
@@ -113,6 +115,8 @@ export interface ActivityDetail {
   laps: DetailLapWithMetrics[];
   lapsVersion: number;
   lapsEdited: boolean;
+  /** Qui a enregistré les tours en dernier : « Tours modifiés par ton coach » côté athlète. */
+  lapsEditedBy: string | null;
   /** Tours nommés d'après la séance prévue, à valider (rien n'est encore enregistré). */
   lapsNamedFromPlan: boolean;
   /** Une proposition de découpage peut être calculée (`proposeDetailLaps`). */
@@ -204,6 +208,7 @@ export function buildActivityDetail(input: ActivityDetailInput): ActivityDetail 
     laps: lapsWithMetrics(stream, laps, ctx, input.plannedBlocks),
     lapsVersion: input.lapsVersion,
     lapsEdited: input.lapsEdited,
+    lapsEditedBy: input.lapsEdited ? input.lapsEditedBy ?? null : null,
     lapsNamedFromPlan: named,
     proposalAvailable,
     sets: [...input.sets],

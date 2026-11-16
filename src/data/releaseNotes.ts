@@ -109,6 +109,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
           "Ordinateur : glisser sur la courbe, ou la molette en mode modification (⌘ / Ctrl + molette en lecture). Boutons + / − et « Toute la séance ».",
           "Téléphone : pincer, ou les boutons + / −. La vue d'ensemble sous le graphique se glisse pour se déplacer.",
           "Votre athlète et vous (ou le co-coach) pouvez modifier les tours.",
+          "Quand vous modifiez ses tours, votre athlète voit une petite mention « Tours modifiés par ton coach » sous le tableau, sans notification.",
         ],
       },
     ],

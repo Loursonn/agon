@@ -281,6 +281,7 @@ export async function getActivityDetail(activityId: string): Promise<ActivityDet
     laps: (lapRows as LapRow[]).map(fromLapRow),
     lapsVersion: num(s?.laps_version) ?? 0,
     lapsEdited: s?.laps_edited === true,
+    lapsEditedBy: typeof s?.laps_edited_by === "string" ? s.laps_edited_by : null,
     sets: (setRows as SetRow[]).map(fromSetRow),
     bounds,
     link,

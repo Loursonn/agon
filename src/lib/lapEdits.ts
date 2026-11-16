@@ -453,3 +453,12 @@ export function cellEditFromText(field: TableField, text: string, ctx: { speed: 
   const v = parseCount(t);
   return v === null ? null : { field: key, value: v };
 }
+
+/**
+ * « Tours modifiés par ton coach » (choix d'Hugo du 16/11/2026, mention discrète, sans notification) :
+ * les tours enregistrés en dernier l'ont été par quelqu'un d'autre que l'athlète (coach référent ou co-coach,
+ * seuls autres à pouvoir les modifier).
+ */
+export function lapsEditedByCoach(d: { lapsEdited: boolean; lapsEditedBy: string | null; activity: { athleteId: string } }): boolean {
+  return d.lapsEdited && !!d.lapsEditedBy && d.lapsEditedBy !== d.activity.athleteId;
+}

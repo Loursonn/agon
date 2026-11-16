@@ -356,6 +356,7 @@ export type Database = {
           dist: number[] | null
           hr: number[] | null
           laps_edited: boolean
+          laps_edited_by: string | null
           laps_version: number
           lat: number[] | null
           lon: number[] | null
@@ -390,6 +391,7 @@ export type Database = {
           dist?: number[] | null
           hr?: number[] | null
           laps_edited?: boolean
+          laps_edited_by?: string | null
           laps_version?: number
           lat?: number[] | null
           lon?: number[] | null
@@ -424,6 +426,7 @@ export type Database = {
           dist?: number[] | null
           hr?: number[] | null
           laps_edited?: boolean
+          laps_edited_by?: string | null
           laps_version?: number
           lat?: number[] | null
           lon?: number[] | null
@@ -465,6 +468,13 @@ export type Database = {
           {
             foreignKeyName: "activity_streams_athlete_id_fkey"
             columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_streams_laps_edited_by_fkey"
+            columns: ["laps_edited_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]

@@ -9,7 +9,7 @@ import {
   sportFamily, summarizeBlocks,
 } from "@/lib/seance";
 import {
-  applyCellEdit, canDeleteLap, canSetDuration, deleteLap, hasValueEdit, insertManualLap, totalFromLaps, type CellEdit,
+  applyCellEdit, canDeleteLap, canSetDuration, deleteLap, hasValueEdit, insertManualLap, lapsEditedByCoach, totalFromLaps, type CellEdit,
 } from "@/lib/lapEdits";
 import { useActivityDetail, useSaveLaps, useSaveSeanceFeedback } from "@/features/shared/hooks/useActivityDetail";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -134,6 +134,13 @@ export function SeanceView({ athleteId, activityId, role, athleteFirstName, back
   const editing = draft !== null;
   const dirty = editing && !sameLaps(draft!, baseLaps);
   const feedbackTitle = role === "athlete" ? "Ton retour" : `Retour de ${athleteFirstName || "l’athlète"}`;
+  // Mention discrète, sans notification (choix d'Hugo, 16/11) : l'athlète voit que son coach a retouché les tours.
+  const coachEditMark = role === "athlete" && lapsEditedByCoach(detail) ? (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: C.tx3 }}>
+      <Pencil size={12} aria-hidden />
+      Tours modifiés par ton coach
+    </div>
+  ) : null;
 
   // ── Actions ──────────────────────────────────────────────────────────────
   const persist = (laps: readonly DetailLap[], after?: () => void) =>
@@ -344,6 +351,7 @@ export function SeanceView({ athleteId, activityId, role, athleteFirstName, back
             onPatch={hyrox ? patchLap : undefined}
           />
           {!hyrox && <div style={{ fontSize: 11.5, color: C.tx3 }}>Touche un tour pour l’ouvrir. Le graphique de la séance zoome alors sur ce tour.</div>}
+          {coachEditMark}
         </Shell>
       );
     }
@@ -493,6 +501,7 @@ export function SeanceView({ athleteId, activityId, role, athleteFirstName, back
               </div>
             </div>
           </div>
+          {!editing && coachEditMark}
           {hyrox && !editing && (
             <div style={{ fontSize: 11.5, color: C.tx3 }}>
               Réalisé et charge se corrigent directement dans le tableau · bulle dorée = commentaire {role === "athlete" ? "que tu as laissé" : "de l’athlète"} sur le tour{role === "athlete" ? " (touche la bulle pour en écrire un)" : ""}.

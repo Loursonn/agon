@@ -107,6 +107,18 @@ describe("getActivityDetail", () => {
     expect(d.laps.map((l) => l.comment ?? null)).toEqual([null, "J'ai lâché 2 fois", null, null]);
   });
 
+  it("relit qui a enregistré les tours ; rien tant que ce sont ceux de la montre", async () => {
+    const t = hyroxTables({ lapsEdited: true });
+    (t.activity_streams[0] as Record<string, unknown>).laps_edited_by = "coach-1";
+    setDbForTests(fakeDb(t, undefined, zones).db);
+    expect((await getActivityDetail("act")).lapsEditedBy).toBe("coach-1");
+
+    const w = hyroxTables({ lapsEdited: false });
+    (w.activity_streams[0] as Record<string, unknown>).laps_edited_by = "coach-1";
+    setDbForTests(fakeDb(w, undefined, zones).db);
+    expect((await getActivityDetail("act")).lapsEditedBy).toBeNull();
+  });
+
   it("HYROX : tours nommés d'après la séance prévue, métriques, zones, lien, attribution", async () => {
     const { db } = fakeDb(hyroxTables(), undefined, zones);
     setDbForTests(db);
