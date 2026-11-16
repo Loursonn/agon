@@ -55,7 +55,12 @@ export function ReviewSummaryCard({ summary }: { summary: WeekSummary | null | u
         <Stat label="Séances" value={summary.sessions.planned > 0 || summary.sessions.done > 0 ? `${summary.sessions.done} / ${summary.sessions.planned}` : "—"} />
         <Stat label="RPE moyen" value={formatNumber(summary.rpeAvg)} />
         <Stat label="Durée" value={formatDuration(summary.durationMin)} />
-        <Stat label="Distance" value={formatNumber(summary.distanceKm, "km")} />
+        {summary.runKm === undefined ? (
+          <Stat label="Distance" value={formatNumber(summary.distanceKm, "km")} />
+        ) : (
+          <Stat label="Course à pied" value={formatNumber(summary.runKm, "km")} />
+        )}
+        {summary.bikeKm != null && <Stat label="Vélo" value={formatNumber(summary.bikeKm, "km")} />}
       </div>
       {summary.hardest && (
         <div className="border-t border-agon-brd pt-2.5 text-[13px]">

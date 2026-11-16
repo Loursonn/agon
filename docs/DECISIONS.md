@@ -2775,3 +2775,20 @@ Demande d'Hugo (15/11) : « lorsqu'un athlète a une compétition, il faut la me
 - **API Claude d'Agon** (`athlete-insights`, `ai-program`) : rien de nouveau, ces données ne lui sont toujours pas envoyées.
 - Politique (§ finalités, § assistant, liste « jamais transmis »), texte de l'accord, écran de mise à jour,
   `docs/stores/DONNEES_COLLECTEES.md` et `docs/API_COACH.md` mis à jour.
+
+## 2026-11-16 — « Modifier tours » : tableau modifiable, tours à la main, zoom
+
+- **Demande d'Hugo** : en mode « Modifier tours » d'une séance de montre, ajouter des tours, zoomer sur le graphique et
+  modifier toutes les cases du tableau, sauf la FC (données de la montre).
+- **Choix d'Hugo** : durée tapée = la limite du tour se déplace sur la courbe (le voisin suit) ; allure tapée = la distance
+  se recalcule ; supprimer = le temps rejoint le tour précédent ; ajouter = couper la courbe ou un tour tapé à la main hors
+  courbe (sans FC) ; types Échauffement · Effort · Récupération · Retour au calme ; cadence, D+ / D−, allure max et
+  puissance modifiables aussi ; athlète et coach (référent ou co-coach).
+- **La montre fait foi hors de l'écran de la séance, définitivement** : volume de la semaine, charge et IA ne lisent jamais
+  les valeurs corrigées (réponse d'Hugo : « non, jamais »). Seuls le tableau, la ligne Total et les chiffres clés de la
+  séance les suivent.
+- **Flux brut jamais touché** : `activity_streams` (série, `watch_laps`) reste tel quel ; les corrections vivent dans
+  `activity_laps` (`lap_type`, `manual_duration_s`, `overrides`), « Revenir aux tours de la montre » les efface.
+- **Trace** : quand le coach modifie les tours, l'athlète voit une mention discrète « Tours modifiés par ton coach », sans
+  notification (`activity_streams.laps_edited_by`).
+- HYROX garde son écran « Ajuster les tours » tel quel (pas de tableau entièrement modifiable).

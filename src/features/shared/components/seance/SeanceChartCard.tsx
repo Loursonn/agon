@@ -1,12 +1,13 @@
-import { useState, type ReactNode } from "react";
-import { Move, ZoomIn } from "lucide-react";
+import { useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { Minus, Move, Plus, ZoomIn } from "lucide-react";
+import { centerWindow, zoomAround, zoomLevel, type TimeWindow } from "@/lib/chartZoom";
 import type { ActivityStream } from "@shared/activityFiles/stream";
 import type { ExpectedBlock } from "@shared/domain/hyroxLaps";
 import { C, alpha } from "@/lib/theme";
 import { fmtClock, fmtInt, fmtKm, fmtPaceOrSpeed, SERIES_COLORS, ZONE_COLORS_3 } from "@/lib/seance";
 import type { DetailLapWithMetrics } from "@/lib/activityDetail";
 import { SeanceChart, type SeriesKey, type XAxis } from "./SeanceChart";
-import { CARD, MONO, buttonStyle } from "./seanceUi";
+import { CARD, capturePointer, MONO, buttonStyle } from "./seanceUi";
 
 interface Props {
   stream: ActivityStream;
@@ -46,7 +47,11 @@ export function SeanceChartCard(props: Props) {
   const zoom = lapZoom ?? pinch;
   const zoomedLap = lapZoom ? laps[zoomLap!] : null;
   const vis = zoomedLap ? { ...visible, alt: false, cadence: false } : visible;
-  const fullSpan = (display.t[display.t.length - 1] ?? 1) - (display.t[0] ?? 0);
+  const full: TimeWindow = { startS: display.t[0] ?? 0, endS: display.t[display.t.length - 1] ?? 1 };
+  const zoomBy = (factor: number) => {
+    const w = pinch ?? full;
+    setPinch(zoomAround(pinch, full, factor, (w.startS + w.endS) / 2));
+  };
 
   const toggles: Array<{ k: SeriesKey; label: string; color: string; on: boolean }> = [
     { k: "pace", label: props.speed ? "Vitesse" : "Allure", color: SERIES_COLORS.pace, on: hasDist },
@@ -118,10 +123,22 @@ export function SeanceChartCard(props: Props) {
           <button type="button" onClick={props.onExitZoom} style={buttonStyle()}>Toute la séance</button>
         </div>
       )}
-      {!zoomedLap && pinch && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ ...MONO, fontSize: 11, color: C.tx2 }}>Zoomé × {Math.max(1, Math.round(fullSpan / (pinch.endS - pinch.startS)))}</span>
-          <button type="button" onClick={() => setPinch(null)} style={{ ...buttonStyle(), height: 30 }}>Toute la séance</button>
+      {!zoomedLap && (pinch || editing || !compact) && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <div style={{ display: "inline-flex", gap: 4 }}>
+            <button type="button" aria-label="Dézoomer" title="Dézoomer" disabled={!pinch} onClick={() => zoomBy(0.5)} style={{ ...buttonStyle("ghost", !pinch), height: 30, width: 34, padding: 0, justifyContent: "center" }}><Minus size={14} /></button>
+            <button type="button" aria-label="Zoomer" title="Zoomer" onClick={() => zoomBy(2)} style={{ ...buttonStyle(), height: 30, width: 34, padding: 0, justifyContent: "center" }}><Plus size={14} /></button>
+          </div>
+          <span style={{ ...MONO, fontSize: 11, color: pinch ? C.ac : C.tx3 }}>
+            {pinch ? `Zoom × ${zoomLevel(pinch, full)} · ${fmtClock(pinch.startS)} → ${fmtClock(pinch.endS)}` : "Toute la séance"}
+          </span>
+          <span style={{ flex: 1 }} />
+          {!compact && (
+            <span style={{ fontSize: 11.5, color: C.tx3 }}>
+              {editing ? "Molette ou glisser sur la courbe : zoomer" : "Glisser sur la courbe ou ⌘/Ctrl + molette : zoomer"}
+            </span>
+          )}
+          {pinch && <button type="button" onClick={() => setPinch(null)} style={{ ...buttonStyle(), height: 30 }}>Toute la séance</button>}
         </div>
       )}
 
@@ -134,7 +151,7 @@ export function SeanceChartCard(props: Props) {
         axis={axis}
         visible={vis}
         zoom={zoom}
-        onZoomChange={compact && !lapZoom ? setPinch : undefined}
+        onZoomChange={!lapZoom ? setPinch : undefined}
         activeLap={props.activeLap}
         onLapClick={props.onLapClick}
         editing={editing}
@@ -146,7 +163,7 @@ export function SeanceChartCard(props: Props) {
         speed={props.speed}
       />
 
-      {zoom && <Overview display={display} zoom={zoom} lapZoom={!!zoomedLap && !compact} />}
+      {zoom && <Overview display={display} zoom={zoom} lapZoom={!!zoomedLap && !compact} onCenter={!zoomedLap ? (t) => setPinch((z) => centerWindow(z, full, t)) : undefined} />}
       {compact && !editing && (
         <div style={{ display: "flex", justifyContent: "center", gap: 18, fontSize: 11, color: C.tx3 }}>
           <span style={{ display: "inline-flex", gap: 5, alignItems: "center" }}><ZoomIn size={12} /> 2 doigts : zoomer</span>
@@ -159,7 +176,9 @@ export function SeanceChartCard(props: Props) {
 }
 
 /** Vue d'ensemble sous un zoom : toute la FC, la partie affichée en or. */
-function Overview({ display, zoom, lapZoom }: { display: ActivityStream; zoom: { startS: number; endS: number }; lapZoom: boolean }) {
+function Overview({ display, zoom, lapZoom, onCenter }: { display: ActivityStream; zoom: { startS: number; endS: number }; lapZoom: boolean; onCenter?: (tS: number) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const dragging = useRef(false);
   const t0 = display.t[0] ?? 0;
   const t1 = display.t[display.t.length - 1] ?? 1;
   const hr = display.hr ?? [];
@@ -178,13 +197,26 @@ function Overview({ display, zoom, lapZoom }: { display: ActivityStream; zoom: {
   });
   const a = ((zoom.startS - t0) / (t1 - t0)) * W;
   const b = ((zoom.endS - t0) / (t1 - t0)) * W;
+  // Glisser la vue d'ensemble : la partie affichée suit le doigt / la souris.
+  const at = (e: ReactPointerEvent) => {
+    const r = ref.current?.getBoundingClientRect();
+    if (!r || !onCenter) return;
+    onCenter(t0 + Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * (t1 - t0));
+  };
   return (
-    <div>
+    <div
+      ref={ref}
+      style={{ touchAction: onCenter ? "none" : undefined, cursor: onCenter ? "grab" : undefined }}
+      onPointerDown={(e) => { if (!onCenter) return; dragging.current = true; capturePointer(e); at(e); }}
+      onPointerMove={(e) => dragging.current && at(e)}
+      onPointerUp={() => { dragging.current = false; }}
+      onPointerCancel={() => { dragging.current = false; }}
+    >
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: "100%", height: H, display: "block" }} aria-hidden>
         <path d={d} fill="none" stroke={C.tx3} strokeWidth={1} vectorEffect="non-scaling-stroke" />
         <rect x={a} y={0} width={Math.max(2, b - a)} height={H} fill={alpha(C.ac, 0.18)} stroke={C.ac} vectorEffect="non-scaling-stroke" />
       </svg>
-      <div style={{ fontSize: 11, color: C.tx3, marginTop: 4 }}>{lapZoom ? "Toute la séance · le tour zoomé est surligné" : "Toute la séance · partie affichée en or"}</div>
+      <div style={{ fontSize: 11, color: C.tx3, marginTop: 4 }}>{lapZoom ? "Toute la séance · le tour zoomé est surligné" : `Toute la séance · partie affichée en or${onCenter ? " (glisse-la pour te déplacer)" : ""}`}</div>
     </div>
   );
 }

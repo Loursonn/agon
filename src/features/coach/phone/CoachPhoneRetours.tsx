@@ -1,3 +1,4 @@
+import { countAddedExercises } from "@/lib/athleteChanges";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -139,7 +140,7 @@ export default function CoachPhoneRetours() {
               weekMods.map((m) => {
                 const moved = m.rescheduledByAthlete && m.originalScheduledDate && m.originalScheduledDate !== m.scheduledDate;
                 const bonus = m.athleteModifications?.bonusSets?.reduce((n, b) => n + b.sets.length, 0) ?? 0;
-                const added = m.athleteModifications?.customExercises?.length ?? 0;
+                const added = countAddedExercises(m.athleteModifications);
                 const parts = [
                   moved ? `Décalée du ${new Date(m.originalScheduledDate + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}` : null,
                   m.rescheduleReason ? `« ${m.rescheduleReason} »` : null,

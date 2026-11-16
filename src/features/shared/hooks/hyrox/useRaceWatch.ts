@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { hyroxKeys, invalidateHyrox, linkRaceWatch, listRaceActivityCandidates } from "@/api/hyrox";
-import { getCompetitionLink, planLinkKeys } from "@/api/plannedVsDone";
+import { invalidateCompetitions } from "@/api/competitions";
+import { getCompetitionLink, invalidatePlanLinks, planLinkKeys } from "@/api/plannedVsDone";
 import { useActivityDetail } from "@/features/shared/hooks/useActivityDetail";
 import { pickRaceActivity } from "@/lib/hyrox/raceWatch";
 import type { HyroxResult } from "@/features/shared/types/hyrox";
@@ -45,13 +46,20 @@ export function useRaceWatch(race: HyroxResult | null, chosenId: string | null =
   };
 }
 
-/** Enregistre le lien course ↔ montre et le recalage (athlète ou coach). */
+/**
+ * Enregistre le lien course ↔ montre et le recalage (athlète ou coach). La
+ * compétition de la course suit en base (trigger `hyrox_results_race_watch`).
+ */
 export function useLinkRaceWatch(race: HyroxResult) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ activityId, offsetS }: { activityId: string | null; offsetS: number | null }) => linkRaceWatch(race.id, activityId, offsetS),
     onSuccess: () => {
       void invalidateHyrox(qc, race.athlete_id);
+      if (race.competition_id) {
+        void invalidatePlanLinks(qc, race.athlete_id);
+        void invalidateCompetitions(qc, race.athlete_id);
+      }
       toast.success("Montre recalée sur la course");
     },
     onError: () => toast.error("Lien avec la montre non enregistré"),

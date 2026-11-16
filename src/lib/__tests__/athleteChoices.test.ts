@@ -31,6 +31,18 @@ describe("summarizeAthleteChoices", () => {
     expect(r.any).toBe(true);
   });
 
+  it("exercice ajouté pendant la séance : son vrai nom, séries faites seulement", () => {
+    const r = summarizeAthleteChoices({
+      mods: {
+        addedExercises: [{ id: "ajout-1", name: "Curl incliné" }],
+        sessionSets: { ex1: [{ done: true, kg: 80 }], "ajout-1": [{ done: true, kg: 12, reps: 10 }, { done: false }] },
+      },
+      plannedExerciceIds: ["ex1"],
+    });
+    expect(r.exercises).toEqual([{ key: "added-ajout-1", name: "Curl incliné", kind: "extra", sets: [{ kg: 12, reps: 10, rir: null }] }]);
+    expect(r.any).toBe(true);
+  });
+
   it("pas de déplacement si la date d'origine est identique", () => {
     const r = summarizeAthleteChoices({ mods: {}, scheduledDate: "2026-10-21", originalScheduledDate: "2026-10-21", rescheduledByAthlete: true });
     expect(r.moved).toBeNull();

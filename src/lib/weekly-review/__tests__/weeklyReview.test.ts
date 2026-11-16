@@ -106,6 +106,23 @@ describe("bilan automatique (bloc 1)", () => {
   it("durée et distance : séances faites + activités libres, sans tonnage", () => {
     expect(s.durationMin).toBe(Math.round((3600 + 3000 + 4500 + 2700) / 60));
     expect(s.distanceKm).toBe(28.5);
+    expect(s.runKm).toBe(28.5);
+    expect(s.bikeKm).toBeNull();
+  });
+
+  it("course à pied et vélo comptés à part (le total garde les deux)", () => {
+    const bike = { ...run("b1", "2026-11-25", 5400, 40_000), sport: "road_biking" };
+    const swim = { ...run("n1", "2026-11-26", 1800, 2_000), sport: "lap_swimming" };
+    const w = summarizeWeek({ weekStart: WEEK, wellness: [], days: [
+      { date: "2026-11-24", planned: [], free: [run("r1", "2026-11-24", 3000, 10_000)] },
+      { date: "2026-11-25", planned: [], free: [bike] },
+      { date: "2026-11-26", planned: [], free: [swim] },
+    ] });
+    expect(w.runKm).toBe(10);
+    expect(w.bikeKm).toBe(40);
+    expect(w.distanceKm).toBe(52);
+    const onlyBike = summarizeWeek({ weekStart: WEEK, wellness: [], days: [{ date: "2026-11-25", planned: [], free: [bike] }] });
+    expect(onlyBike.runKm).toBeNull(); // affiché « — » : jamais 0
   });
 
   it("RPE moyen et séance la plus dure avec le commentaire", () => {

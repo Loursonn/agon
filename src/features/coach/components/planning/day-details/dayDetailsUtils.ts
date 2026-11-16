@@ -2,6 +2,7 @@ import { C } from "@/lib/theme";
 import type { ProgSession, Bloc, Exercice, ExerciceParams } from "@/features/coach/components/programmation/types";
 import { resolveExerciceParams } from "@/lib/sessionOccurrence";
 import { formatSetsReps } from "@/lib/formatSetsReps";
+import { ADDED_BY_ATHLETE_LABEL, type AddedExercise } from "@/lib/addedExercises";
 
 export function rpeColor(v: number) { return v <= 4 ? C.g : v <= 7 ? C.o : C.r; }
 export function rpeBg(v: number)    { return v <= 4 ? C.gS : v <= 7 ? C.oS : C.rS; }
@@ -18,6 +19,8 @@ export type ExoRow = {
   comment?: string;
   planned: ExerciceParams | null;
   actual: SessionSetLog[];
+  /** Exercice ajouté par l'athlète pendant la séance (hors programme). */
+  addedByAthlete?: boolean;
 };
 
 /** Format planned params to readable string */
@@ -40,6 +43,8 @@ export function buildExoRows(
   progSession: ProgSession | undefined,
   sessionSets: Record<string, SessionSetLog[]> | null,
   weekNumber: number | undefined,
+  /** Exercices ajoutés par l'athlète (`athlete_modifications.addedExercises`). */
+  added: readonly AddedExercise[] = [],
 ): ExoRow[] {
   const allExercices = progSession?.blocs?.flatMap((b: Bloc) =>
     b.exercices.map((ex: Exercice) => ({ ...ex, blocName: b.name, blocCategory: b.category }))
@@ -57,6 +62,14 @@ export function buildExoRows(
       methodeId: ex.methode_id, libreText: ex.libre_text, comment: ex.comment,
       planned: params, actual: actual.filter(s => s.done),
     });
+  }
+
+  // Ajouts de l'athlète : nom réel, sous « Ajouté par l'athlète », même sans série faite.
+  for (const a of added) {
+    if (seenIds.has(a.id)) continue;
+    seenIds.add(a.id);
+    const doneSets = ((sessionSets?.[a.id] ?? []) as SessionSetLog[]).filter(s => s.done);
+    rows.push({ id: a.id, name: a.name, blocName: ADDED_BY_ATHLETE_LABEL, mode: "classique", planned: null, actual: doneSets, addedByAthlete: true });
   }
 
   if (sessionSets) {

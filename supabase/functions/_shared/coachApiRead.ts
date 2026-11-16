@@ -18,6 +18,7 @@
  *
  * Module pur, testé par vitest.
  */
+import { addedExerciseNames } from "./domain/athleteMods.ts";
 import { exportableInjuries } from "./domain/injuries.ts";
 import { wellnessEntries, wellnessScore } from "./domain/wellness.ts";
 import type { SummaryHealth } from "./coachApiHealth.ts";
@@ -216,8 +217,11 @@ function exerciseNames(prog: unknown): Map<string, string> {
   return names;
 }
 
-function performedSets(mods: unknown, names: Map<string, string>) {
+function performedSets(mods: unknown, progNames: Map<string, string>) {
   const sets = obj(obj(mods).sessionSets);
+  // Exercices ajoutés par l'athlète pendant la séance : nommés dans la saisie.
+  const added = addedExerciseNames(mods);
+  const names = added.size ? new Map([...progNames, ...[...added].map(([id, n]) => [id, `${n} (ajouté par l'athlète)`] as [string, string])]) : progNames;
   const out: Array<{ exercice: string; series: Array<{ kg: number | null; reps: number | null; rir: number | null; faite: boolean }> }> = [];
   for (const [exId, rows] of Object.entries(sets)) {
     const name = names.get(exId);

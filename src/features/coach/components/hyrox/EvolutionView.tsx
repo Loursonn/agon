@@ -5,15 +5,18 @@ import { C, alpha } from "@/lib/theme";
 import { CARD, DISPLAY, KICKER, LABEL, MONO } from "@/features/shared/components/seance/seanceUi";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useHyroxResults } from "@/features/shared/hooks/hyrox/useHyroxResults";
-import { useHyroxReferences, pickRef } from "@/features/shared/hooks/hyrox/useHyroxReferences";
+import { useHyroxRacePlans } from "@/features/shared/hooks/hyrox/useHyroxRacePlans";
 import { useHyroxAnalyses } from "@/features/shared/hooks/hyrox/useHyroxTests";
 import { useRaceWatch } from "@/features/shared/hooks/hyrox/useRaceWatch";
 import { competitionKeys, daysUntil, listCompetitions } from "@/api/competitions";
 import { type HyroxResult } from "@/features/shared/types/hyrox";
-import { bracketOf, type RefLookup } from "@/lib/hyrox/calc";
-import { raceShortName, segmentPositions } from "@/lib/hyrox/raceEvolution";
+import { raceShortName } from "@/lib/hyrox/raceEvolution";
+import { objectiveForRace } from "@/lib/hyrox/objective/forRace";
+import { raceStrategy } from "@/lib/hyrox/objective/strategy";
+import { segmentGaps } from "@/lib/hyrox/objective/seasonView";
+import { objectiveLookup } from "@/lib/hyrox/objective/vsObjective";
 import { evolutionRaces, nextHyroxCompetition, raceProjection, runEfficiencySeries } from "@/lib/hyrox/raceProjection";
-import { crossRaceWithWatch, defaultRaceOffset, raceGains } from "@/lib/hyrox/raceWatch";
+import { crossRaceWithWatch, defaultRaceOffset } from "@/lib/hyrox/raceWatch";
 import type { CalibrationAnalysis } from "@/lib/hyrox/tests/calibration";
 import { fmtClock } from "@/lib/seance";
 import { localIsoDay } from "@shared/domain/dates";
@@ -36,7 +39,7 @@ const comma2 = (x: number) => x.toFixed(2).replace(".", ",");
 export default function EvolutionView({ onBack }: { onBack: () => void }) {
   const { athleteId } = useAthleteContext();
   const { data: all = [] } = useHyroxResults(athleteId);
-  const { data: refs = [] } = useHyroxReferences();
+  const { data: plans = [] } = useHyroxRacePlans(athleteId);
   const { data: analyses = [] } = useHyroxAnalyses(athleteId);
   const { data: competitions = [] } = useQuery({
     queryKey: competitionKeys.list(athleteId ?? ""),
@@ -48,8 +51,7 @@ export default function EvolutionView({ onBack }: { onBack: () => void }) {
   const allRaces = useMemo(() => evolutionRaces(all, false), [all]);
   const officialCount = useMemo(() => allRaces.filter((r) => r.is_official).length, [allRaces]);
   const races = useMemo(() => (onlyOfficial ? allRaces.filter((r) => r.is_official) : allRaces), [allRaces, onlyOfficial]);
-  const refLookup: RefLookup = useMemo(() => (d, s, b) => pickRef(refs, d, s, b) ?? undefined, [refs]);
-  const positions = useMemo(() => segmentPositions(races, refLookup), [races, refLookup]);
+  const gaps = useMemo(() => segmentGaps(races, plans), [races, plans]);
   const today = localIsoDay();
   const next = nextHyroxCompetition(competitions, today);
   const projection = useMemo(
@@ -59,18 +61,17 @@ export default function EvolutionView({ onBack }: { onBack: () => void }) {
   const latest = races[races.length - 1] ?? null;
   const categories = [...new Set(races.map(raceCategory))];
   const division = categories.map((c) => CATEGORY_LABEL[c]).join(" · ");
-  const levelOf = useCallback(
-    (r: HyroxResult) => (refs.length ? (seg: string) => pickRef(refs, raceCategory(r), seg, bracketOf(r.total_s))?.p50_s ?? null : null),
-    [refs],
-  );
+  // Objectif de chaque course (plan, sinon run du jour) : la référence des segments, à la place de la médiane du niveau.
+  const levelOf = useCallback((r: HyroxResult) => {
+    const v = objectiveForRace(r, plans);
+    return v ? objectiveLookup(v.objective.segments) : null;
+  }, [plans]);
   const levers = useMemo(() => {
-    if (!latest || !refs.length) return null;
-    const div = raceCategory(latest);
-    const b = bracketOf(latest.total_s);
-    const g = raceGains(latest, (seg) => pickRef(refs, div, seg, b)?.p50_s ?? null);
-    const top = g.items.slice(0, 2);
+    const v = latest ? objectiveForRace(latest, plans) : null;
+    if (!latest || !v) return null;
+    const top = [...raceStrategy(latest, v.objective.segments).levers].sort((a, b) => b.gainS - a.gainS).slice(0, 2);
     return top.length ? { names: top.map((x) => x.label.toLowerCase()), gainS: top.reduce((n, x) => n + x.gainS, 0) } : null;
-  }, [latest, refs]);
+  }, [latest, plans]);
 
   const crumb = (
     <nav aria-label="Fil d'Ariane" style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: C.tx2 }}>
@@ -127,13 +128,13 @@ export default function EvolutionView({ onBack }: { onBack: () => void }) {
         <EfficiencyCard races={races} />
       </div>
 
-      <Section n="03" title="Position par station" right={races.map(raceShortName).join(" · ")} />
-      <EvolutionHeatmap races={races} rows={positions} refs={refLookup} />
+      <Section n="03" title="Écart à l'objectif par station" right={races.map(raceShortName).join(" · ")} />
+      <EvolutionHeatmap races={races} rows={gaps} />
       <Sources>
-        position de chaque course dans toute sa catégorie ({division}) · vert = top 35 %, orange = 35 % les plus lents · solo, duo et relais : chacun dans sa catégorie · courses : {races.map((r) => `${raceShortName(r)} ${ddmm(r.date)}`).join(" → ")}
+        écart en secondes à l'objectif de chaque course (plan, sinon run du jour) · vert = en avance, orange = en retard · solo, duo et relais : chacun contre son objectif · courses : {races.map((r) => `${raceShortName(r)} ${ddmm(r.date)}`).join(" → ")}
       </Sources>
       <Sources>
-        {races.some((r) => r.is_official) ? "courses officielles : résultats officiels" : ""}{races.some((r) => !r.is_official) ? " · simulations : temps saisis" : ""} · FC : montre de chaque course · positions et projection : calcul Agon, sans IA · mesure absente : « — »
+        {races.some((r) => r.is_official) ? "courses officielles : résultats officiels" : ""}{races.some((r) => !r.is_official) ? " · simulations : temps saisis" : ""} · FC : montre de chaque course · écarts et projection : calcul Agon, sans IA · mesure absente : « — »
       </Sources>
     </div>
   );
@@ -266,7 +267,7 @@ function ProjectionCard({ projection, next, today, levers }: {
           </div>
           {levers && (
             <div style={{ background: C.s2, borderRadius: 10, padding: "10px 12px", fontSize: 13, color: C.tx }}>
-              Si {levers.names.join(" et ")} rejoignent la médiane : <span style={{ ...MONO, color: C.g }}>−{fmtGap(levers.gainS)}</span>
+              Si {levers.names.join(" et ")} rejoignent l'objectif : <span style={{ ...MONO, color: C.g }}>−{fmtGap(levers.gainS)}</span>
             </div>
           )}
           <Sources>calcul Agon · tests du {ddmm(projection.analysisDate)} · fourchette « ma méthode » recalée sur les courses de nos athlètes</Sources>

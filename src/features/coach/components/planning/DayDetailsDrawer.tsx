@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { CompetitionResultLine } from "@/features/shared/components/CompetitionResultLine";
+import { CompetitionWatchPanel } from "@/features/shared/components/competition/CompetitionWatchPanel";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { X, Plus, ChevronLeft, Trophy } from "lucide-react";
@@ -200,8 +201,8 @@ export function DayDetailsDrawer({
             <>
               {/* Jour de compétition — en tête du jour, cliquable pour modifier */}
               {competitions.map((e) => (
+                <div key={e.id} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <button
-                  key={e.id}
                   onClick={() => setEditingComp(e.raw as unknown as Competition)}
                   style={{
                     width: "100%", borderRadius: 6, overflow: "hidden",
@@ -240,6 +241,14 @@ export function DayDetailsDrawer({
                     <div style={{ fontSize: 11, color: C.tx3, fontStyle: "italic" }}>Pas encore de retour de l'athlète</div>
                   )}
                 </button>
+                {e.raw && athleteId && (
+                  <CompetitionWatchPanel
+                    athleteId={athleteId}
+                    competition={e.raw as unknown as Competition}
+                    seancePath={seancePath}
+                  />
+                )}
+                </div>
               ))}
 
               {/* Événements de vie (renseignés par l'athlète) */}

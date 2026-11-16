@@ -277,6 +277,64 @@ $$;
 ALTER FUNCTION "public"."_signup_name"("p_full_name" "text") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."_sync_competition_link_from_race"("p_competition" "uuid", "p_activity" "uuid", "p_previous" "uuid") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_comp record;
+  v_act record;
+BEGIN
+  SELECT id, athlete_id, date INTO v_comp FROM public.competitions WHERE id = p_competition;
+  IF NOT FOUND THEN RETURN; END IF;
+
+  IF p_activity IS NULL THEN
+    -- Course déliée : son lien confirmé tombe, la proposition automatique reprend.
+    IF p_previous IS NOT NULL THEN
+      DELETE FROM public.activity_plan_links
+       WHERE planned_kind = 'competition' AND planned_id = p_competition
+         AND activity_id = p_previous AND status = 'confirmed';
+      PERFORM public.auto_link_day(v_comp.athlete_id, v_comp.date);
+    END IF;
+    RETURN;
+  END IF;
+
+  SELECT id, athlete_id, source, local_date INTO v_act FROM public.provider_activities WHERE id = p_activity;
+  IF NOT FOUND OR v_act.athlete_id <> v_comp.athlete_id THEN RETURN; END IF;
+  IF EXISTS (SELECT 1 FROM public.activity_plan_links
+              WHERE planned_kind = 'competition' AND planned_id = p_competition
+                AND activity_id = p_activity AND status = 'confirmed') THEN
+    RETURN;
+  END IF;
+
+  PERFORM pg_advisory_xact_lock(hashtextextended(v_act.athlete_id::text || v_act.local_date::text, 41));
+  -- Le dernier choix gagne : l'ancien lien confirmé de la compétition, et celui
+  -- de l'activité vers une autre séance, sont refusés (le couple n'est plus reproposé).
+  UPDATE public.activity_plan_links
+     SET status = 'rejected', confirmed_by = auth.uid(), confirmed_at = now(), updated_at = now()
+   WHERE status = 'confirmed'
+     AND ((planned_kind = 'competition' AND planned_id = p_competition)
+       OR activity_id = p_activity);
+  DELETE FROM public.activity_plan_links
+   WHERE status = 'auto'
+     AND (activity_id = p_activity OR (planned_kind = 'competition' AND planned_id = p_competition));
+  INSERT INTO public.activity_plan_links (athlete_id, activity_id, source, planned_kind, planned_id, local_date,
+                                          status, confirmed_by, confirmed_at)
+  VALUES (v_act.athlete_id, p_activity, v_act.source, 'competition', p_competition, v_act.local_date,
+          'confirmed', auth.uid(), now())
+  ON CONFLICT (activity_id, planned_kind, planned_id) DO UPDATE
+    SET status = 'confirmed', confirmed_by = auth.uid(), confirmed_at = now(), updated_at = now();
+  PERFORM public.auto_link_day(v_act.athlete_id, v_act.local_date);
+  IF v_act.local_date <> v_comp.date THEN
+    PERFORM public.auto_link_day(v_comp.athlete_id, v_comp.date);
+  END IF;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."_sync_competition_link_from_race"("p_competition" "uuid", "p_activity" "uuid", "p_previous" "uuid") OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."workout_logs" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "athlete_id" "uuid" NOT NULL,
@@ -650,6 +708,22 @@ $$;
 
 
 ALTER FUNCTION "public"."activity_from_garmin_device"("p_source" "public"."data_source", "p_raw" "jsonb", "p_device" "text", "p_sources" "text"[]) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."activity_lap_overrides"("p" "jsonb") RETURNS "jsonb"
+    LANGUAGE "sql" IMMUTABLE
+    SET "search_path" TO 'public'
+    AS $$
+  SELECT nullif(coalesce(jsonb_object_agg(k, v), '{}'::jsonb), '{}'::jsonb)
+    FROM jsonb_each(CASE WHEN jsonb_typeof(p) = 'object' THEN p ELSE '{}'::jsonb END) AS x(k, v)
+   WHERE k IN ('maxPaceSPerKm', 'avgCadence', 'maxCadence', 'ascentM', 'descentM', 'avgPower', 'maxPower')
+     AND jsonb_typeof(v) = 'number'
+     AND (v #>> '{}')::numeric >= 0
+     AND (v #>> '{}')::numeric <= 100000;
+$$;
+
+
+ALTER FUNCTION "public"."activity_lap_overrides"("p" "jsonb") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."activity_laps_editor"("p_athlete" "uuid") RETURNS boolean
@@ -2113,6 +2187,11 @@ BEGIN
   END IF;
 
   IF TG_OP = 'INSERT' THEN
+    -- Inscription fermée (Hugo, 15/11/2026) : un profil ne naît que par register_coach,
+    -- register_athlete ou register_staff, qui posent agon.signup.
+    IF coalesce(current_setting('agon.signup', true), '') <> 'on' THEN
+      RAISE EXCEPTION 'Inscription : passe par ton lien d''invitation ou le code de ton coach' USING ERRCODE = '42501';
+    END IF;
     NEW.is_admin := false;
     NEW.is_certified_coach := false;
     IF NEW.role IS NULL OR NEW.role NOT IN ('athlete', 'coach', 'coach_athlete', 'staff') THEN
@@ -3603,10 +3682,13 @@ ALTER FUNCTION "public"."performance_logs_normalize_name"() OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."plan_family_accepts"("p_planned" "text", "p_activity" "text") RETURNS boolean
     LANGUAGE "sql" IMMUTABLE
     AS $$
-  SELECT p_planned IS NOT NULL AND p_activity IS NOT NULL AND CASE p_planned
-    WHEN 'hyrox' THEN p_activity IN ('hyrox', 'run', 'strength', 'row')
-    WHEN 'strength' THEN p_activity IN ('strength', 'hyrox')
-    ELSE p_activity = p_planned
+  SELECT CASE
+    WHEN p_planned = 'any' THEN true
+    ELSE p_planned IS NOT NULL AND p_activity IS NOT NULL AND CASE p_planned
+      WHEN 'hyrox' THEN p_activity IN ('hyrox', 'run', 'strength', 'row')
+      WHEN 'strength' THEN p_activity IN ('strength', 'hyrox')
+      ELSE p_activity = p_planned
+    END
   END;
 $$;
 
@@ -3658,7 +3740,27 @@ CREATE OR REPLACE FUNCTION "public"."planned_sessions_of_day"("p_athlete" "uuid"
   UNION ALL
   SELECT 'test', t.id, CASE WHEN t.type = 'endurance' THEN 'run' ELSE 'strength' END, NULL::real, NULL::real
     FROM public.test_sessions t
-   WHERE t.athlete_id = p_athlete AND t.date = p_day;
+   WHERE t.athlete_id = p_athlete AND t.date = p_day
+  UNION ALL
+  -- Compétition ou match maintenu : la course est l'activité la plus proche du
+  -- chrono HYROX saisi, sinon la plus longue du jour parmi les sports acceptés
+  -- (l'échauffement est plus court). HYROX (nom ou résultat saisi) : activités
+  -- HYROX, course, renfo ou rameur seulement ; sinon tout sport.
+  SELECT 'competition', c.id, f.family, NULL::real,
+         coalesce(
+           (SELECT max(h.total_s) FROM public.hyrox_results h WHERE h.competition_id = c.id AND h.total_s > 0),
+           (SELECT max(pa.duration_s) FROM public.provider_activities pa
+             WHERE pa.athlete_id = p_athlete AND pa.local_date = p_day
+               AND public.plan_family_accepts(f.family, public.activity_sport_family(pa.sport)))
+         )::real
+    FROM public.competitions c
+    CROSS JOIN LATERAL (
+      SELECT CASE WHEN c.name ILIKE '%hyrox%'
+                    OR EXISTS (SELECT 1 FROM public.hyrox_results h WHERE h.competition_id = c.id)
+                  THEN 'hyrox' ELSE 'any' END AS family
+    ) f
+   WHERE c.athlete_id = p_athlete AND c.date = p_day AND c.cancelled_at IS NULL
+     AND c.type IN ('competition', 'match');
 $$;
 
 
@@ -4825,7 +4927,7 @@ BEGIN
     FROM jsonb_array_elements(coalesce(v_s.watch_laps, '[]'::jsonb)) WITH ORDINALITY x(e, o);
 
   UPDATE public.activity_streams
-     SET laps_version = laps_version + 1, laps_edited = false, updated_at = now()
+     SET laps_version = laps_version + 1, laps_edited = false, laps_edited_by = NULL, updated_at = now()
    WHERE activity_id = p_activity;
   RETURN v_s.laps_version + 1;
 END;
@@ -4949,13 +5051,14 @@ CREATE OR REPLACE FUNCTION "public"."save_activity_laps"("p_activity" "uuid", "p
     SET "search_path" TO 'public'
     AS $$
 DECLARE
-  v_s     record;
-  v_end   integer;
-  v_prev  integer := 0;
-  v_e     jsonb;
-  v_start integer;
-  v_stop  integer;
-  v_n     integer;
+  v_s      record;
+  v_end    integer;
+  v_prev   integer := 0;
+  v_e      jsonb;
+  v_start  integer;
+  v_stop   integer;
+  v_manual integer;
+  v_n      integer;
 BEGIN
   SELECT s.activity_id, s.athlete_id, s.source, s.laps_version, s.t INTO v_s
     FROM public.activity_streams s WHERE s.activity_id = p_activity FOR UPDATE;
@@ -4974,19 +5077,30 @@ BEGIN
   END IF;
 
   -- Bornes : dans la séance, croissantes, sans chevauchement (des trous sont permis).
+  -- Un tour manuel (durée tapée, hors courbe) est posé à un instant : start_s = end_s.
   v_end := coalesce(v_s.t[array_length(v_s.t, 1)], 0) + 1;
   FOR v_e IN SELECT e FROM jsonb_array_elements(p_laps) WITH ORDINALITY x(e, o) ORDER BY o LOOP
     v_start := (v_e->>'start_s')::integer;
     v_stop := (v_e->>'end_s')::integer;
-    IF v_start IS NULL OR v_stop IS NULL OR v_start < v_prev OR v_stop <= v_start OR v_stop > v_end THEN
+    v_manual := (v_e->>'manual_duration_s')::integer;
+    IF v_manual IS NOT NULL AND (v_manual <= 0 OR v_manual > 86400) THEN
+      RAISE EXCEPTION 'save_activity_laps : durée de tour manuel invalide (%)', v_manual USING ERRCODE = '22023';
+    END IF;
+    IF v_start IS NULL OR v_stop IS NULL OR v_start < v_prev OR v_stop > v_end
+       OR (v_manual IS NULL AND v_stop <= v_start)
+       OR (v_manual IS NOT NULL AND v_stop <> v_start) THEN
       RAISE EXCEPTION 'save_activity_laps : bornes de tour invalides (% → %)', v_start, v_stop USING ERRCODE = '22023';
+    END IF;
+    IF v_e->>'lap_type' IS NOT NULL AND v_e->>'lap_type' NOT IN ('warmup', 'work', 'recovery', 'cooldown') THEN
+      RAISE EXCEPTION 'save_activity_laps : type de tour inconnu (%)', v_e->>'lap_type' USING ERRCODE = '22023';
     END IF;
     v_prev := v_stop;
   END LOOP;
 
   DELETE FROM public.activity_laps WHERE activity_id = p_activity;
   INSERT INTO public.activity_laps (activity_id, athlete_id, source, position, start_s, end_s, name, exercise_id,
-                                    planned_block_ref, distance_override_m, reps, load_kg, origin, status, needs_review, comment)
+                                    planned_block_ref, distance_override_m, reps, load_kg, origin, status, needs_review, comment,
+                                    lap_type, manual_duration_s, overrides)
   SELECT p_activity, v_s.athlete_id, v_s.source, o::integer,
          (e->>'start_s')::integer, (e->>'end_s')::integer,
          nullif(btrim(e->>'name'), ''),
@@ -4998,12 +5112,15 @@ BEGIN
          coalesce(e->>'origin', 'manual'),
          coalesce(e->>'status', 'validated'),
          coalesce((e->>'needs_review')::boolean, false),
-         left(nullif(btrim(e->>'comment'), ''), 500)
+         left(nullif(btrim(e->>'comment'), ''), 500),
+         e->>'lap_type',
+         (e->>'manual_duration_s')::integer,
+         public.activity_lap_overrides(e->'overrides')
     FROM jsonb_array_elements(p_laps) WITH ORDINALITY x(e, o);
   GET DIAGNOSTICS v_n = ROW_COUNT;
 
   UPDATE public.activity_streams
-     SET laps_version = laps_version + 1, laps_edited = true, updated_at = now()
+     SET laps_version = laps_version + 1, laps_edited = true, laps_edited_by = auth.uid(), updated_at = now()
    WHERE activity_id = p_activity;
   RETURN v_s.laps_version + 1;
 END;
@@ -5202,7 +5319,7 @@ CREATE TABLE IF NOT EXISTS "public"."weekly_reviews" (
     CONSTRAINT "weekly_reviews_check" CHECK ((("status" = 'submitted'::"text") = ("submitted_at" IS NOT NULL))),
     CONSTRAINT "weekly_reviews_light_check" CHECK (("light" = ANY (ARRAY['green'::"text", 'orange'::"text", 'red'::"text"]))),
     CONSTRAINT "weekly_reviews_status_check" CHECK (("status" = ANY (ARRAY['draft'::"text", 'submitted'::"text"]))),
-    CONSTRAINT "weekly_reviews_week_start_check" CHECK ((EXTRACT(isodow FROM "week_start") = (1)::numeric))
+    CONSTRAINT "weekly_reviews_week_start_check" CHECK ((EXTRACT("isodow" FROM "week_start") = (1)::numeric))
 );
 
 
@@ -6436,6 +6553,41 @@ $$;
 ALTER FUNCTION "public"."tg_activity_streams_zones"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."tg_competition_link_to_race"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+BEGIN
+  -- Lien confirmé (créé, confirmé ou déplacé) : la course suit, recalage automatique.
+  IF TG_OP <> 'DELETE' AND NEW.planned_kind = 'competition' AND NEW.status = 'confirmed'
+     AND (TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM 'confirmed' OR OLD.activity_id IS DISTINCT FROM NEW.activity_id) THEN
+    UPDATE public.hyrox_results
+       SET watch_activity_id = NEW.activity_id, watch_offset_s = NULL
+     WHERE competition_id = NEW.planned_id
+       AND athlete_id = NEW.athlete_id
+       AND watch_activity_id IS DISTINCT FROM NEW.activity_id;
+  END IF;
+
+  -- Lien confirmé défait (refusé, supprimé, déplacé) : la course qui pointait
+  -- sur cette activité revient à la proposition d'office.
+  IF TG_OP <> 'INSERT' AND OLD.planned_kind = 'competition' AND OLD.status = 'confirmed'
+     AND (TG_OP = 'DELETE' OR NEW.status <> 'confirmed' OR NEW.activity_id IS DISTINCT FROM OLD.activity_id) THEN
+    UPDATE public.hyrox_results
+       SET watch_activity_id = NULL, watch_offset_s = NULL
+     WHERE competition_id = OLD.planned_id
+       AND watch_activity_id = OLD.activity_id
+       AND NOT EXISTS (SELECT 1 FROM public.activity_plan_links l
+                        WHERE l.planned_kind = 'competition' AND l.planned_id = OLD.planned_id
+                          AND l.activity_id = OLD.activity_id AND l.status = 'confirmed');
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."tg_competition_link_to_race"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."tg_fczone_refresh"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -6521,6 +6673,50 @@ $$;
 
 
 ALTER FUNCTION "public"."tg_plan_links_relink"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."tg_plan_links_relink_hyrox"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT DISTINCT c.athlete_id, c.date FROM public.competitions c
+     WHERE c.id IN (CASE WHEN TG_OP <> 'INSERT' THEN OLD.competition_id END,
+                    CASE WHEN TG_OP <> 'DELETE' THEN NEW.competition_id END)
+  LOOP
+    PERFORM public.auto_link_day(r.athlete_id, r.date);
+  END LOOP;
+  RETURN NULL;
+EXCEPTION WHEN OTHERS THEN
+  RAISE WARNING 'rapprochement planning non recalculé : %', SQLERRM;
+  RETURN NULL;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."tg_plan_links_relink_hyrox"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."tg_race_watch_to_competition"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+BEGIN
+  IF NEW.competition_id IS NULL THEN RETURN NULL; END IF;
+  IF TG_OP = 'UPDATE' AND NEW.watch_activity_id IS NOT DISTINCT FROM OLD.watch_activity_id THEN RETURN NULL; END IF;
+  IF TG_OP = 'INSERT' AND NEW.watch_activity_id IS NULL THEN RETURN NULL; END IF;
+  PERFORM public._sync_competition_link_from_race(
+    NEW.competition_id, NEW.watch_activity_id,
+    CASE WHEN TG_OP = 'UPDATE' THEN OLD.watch_activity_id END);
+  RETURN NULL;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."tg_race_watch_to_competition"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."tg_test_values_propose_zones"() RETURNS "trigger"
@@ -7258,12 +7454,18 @@ CREATE TABLE IF NOT EXISTS "public"."activity_laps" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "comment" "text",
+    "lap_type" "text",
+    "manual_duration_s" integer,
+    "overrides" "jsonb",
     CONSTRAINT "activity_laps_bounds" CHECK (("end_s" >= "start_s")),
     CONSTRAINT "activity_laps_comment_check" CHECK ((("comment" IS NULL) OR ("length"("comment") <= 500))),
     CONSTRAINT "activity_laps_distance_override_m_check" CHECK ((("distance_override_m" IS NULL) OR ("distance_override_m" >= (0)::double precision))),
+    CONSTRAINT "activity_laps_lap_type_check" CHECK ((("lap_type" IS NULL) OR ("lap_type" = ANY (ARRAY['warmup'::"text", 'work'::"text", 'recovery'::"text", 'cooldown'::"text"])))),
     CONSTRAINT "activity_laps_load_kg_check" CHECK ((("load_kg" IS NULL) OR ("load_kg" >= (0)::double precision))),
+    CONSTRAINT "activity_laps_manual_duration_s_check" CHECK ((("manual_duration_s" IS NULL) OR (("manual_duration_s" > 0) AND ("manual_duration_s" <= 86400)))),
     CONSTRAINT "activity_laps_name_check" CHECK ((("name" IS NULL) OR ("length"("name") <= 120))),
     CONSTRAINT "activity_laps_origin_check" CHECK (("origin" = ANY (ARRAY['watch'::"text", 'agon_proposal'::"text", 'manual'::"text"]))),
+    CONSTRAINT "activity_laps_overrides_check" CHECK ((("overrides" IS NULL) OR (("jsonb_typeof"("overrides") = 'object'::"text") AND ("length"(("overrides")::"text") <= 1000)))),
     CONSTRAINT "activity_laps_planned_block_ref_check" CHECK ((("planned_block_ref" IS NULL) OR ("length"("planned_block_ref") <= 120))),
     CONSTRAINT "activity_laps_position_check" CHECK (("position" >= 1)),
     CONSTRAINT "activity_laps_reps_check" CHECK ((("reps" IS NULL) OR ("reps" >= 0))),
@@ -7357,6 +7559,7 @@ CREATE TABLE IF NOT EXISTS "public"."activity_streams" (
     "ai_allowed" boolean DEFAULT false NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "laps_edited_by" "uuid",
     CONSTRAINT "activity_streams_lengths" CHECK ((("cardinality"("t") = "sample_count") AND (("timer" IS NULL) OR ("cardinality"("timer") = "sample_count")) AND (("hr" IS NULL) OR ("cardinality"("hr") = "sample_count")) AND (("speed" IS NULL) OR ("cardinality"("speed") = "sample_count")) AND (("dist" IS NULL) OR ("cardinality"("dist") = "sample_count")) AND (("alt" IS NULL) OR ("cardinality"("alt") = "sample_count")) AND (("cadence" IS NULL) OR ("cardinality"("cadence") = "sample_count")) AND (("power" IS NULL) OR ("cardinality"("power") = "sample_count")) AND (("lat" IS NULL) OR ("cardinality"("lat") = "sample_count")) AND (("lon" IS NULL) OR ("cardinality"("lon") = "sample_count")) AND (("vosc" IS NULL) OR ("cardinality"("vosc") = "sample_count")) AND (("stance" IS NULL) OR ("cardinality"("stance") = "sample_count")) AND (("vratio" IS NULL) OR ("cardinality"("vratio") = "sample_count")) AND (("step_len" IS NULL) OR ("cardinality"("step_len") = "sample_count")) AND (("temp" IS NULL) OR ("cardinality"("temp") = "sample_count")))),
     CONSTRAINT "activity_streams_normalized_from_check" CHECK (("normalized_from" = ANY (ARRAY['fit'::"text", 'garmin_json'::"text", 'tcx'::"text", 'gpx'::"text"]))),
     CONSTRAINT "activity_streams_sample_count_check" CHECK (("sample_count" >= 0))
@@ -10352,6 +10555,10 @@ CREATE INDEX "activity_streams_athlete_started" ON "public"."activity_streams" U
 
 
 
+CREATE INDEX "activity_streams_laps_edited_by_idx" ON "public"."activity_streams" USING "btree" ("laps_edited_by") WHERE ("laps_edited_by" IS NOT NULL);
+
+
+
 CREATE INDEX "activity_zone_summaries_athlete" ON "public"."activity_zone_summaries" USING "btree" ("athlete_id");
 
 
@@ -11132,6 +11339,10 @@ CREATE OR REPLACE TRIGGER "activity_plan_links_ai_policy" BEFORE INSERT OR UPDAT
 
 
 
+CREATE OR REPLACE TRIGGER "activity_plan_links_race_watch" AFTER INSERT OR DELETE OR UPDATE OF "status", "activity_id" ON "public"."activity_plan_links" FOR EACH ROW EXECUTE FUNCTION "public"."tg_competition_link_to_race"();
+
+
+
 CREATE OR REPLACE TRIGGER "activity_sets_ai_policy" BEFORE INSERT OR UPDATE OF "source" ON "public"."activity_sets" FOR EACH ROW EXECUTE FUNCTION "public"."apply_source_ai_policy"();
 
 
@@ -11189,6 +11400,14 @@ CREATE OR REPLACE TRIGGER "health_sync_upd" AFTER UPDATE ON "public"."app_data" 
 
 
 CREATE OR REPLACE TRIGGER "hr_zone_models_refresh" AFTER INSERT OR UPDATE OF "status", "bounds", "valid_from" ON "public"."hr_zone_models" FOR EACH ROW EXECUTE FUNCTION "public"."tg_hr_zone_models_refresh"();
+
+
+
+CREATE OR REPLACE TRIGGER "hyrox_results_plan_links" AFTER INSERT OR DELETE OR UPDATE OF "total_s", "competition_id" ON "public"."hyrox_results" FOR EACH ROW EXECUTE FUNCTION "public"."tg_plan_links_relink_hyrox"();
+
+
+
+CREATE OR REPLACE TRIGGER "hyrox_results_race_watch" AFTER INSERT OR UPDATE OF "watch_activity_id" ON "public"."hyrox_results" FOR EACH ROW EXECUTE FUNCTION "public"."tg_race_watch_to_competition"();
 
 
 
@@ -11460,6 +11679,11 @@ ALTER TABLE ONLY "public"."activity_streams"
 
 ALTER TABLE ONLY "public"."activity_streams"
     ADD CONSTRAINT "activity_streams_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."activity_streams"
+    ADD CONSTRAINT "activity_streams_laps_edited_by_fkey" FOREIGN KEY ("laps_edited_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
 
 
 
@@ -14228,14 +14452,7 @@ CREATE POLICY "wr_coach_all" ON "public"."weekly_retours" TO "authenticated" USI
 ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
 
 
-
-
-
-
 ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."citation_stats";
-
-
-
 
 
 
@@ -15711,6 +15928,11 @@ GRANT ALL ON FUNCTION "public"."_strict"("name", "name", "name"[]) TO "service_r
 
 
 
+REVOKE ALL ON FUNCTION "public"."_sync_competition_link_from_race"("p_competition" "uuid", "p_activity" "uuid", "p_previous" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."_sync_competition_link_from_race"("p_competition" "uuid", "p_activity" "uuid", "p_previous" "uuid") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."_table_privs"() TO "postgres";
 GRANT ALL ON FUNCTION "public"."_table_privs"() TO "anon";
 GRANT ALL ON FUNCTION "public"."_table_privs"() TO "authenticated";
@@ -15900,6 +16122,12 @@ GRANT ALL ON FUNCTION "public"."activity_detail_visible"("p_athlete" "uuid", "p_
 GRANT ALL ON FUNCTION "public"."activity_from_garmin_device"("p_source" "public"."data_source", "p_raw" "jsonb", "p_device" "text", "p_sources" "text"[]) TO "anon";
 GRANT ALL ON FUNCTION "public"."activity_from_garmin_device"("p_source" "public"."data_source", "p_raw" "jsonb", "p_device" "text", "p_sources" "text"[]) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."activity_from_garmin_device"("p_source" "public"."data_source", "p_raw" "jsonb", "p_device" "text", "p_sources" "text"[]) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."activity_lap_overrides"("p" "jsonb") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."activity_lap_overrides"("p" "jsonb") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."activity_lap_overrides"("p" "jsonb") TO "service_role";
 
 
 
@@ -22711,6 +22939,11 @@ GRANT ALL ON FUNCTION "public"."tg_activity_streams_zones"() TO "service_role";
 
 
 
+REVOKE ALL ON FUNCTION "public"."tg_competition_link_to_race"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."tg_competition_link_to_race"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."tg_fczone_refresh"() TO "anon";
 GRANT ALL ON FUNCTION "public"."tg_fczone_refresh"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."tg_fczone_refresh"() TO "service_role";
@@ -22726,6 +22959,16 @@ GRANT ALL ON FUNCTION "public"."tg_hr_zone_models_refresh"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."tg_plan_links_relink"() TO "anon";
 GRANT ALL ON FUNCTION "public"."tg_plan_links_relink"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."tg_plan_links_relink"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."tg_plan_links_relink_hyrox"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."tg_plan_links_relink_hyrox"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."tg_race_watch_to_competition"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."tg_race_watch_to_competition"() TO "service_role";
 
 
 

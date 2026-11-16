@@ -38,6 +38,141 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-16-competition-courbe-fc",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "Compétition : la sortie de la montre et sa courbe FC, directement depuis la compétition",
+    summary:
+      "Le jour J et après, la compétition affiche la sortie de la montre (Garmin, COROS ou fichier) avec sa courbe de fréquence cardiaque. On peut choisir une autre sortie, et l'analyse HYROX suit.",
+    sections: [
+      {
+        title: "Dans la compétition",
+        points: [
+          "Coach : fiche de la compétition et panneau du jour du planning. Athlète : carte de la compétition (Aujourd'hui, Programme).",
+          "La sortie proposée est la plus longue du jour ou la plus proche du chrono HYROX ; « C'est bien la course » la confirme, « Choisir une autre sortie » en prend une autre (l'échauffement par exemple).",
+          "Mini-courbe de FC avec FC moyenne et maximale ; « Voir la séance » ouvre la séance complète (zones, tours).",
+        ],
+      },
+      {
+        title: "HYROX : une seule saisie",
+        points: [
+          "La sortie choisie depuis la compétition est celle de l'analyse de course HYROX, et inversement.",
+          "Le dernier choix gagne : changer de sortie depuis la compétition remet le recalage de la montre en automatique (réglable ensuite dans l'analyse).",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-16-fix-bilan-semaine-course-velo",
+    date: "2026-11-16",
+    kind: "fix",
+    title: "Bilan de la semaine : course à pied et vélo séparés",
+    summary: "Les kilomètres du bilan de la semaine ne mélangent plus la course et le vélo.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Le bilan de la semaine affiche d'abord les kilomètres de course à pied, puis ceux de vélo s'il y en a. Une sortie vélo de 40 km ne gonfle plus le volume de course.",
+          "Les bilans déjà envoyés gardent leur distance totale d'origine.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-16-modifier-tours-tableau",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "Modifier les tours : tout le tableau se corrige, et le graphique se zoome",
+    summary:
+      "Sur une séance de montre (course, vélo, rameur…), « Modifier les tours » rend chaque case du tableau modifiable, sauf la FC. On ajoute, supprime ou découpe des tours, et on zoome sur la courbe pour placer une limite à la seconde près.",
+    sections: [
+      {
+        title: "Le tableau des tours",
+        points: [
+          "Nom, type (Échauffement, Effort, Récupération, Retour au calme), durée, distance, allure, allure max, cadence, D+ et D− se tapent directement dans le tableau.",
+          "Une allure tapée recalcule la distance du tour ; une durée tapée déplace la limite du tour sur la courbe, le tour suivant suit.",
+          "La FC reste celle de la montre (cadenas). Une case corrigée porte un point doré ; au survol, la valeur d'avant.",
+          "La ligne Total et les chiffres clés de la séance suivent les tours corrigés. Le volume de la semaine et la charge gardent les données de la montre.",
+        ],
+      },
+      {
+        title: "Ajouter, supprimer, découper",
+        points: [
+          "« Tour à la main » ajoute un tour sans montre (montre oubliée ou arrêtée) : durée, distance et type tapés, sans FC.",
+          "« Supprimer » rend le temps du tour au tour précédent.",
+          "Couper et fusionner fonctionnent comme avant ; « Revenir aux tours de la montre » annule tout, les données de la montre ne sont jamais effacées.",
+        ],
+      },
+      {
+        title: "Zoomer sur le graphique",
+        points: [
+          "Ordinateur : glisser sur la courbe, ou la molette en mode modification (⌘ / Ctrl + molette en lecture). Boutons + / − et « Toute la séance ».",
+          "Téléphone : pincer, ou les boutons + / −. La vue d'ensemble sous le graphique se glisse pour se déplacer.",
+          "Votre athlète et vous (ou le co-coach) pouvez modifier les tours.",
+          "Quand vous modifiez ses tours, votre athlète voit une petite mention « Tours modifiés par ton coach » sous le tableau, sans notification.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-16-fix-ajouter-exercice-seance",
+    date: "2026-11-16",
+    kind: "fix",
+    title: "L'athlète peut de nouveau ajouter un exercice imprévu pendant sa séance",
+    summary: "Un exercice fait en plus du programme se note maintenant pendant la séance de musculation, et vous le voyez dans la séance réalisée.",
+    sections: [
+      {
+        title: "Côté athlète",
+        points: [
+          "En bas de la séance, « + Ajouter un exercice » : il cherche dans la banque d'exercices ou tape un nom libre s'il ne le trouve pas.",
+          "L'exercice arrive avec une série à remplir (charge, reps, RIR) ; « + Série bonus » pour les suivantes.",
+          "Ajouté par erreur ? « Retirer cet exercice » tant qu'aucune série n'est remplie.",
+        ],
+      },
+      {
+        title: "Côté coach",
+        points: [
+          "Dans le planning, le récap « Prévu vs Réalisé » montre l'exercice sous « Ajouté par l'athlète », avec ses séries.",
+          "Il compte dans le badge « modifs » et dans les Retours (« +1 exercice ajouté ») ; votre programme, lui, ne change pas.",
+          "Choisi dans la banque, il alimente aussi les records de l'athlète.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-16-hyrox-ma-saison-profil-effort",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "HYROX : Ma saison refaite, et le profil d'effort de chaque course",
+    summary:
+      "L'athlète suit sa saison course après course contre ses objectifs. Un radar montre, station par station, son rang parmi toute sa catégorie et son niveau contre l'objectif de la course.",
+    sections: [
+      {
+        title: "Ma saison (athlète)",
+        points: [
+          "Choix de la saison en haut de page, avec les objectifs de saison que tu as fixés.",
+          "Dernière course, chrono saison après saison, écart à l'objectif par station et par course, et la meilleure stratégie de la dernière course.",
+          "Leviers de la saison : le temps à gagner en moyenne par course ; un levier qui revient sur 2 courses sur 3 est marqué « récurrent ».",
+        ],
+      },
+      {
+        title: "Profil d'effort",
+        points: [
+          "Radar à deux toiles, chacune masquable : le rang de l'athlète parmi toute sa catégorie, et son niveau contre l'objectif de la course.",
+          "Tableau par station : son temps, le temps des 1 % les plus rapides de la catégorie, son rang et son niveau.",
+          "Dans Ma saison côté athlète, et dans l'onglet Radar de la fiche HYROX côté coach.",
+        ],
+      },
+      {
+        title: "Vues coach",
+        points: [
+          "Stations : chaque station de la dernière course contre son objectif (en % et en secondes), avec les leviers de la saison.",
+          "Évolution : l'écart à l'objectif de chaque station, course après course, avec ce qui progresse et ce qui stagne.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-16-fix-affichages-telephone",
     date: "2026-11-16",
     kind: "fix",

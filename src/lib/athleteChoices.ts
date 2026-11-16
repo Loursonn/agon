@@ -4,6 +4,7 @@
  * Affiché côté coach avec le tag « Choix de l'athlète ».
  */
 import type { AthleteModifications } from "@/features/shared/types/athlete";
+import { addedExercisesOf } from "@shared/domain/athleteMods";
 
 export const ATHLETE_CHOICE_LABEL = "Choix de l'athlète";
 
@@ -17,7 +18,7 @@ export interface AthleteChoiceSet {
 export interface AthleteChoiceExercise {
   key: string;
   name: string;
-  /** "custom" = exercice ajouté par l'athlète, "bonus" = séries en plus sur un exercice prévu */
+  /** "custom" = exercice ajouté (ancien format), "extra" = exercice ajouté pendant la séance, "bonus" = séries en plus sur un exercice prévu */
   kind: "custom" | "bonus" | "extra";
   sets: AthleteChoiceSet[];
 }
@@ -67,10 +68,19 @@ export function summarizeAthleteChoices(input: AthleteChoicesInput): AthleteChoi
     });
   }
 
+  // Exercices ajoutés pendant la séance (2026-11-16) : nom réel, même sans série faite.
+  const added = addedExercisesOf(mods);
+  const addedIds = new Set(added.map((a) => a.id));
+  for (const a of added) {
+    const rows = mods?.sessionSets?.[a.id];
+    const done = Array.isArray(rows) ? rows.filter((s) => s?.done) : [];
+    exercises.push({ key: "added-" + a.id, name: a.name, kind: "extra", sets: done.map((s) => ({ kg: s.kg ?? null, reps: s.reps ?? null, rir: s.rir ?? null })) });
+  }
+
   let skippedSets = 0;
   if (planned.size > 0) {
     for (const [exId, sets] of Object.entries(mods?.sessionSets ?? {})) {
-      if (!Array.isArray(sets)) continue;
+      if (!Array.isArray(sets) || addedIds.has(exId)) continue;
       if (!planned.has(exId)) {
         const done = sets.filter((s) => s?.done);
         if (done.length) exercises.push({ key: "extra-" + exId, name: "Exercice ajouté", kind: "extra", sets: done.map((s) => ({ kg: s.kg ?? null, reps: s.reps ?? null, rir: s.rir ?? null })) });

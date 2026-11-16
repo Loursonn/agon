@@ -29,6 +29,10 @@ describe("toAthleteChange", () => {
   it("remise à sa date d'origine : plus rien à signaler", () => {
     expect(toAthleteChange(base({ rescheduledByAthlete: true, recordedOriginalDate: "2026-11-12" }))).toBeNull();
   });
+  it("exercice ajouté pendant la séance : une modification", () => {
+    const c = toAthleteChange(base({ athleteModifications: { addedExercises: [{ id: "ajout-1", name: "Curl" }] } }));
+    expect(c).toMatchObject({ addedSets: 0, addedExercises: 1 });
+  });
   it("séries et exercices ajoutés (ancien format)", () => {
     const c = toAthleteChange(base({ athleteModifications: { bonusSets: [{ sets: [1, 2] }, { sets: [3] }], customExercises: [{}] } }));
     expect(c).toMatchObject({ moved: false, addedSets: 3, addedExercises: 1 });

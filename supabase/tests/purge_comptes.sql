@@ -101,11 +101,14 @@ EXCEPTION WHEN check_violation THEN
   INSERT INTO t_res VALUES ('journal: origine « retention » acceptée', false, SQLERRM);
 END $$;
 
--- La tâche planifiée existe et est inactive.
+-- La tâche planifiée existe et est inactive. Sur une base sans aucun cron (agon-test,
+-- reconstruite sans les cron.schedule de platform.sql : docs/BASE_DE_TEST.md), rien à vérifier.
 INSERT INTO t_res
 SELECT 'cron: account-retention créée inactive',
-       coalesce((SELECT NOT active FROM cron.job WHERE jobname = 'account-retention'), false),
-       coalesce((SELECT active::text FROM cron.job WHERE jobname = 'account-retention'), 'absente');
+       CASE WHEN NOT EXISTS (SELECT 1 FROM cron.job) THEN true
+            ELSE coalesce((SELECT NOT active FROM cron.job WHERE jobname = 'account-retention'), false) END,
+       CASE WHEN NOT EXISTS (SELECT 1 FROM cron.job) THEN 'base sans crons (test)'
+            ELSE coalesce((SELECT active::text FROM cron.job WHERE jobname = 'account-retention'), 'absente') END;
 
 SELECT name, ok, left(detail, 60) AS detail FROM t_res;
 ROLLBACK;

@@ -1,257 +1,49 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { C } from "@/lib/theme";
+import { CARD, KICKER } from "@/features/shared/components/seance/seanceUi";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useHyroxResults } from "@/features/shared/hooks/hyrox/useHyroxResults";
+import { useHyroxRacePlans } from "@/features/shared/hooks/hyrox/useHyroxRacePlans";
 import { useHyroxReferences, pickRef } from "@/features/shared/hooks/hyrox/useHyroxReferences";
-import { radarAxes, typology, percentile, runTotal, stationsTotal, roxzoneTotal, standing, POSITION_BRACKET, type RefLookup } from "@/lib/hyrox/calc";
+import type { RefLookup } from "@/lib/hyrox/calc";
 import { CATEGORY_LABEL, raceCategory } from "@/lib/hyrox/categories";
-import { STATION_KEYS, STATION_META, SEGMENT_LABEL, type StationKey } from "@/features/shared/types/hyrox";
-import { formatMmSs } from "@/lib/time";
-import HyroxRadar from "./HyroxRadar";
+import { effortProfile } from "@/lib/hyrox/effortProfile";
+import { objectiveForRace } from "@/lib/hyrox/objective/forRace";
+import { fmtClock } from "@/lib/seance";
+import EffortProfile from "@/features/shared/components/hyrox/EffortProfile";
 
-const PROFILE_LABEL = { runner: "Runner", hybrid: "Hybride", powerhouse: "Powerhouse" };
-
+/**
+ * Vue coach « Radar » : le profil d'effort d'une course, le même que le bloc 07
+ * de Ma saison (décision d'Hugo du 16/11/2026) : rang dans toute la catégorie
+ * et niveau contre l'objectif de la course, superposés.
+ */
 export default function HyroxRadarView() {
   const { athleteId } = useAthleteContext();
   const { data: races = [] } = useHyroxResults(athleteId);
-  const { data: refs = [] } = useHyroxReferences();
-
-  const officialRaces = races.filter(r => r.is_official && r.status === "finished");
-  const [selectedIdx, setSelectedIdx] = useState(0);
-  const [showRecord, setShowRecord] = useState(false);
-
-  const refLookup: RefLookup = useMemo(
-    () => (d, s, b) => pickRef(refs, d, s, b) ?? undefined,
-    [refs],
-  );
-
-  const race = officialRaces[selectedIdx];
-  const record = officialRaces.length > 0
-    ? officialRaces.reduce((a, b) => a.total_s < b.total_s ? a : b) : null;
+  const { data: plans = [] } = useHyroxRacePlans(athleteId);
+  const { data: refRows = [] } = useHyroxReferences();
+  const refs: RefLookup = useMemo(() => (d, s, b) => pickRef(refRows, d, s, b) ?? undefined, [refRows]);
+  const finished = useMemo(() => races.filter((r) => r.status === "finished" && r.total_s > 0).sort((a, b) => b.date.localeCompare(a.date)), [races]);
+  const [id, setId] = useState<string | null>(null);
+  const race = finished.find((r) => r.id === id) ?? finished[0];
 
   if (!race) {
-    return <div style={{ padding: 40, textAlign: "center", color: C.tx3, fontSize: 12 }}>Aucune course officielle pour afficher le radar.</div>;
+    return <div style={{ padding: 40, textAlign: "center", color: C.tx3, fontSize: 12 }}>Aucune course terminée pour afficher le profil d'effort.</div>;
   }
-
-  const axes = radarAxes(race, refLookup);
-  const series = [{ name: race.event_name + " (" + race.date + ")", color: C.ac, axes }];
-  if (showRecord && record && record.id !== race.id) {
-    series.push({ name: "Record — " + formatMmSs(record.total_s, { hours: true }), color: C.g, axes: radarAxes(record, refLookup) });
-  }
-
-  // Typology : positions dans toute la catégorie (pas la tranche de chrono).
-  const refDiv = raceCategory(race);
-  const bracket = POSITION_BRACKET;
-  const runRef = refLookup(refDiv, "run_total", bracket);
-  const rt = runTotal(race);
-  const pctRun = runRef && rt != null ? percentile(rt, runRef) : null;
-
-  const stationPcts = STATION_KEYS.map(k => {
-    const v = (race as unknown as Record<string, unknown>)[k + "_s"] as number | null;
-    const ref = refLookup(refDiv, k, bracket);
-    return v != null && ref ? percentile(v, ref) : null;
-  }).filter(v => v != null) as number[];
-  const pctStations = stationPcts.length > 0 ? stationPcts.reduce((a, b) => a + b, 0) / stationPcts.length : null;
-  const typo = typology(pctRun, pctStations);
-
-  // Best/worst axes for typology description
-  // Points forts / faibles : seuils nets (top 35 % / 35 % les plus lents), jamais un classement relatif.
-  // value = 100 − position : position = 100 − value.
-  const validAxes = axes.filter(a => a.value != null).sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
-  const best3 = validAxes.filter(a => standing(100 - (a.value as number)) === "fort").slice(0, 3).map(a => a.label);
-  const worst3 = [...validAxes].reverse().filter(a => standing(100 - (a.value as number)) === "faible").slice(0, 3).map(a => a.label);
+  const cat = raceCategory(race);
+  const axes = effortProfile(race, refs, objectiveForRace(race, plans)?.objective.segments ?? null);
 
   return (
-    <div>
-      <div style={{ fontSize: 15, fontWeight: 800, color: C.tx, marginTop: 16, marginBottom: 12 }}>Radar</div>
-
-      {/* Selectors */}
-      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
-        <select
-          value={selectedIdx}
-          onChange={e => setSelectedIdx(Number(e.target.value))}
-          style={{
-            padding: "6px 10px", borderRadius: 4, border: "1px solid " + C.brdL,
-            background: C.s2, color: C.tx, fontSize: 12, fontFamily: "inherit",
-          }}
-        >
-          {officialRaces.map((r, i) => (
-            <option key={r.id} value={i}>{r.event_name} — {r.date} — {formatMmSs(r.total_s, { hours: true })}</option>
-          ))}
+    <section aria-label="Profil d'effort" style={{ ...CARD, padding: 20, marginTop: 16, display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <span style={KICKER}>Profil d'effort</span>
+        <select value={race.id} onChange={(e) => setId(e.target.value)} aria-label="Course"
+          style={{ minHeight: 36, borderRadius: 10, border: `1px solid ${C.brdL}`, background: C.s2, color: C.tx, padding: "0 10px", fontFamily: "inherit", fontSize: 13 }}>
+          {finished.map((r) => <option key={r.id} value={r.id}>{r.event_name} · {r.date} · {fmtClock(r.total_s)}</option>)}
         </select>
-        {record && record.id !== race.id && (
-          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: C.tx2, cursor: "pointer" }}>
-            <input type="checkbox" checked={showRecord} onChange={e => setShowRecord(e.target.checked)} style={{ width: 14, height: 14 }} />
-            Superposer le record
-          </label>
-        )}
       </div>
-
-      <HyroxRadar series={series} />
-
-      {/* Global ranking table */}
-      <RankingTable race={race} refLookup={refLookup} />
-
-      {/* Typology */}
-      {typo && (
-        <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, padding: "12px 14px", marginTop: 12 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, marginBottom: 4 }}>
-            Profil : {PROFILE_LABEL[typo]}
-          </div>
-          <div style={{ fontSize: 11, color: C.tx2 }}>
-            {typo === "runner" && "Course au-dessus des stations dans la catégorie. "}
-            {typo === "powerhouse" && "Stations au-dessus de la course dans la catégorie. "}
-            {typo === "hybrid" && "Profil équilibré. "}
-            Points forts (top 35 %) : {best3.length ? best3.join(", ") : "aucun"}. Points faibles (35 % les plus lents) : {worst3.length ? worst3.join(", ") : "aucun"}.
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Ranking table: explicit percentile per segment vs global population ──────
-
-import type { HyroxResult } from "@/features/shared/types/hyrox";
-
-type RankingRow = {
-  label: string;
-  athlete_s: number | null;
-  pct: number | null;
-  top1_s: number | null;
-  median_s: number | null;
-  delta_s: number | null;
-  sample: number | null;
-};
-
-function pctColor(pct: number | null): string {
-  if (pct == null) return C.tx3;
-  if (pct <= 25) return C.g;
-  if (pct <= 50) return C.ac;
-  if (pct <= 75) return C.o;
-  return C.r;
-}
-
-function pctLabel(pct: number | null): string {
-  if (pct == null) return "—";
-  return `Top ${pct} %`;
-}
-
-
-function RankingTable({ race, refLookup }: { race: HyroxResult; refLookup: RefLookup }) {
-  const refDiv = raceCategory(race);
-  // Classement dans toute la catégorie (décision d'Hugo, 15/11/2026).
-  const bracket = POSITION_BRACKET;
-
-  const rows: RankingRow[] = [];
-
-  // Helper to build row
-  const makeRow = (label: string, athlete_s: number | null, ref: ReturnType<typeof refLookup>): RankingRow => ({
-    label,
-    athlete_s,
-    pct: athlete_s != null && ref ? percentile(athlete_s, ref) : null,
-    top1_s: ref?.p1_s ?? null,
-    median_s: ref?.p50_s ?? null,
-    delta_s: athlete_s != null && ref ? athlete_s - ref.p50_s : null,
-    sample: ref?.sample_size ?? null,
-  });
-
-  // Total
-  rows.push(makeRow("Total", race.total_s, refLookup(refDiv, "total", bracket)));
-
-  // Run total
-  rows.push(makeRow("Course (total runs)", runTotal(race), refLookup(refDiv, "run_total", bracket)));
-
-  // Stations total (no ref)
-  rows.push({ label: "Stations (total)", athlete_s: stationsTotal(race), pct: null, top1_s: null, median_s: null, delta_s: null, sample: null });
-
-  // 8 stations
-  for (const k of STATION_KEYS) {
-    const v = (race as unknown as Record<string, unknown>)[k + "_s"] as number | null;
-    rows.push(makeRow(STATION_META[k].label, v, refLookup(refDiv, k, bracket)));
-  }
-
-  // Roxzone
-  const rox = roxzoneTotal(race);
-  const roxRef = refLookup(refDiv, "roxzone_total", bracket);
-  rows.push({ ...makeRow("Roxzone", rox, roxRef),
-  });
-
-  const maxSample = Math.max(...rows.map(r => r.sample ?? 0));
-  const sampleLabel = maxSample > 1000 ? `${Math.round(maxSample / 1000)}K` : String(maxSample);
-
-  return (
-    <div style={{ marginTop: 16 }}>
-      <div style={{ fontSize: 13, fontWeight: 700, color: C.tx, marginBottom: 4 }}>
-        Classement global
-      </div>
-      <div style={{ fontSize: 10, color: C.tx3, marginBottom: 8 }}>
-        Comparé à toute la catégorie {CATEGORY_LABEL[refDiv]} ({sampleLabel}+ résultats, saisons 7-8-9)
-      </div>
-
-      <div style={{ background: C.s1, borderRadius: 6, border: "1px solid " + C.brd, overflowX: "auto" }}>
-        <table style={{ width: "100%", minWidth: 480, borderCollapse: "collapse", fontSize: 11 }}>
-          <thead>
-            <tr style={{ borderBottom: "1px solid " + C.brd, color: C.tx3, fontSize: 10, fontWeight: 600 }}>
-              <th style={{ padding: "6px 8px", textAlign: "left" }}>Segment</th>
-              <th style={{ padding: "6px 8px", textAlign: "right" }}>Toi</th>
-              <th style={{ padding: "6px 8px", textAlign: "right" }}>Top 1 %</th>
-              <th style={{ padding: "6px 8px", textAlign: "right" }}>Médiane</th>
-              <th style={{ padding: "6px 8px", textAlign: "right" }}>Écart</th>
-              <th style={{ padding: "6px 8px", textAlign: "left" }}>Classement</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => {
-              const isHeader = i < 3;
-              const hrs = i === 0;
-              return (
-                <tr key={r.label} style={{
-                  borderBottom: "1px solid " + C.brd,
-                  background: isHeader ? C.s2 + "60" : "transparent",
-                }}>
-                  <td style={{ padding: "6px 8px", color: C.tx, fontWeight: isHeader ? 700 : 400 }}>
-                    {r.label}
-                  </td>
-                  <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "monospace", color: C.tx }}>
-                    {r.athlete_s != null ? formatMmSs(r.athlete_s, { hours: hrs }) : "—"}
-                  </td>
-                  <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "monospace", color: r.top1_s != null && r.athlete_s != null && r.athlete_s <= r.top1_s ? C.g : C.ac }}>
-                    {r.top1_s != null ? formatMmSs(r.top1_s, { hours: hrs }) : "—"}
-                  </td>
-                  <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "monospace", color: C.tx3 }}>
-                    {r.median_s != null ? formatMmSs(r.median_s, { hours: hrs }) : "—"}
-                  </td>
-                  <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "monospace", color: r.delta_s != null && r.delta_s < 0 ? C.g : r.delta_s != null && r.delta_s > 0 ? C.r : C.tx3 }}>
-                    {r.delta_s != null ? (r.delta_s >= 0 ? "+" : "") + formatMmSs(Math.abs(r.delta_s)) : "—"}
-                  </td>
-                  <td style={{ padding: "6px 8px" }}>
-                    {r.pct != null ? (
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <div style={{
-                          width: 60, height: 6, borderRadius: 3, background: C.s2,
-                          position: "relative", overflow: "hidden",
-                        }}>
-                          <div style={{
-                            position: "absolute", left: 0, top: 0, height: "100%", borderRadius: 3,
-                            background: pctColor(r.pct),
-                            width: (100 - r.pct) + "%",
-                          }} />
-                        </div>
-                        <span style={{ fontSize: 10, fontWeight: 600, color: pctColor(r.pct) }}>
-                          {pctLabel(r.pct)}
-                        </span>
-                      </div>
-                    ) : (
-                      <span style={{ fontSize: 10, color: C.tx3 }}>—</span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
+      <span style={{ fontSize: 12.5, color: C.tx2 }}>Plus loin du centre = plus rapide · anneau du milieu = la médiane</span>
+      <EffortProfile axes={axes} categoryLabel={CATEGORY_LABEL[cat] ?? cat} />
+    </section>
   );
 }

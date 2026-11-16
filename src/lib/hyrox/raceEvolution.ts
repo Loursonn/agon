@@ -4,12 +4,8 @@
  * et « Position par station »). Calculs purs à partir des seuls temps : aucune
  * donnée de montre ici.
  */
-import {
-  REFERENCE_DIVISION, RUN_KEYS, STATION_KEYS, STATION_META,
-  type HyroxDivision, type HyroxResult, type StationKey,
-} from "@/features/shared/types/hyrox";
-import { POSITION_BRACKET, bracketOf, percentile, roxzoneTotal, runTotal, stationsTotal, type RefLookup } from "./calc";
-import { raceCategory } from "./categories";
+import { RUN_KEYS, type HyroxResult } from "@/features/shared/types/hyrox";
+import { bracketOf, roxzoneTotal, runTotal, stationsTotal } from "./calc";
 import { cruisePace } from "./runPacing";
 
 const seg = (r: HyroxResult, key: string): number | null =>
@@ -94,48 +90,5 @@ export function timeSplit(r: HyroxResult): TimeSplit {
   const roxzone = roxzoneTotal(r);
   const pct = (v: number | null) => (v != null && r.total_s > 0 ? Math.round((v / r.total_s) * 1000) / 10 : null);
   return { run, stations, roxzone, pct: { run: pct(run), stations: pct(stations), roxzone: pct(roxzone) } };
-}
-
-export interface SegmentPosition {
-  key: string;
-  label: string;
-  /** Temps et position (top %, 1 = meilleur) course par course, dans l'ordre donné. */
-  values: Array<number | null>;
-  pcts: Array<number | null>;
-  latestPct: number | null;
-  /** Évolution en points entre la première et la dernière position connues (négatif = mieux). */
-  deltaPts: number | null;
-}
-
-/**
- * Position par station sur plusieurs courses (ordre chronologique attendu) :
- * 8 stations, puis les 8 runs ensemble, puis la Roxzone. Chaque course est
- * placée dans toute sa catégorie (solo, duo, pro… : la sienne), jamais dans
- * sa seule tranche de chrono.
- */
-export function segmentPositions(chronological: readonly HyroxResult[], refLookup: RefLookup): SegmentPosition[] {
-  if (chronological.length === 0) return [];
-  const rows: Array<{ key: string; label: string; get: (r: HyroxResult) => number | null }> = [
-    ...STATION_KEYS.map((k: StationKey) => ({ key: k as string, label: STATION_META[k].label, get: (r: HyroxResult) => seg(r, k) })),
-    { key: "run_total", label: "Runs (8 km)", get: runTotal },
-    { key: "roxzone_total", label: "Roxzone", get: roxzoneTotal },
-  ];
-  return rows.map(({ key, label, get }) => {
-    const values = chronological.map(get);
-    const pcts = chronological.map((r, i) => {
-      const v = values[i];
-      const ref = v != null ? refLookup(raceCategory(r), key, POSITION_BRACKET) : undefined;
-      return v != null && ref ? percentile(v, ref) : null;
-    });
-    const known = pcts.filter((p): p is number => p != null);
-    return {
-      key,
-      label,
-      values,
-      pcts,
-      latestPct: pcts[pcts.length - 1] ?? null,
-      deltaPts: known.length >= 2 ? known[known.length - 1] - known[0] : null,
-    };
-  });
 }
 

@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.4"
+    PostgrestVersion: "14.18"
   }
   graphql_public: {
     Tables: {
@@ -95,10 +95,13 @@ export type Database = {
           end_s: number
           exercise_id: string | null
           id: string
+          lap_type: string | null
           load_kg: number | null
+          manual_duration_s: number | null
           name: string | null
           needs_review: boolean
           origin: string
+          overrides: Json | null
           planned_block_ref: string | null
           position: number
           reps: number | null
@@ -117,10 +120,13 @@ export type Database = {
           end_s: number
           exercise_id?: string | null
           id?: string
+          lap_type?: string | null
           load_kg?: number | null
+          manual_duration_s?: number | null
           name?: string | null
           needs_review?: boolean
           origin: string
+          overrides?: Json | null
           planned_block_ref?: string | null
           position: number
           reps?: number | null
@@ -139,10 +145,13 @@ export type Database = {
           end_s?: number
           exercise_id?: string | null
           id?: string
+          lap_type?: string | null
           load_kg?: number | null
+          manual_duration_s?: number | null
           name?: string | null
           needs_review?: boolean
           origin?: string
+          overrides?: Json | null
           planned_block_ref?: string | null
           position?: number
           reps?: number | null
@@ -347,6 +356,7 @@ export type Database = {
           dist: number[] | null
           hr: number[] | null
           laps_edited: boolean
+          laps_edited_by: string | null
           laps_version: number
           lat: number[] | null
           lon: number[] | null
@@ -381,6 +391,7 @@ export type Database = {
           dist?: number[] | null
           hr?: number[] | null
           laps_edited?: boolean
+          laps_edited_by?: string | null
           laps_version?: number
           lat?: number[] | null
           lon?: number[] | null
@@ -415,6 +426,7 @@ export type Database = {
           dist?: number[] | null
           hr?: number[] | null
           laps_edited?: boolean
+          laps_edited_by?: string | null
           laps_version?: number
           lat?: number[] | null
           lon?: number[] | null
@@ -456,6 +468,13 @@ export type Database = {
           {
             foreignKeyName: "activity_streams_athlete_id_fkey"
             columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_streams_laps_edited_by_fkey"
+            columns: ["laps_edited_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -6080,6 +6099,10 @@ export type Database = {
       }
       _signup_guard: { Args: never; Returns: string }
       _signup_name: { Args: { p_full_name: string }; Returns: string }
+      _sync_competition_link_from_race: {
+        Args: { p_activity: string; p_competition: string; p_previous: string }
+        Returns: undefined
+      }
       _table_privs: { Args: never; Returns: unknown[] }
       _temptypes: { Args: { "": string }; Returns: string }
       _todo: { Args: never; Returns: string }
@@ -6150,6 +6173,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      activity_lap_overrides: { Args: { p: Json }; Returns: Json }
       activity_laps_editor: { Args: { p_athlete: string }; Returns: boolean }
       activity_sport_family: { Args: { p_sport: string }; Returns: string }
       activity_zone_seconds: {

@@ -1,3 +1,4 @@
+import type { LapPhase } from "@/lib/lapEdits";
 import type { CSSProperties } from "react";
 import { C } from "@/lib/theme";
 
@@ -57,4 +58,21 @@ export function buttonStyle(kind: "primary" | "ghost" = "ghost", disabled = fals
         whiteSpace: "nowrap",
       };
   return disabled ? { ...base, opacity: 0.4, cursor: "default" } : base;
+}
+
+/** Couleur de chaque type de tour (« Modifier tours ») : Échauffement, Effort, Récup, Retour au calme. */
+export const PHASE_COLOR: Record<LapPhase, string> = {
+  warmup: C.b,
+  work: C.ac,
+  recovery: C.g,
+  cooldown: C.ame,
+};
+
+/** Garde le pointeur sur l'élément pendant un glisser (sans planter si le navigateur l'a déjà relâché). */
+export function capturePointer(e: { target: EventTarget | null; pointerId: number }): void {
+  try {
+    (e.target as Element | null)?.setPointerCapture?.(e.pointerId);
+  } catch {
+    // Pointeur déjà relâché : le glisser continue sans capture.
+  }
 }

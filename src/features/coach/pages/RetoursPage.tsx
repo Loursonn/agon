@@ -1,3 +1,4 @@
+import { countAddedExercises } from "@/lib/athleteChanges";
 import { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
@@ -548,7 +549,7 @@ export default function RetoursPage() {
                 ? new Date(mod.originalScheduledDate + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })
                 : null;
               const bonusSetsCount = mod.athleteModifications?.bonusSets?.reduce((n, b) => n + b.sets.length, 0) ?? 0;
-              const customExCount  = mod.athleteModifications?.customExercises?.length ?? 0;
+              const customExCount  = countAddedExercises(mod.athleteModifications);
 
               return (
                 <div

@@ -9,6 +9,8 @@
  *     sessionForme: 1-5, exerciceComments: { <exId>: texte }, sessionComment,
  *     videoSent: { <exId>: bool }, coachOverride: { blocs, note?, fiches?, createdAt } }
  * `bonusSets` / `customExercises` sont lus par l'ancien code mais plus écrits.
+ * `addedExercises` (2026-11-16) : exercices ajoutés par l'athlète pendant la
+ * séance, hors programme ; leurs séries sont dans `sessionSets[<id>]`.
  *
  * Le parseur est TOLÉRANT : un champ connu mal formé est écarté (jamais
  * d'exception), les clés inconnues sont conservées telles quelles.
@@ -32,8 +34,26 @@ export interface CoachOverrideRaw {
   [extra: string]: unknown;
 }
 
+/**
+ * Exercice ajouté par l'athlète pendant la séance (imprévu). N'existe que dans
+ * la séance réalisée : le programme du coach ne change pas.
+ */
+export interface AddedExercise {
+  /** Clé des séries dans `sessionSets` ; commence par `ADDED_EXERCISE_PREFIX`. */
+  id: string;
+  name: string;
+  /** Exercice de la banque, si choisi dedans (vidéo, records). Absent = nom libre. */
+  exercise_id?: string | null;
+  /** Moment de l'ajout (ISO). */
+  addedAt?: string;
+}
+
+/** Préfixe des ids d'exercices ajoutés : jamais confondus avec ceux du programme. */
+export const ADDED_EXERCISE_PREFIX = "ajout-";
+
 export interface AthleteMods {
   sessionSets?: Record<string, SetEntry[]>;
+  addedExercises?: AddedExercise[];
   sessionForme?: number;
   exerciceComments?: Record<string, string>;
   sessionComment?: string;
@@ -120,7 +140,40 @@ export function parseAthleteMods(raw: unknown): AthleteMods | null {
   for (const k of ["bonusSets", "customExercises"] as const) {
     if (k in raw && !Array.isArray(raw[k])) delete out[k];
   }
+  if ("addedExercises" in raw) out.addedExercises = addedExercisesOf(raw);
   return out;
+}
+
+function parseAdded(raw: unknown): AddedExercise | null {
+  if (!isObj(raw) || typeof raw.id !== "string" || raw.id === "") return null;
+  const name = typeof raw.name === "string" ? raw.name.trim() : "";
+  if (!name) return null;
+  const out: AddedExercise = { id: raw.id, name };
+  if (typeof raw.exercise_id === "string" && raw.exercise_id) out.exercise_id = raw.exercise_id;
+  if (typeof raw.addedAt === "string") out.addedAt = raw.addedAt;
+  return out;
+}
+
+/**
+ * Exercices ajoutés par l'athlète, bien formés et sans doublon d'id (le
+ * premier gagne). Tolérant : `[]` si absent ou mal formé.
+ */
+export function addedExercisesOf(mods: unknown): AddedExercise[] {
+  if (!isObj(mods) || !Array.isArray(mods.addedExercises)) return [];
+  const seen = new Set<string>();
+  const out: AddedExercise[] = [];
+  for (const r of mods.addedExercises) {
+    const a = parseAdded(r);
+    if (!a || seen.has(a.id)) continue;
+    seen.add(a.id);
+    out.push(a);
+  }
+  return out;
+}
+
+/** id → nom des exercices ajoutés par l'athlète (pour nommer leurs séries). */
+export function addedExerciseNames(mods: unknown): Map<string, string> {
+  return new Map(addedExercisesOf(mods).map((a) => [a.id, a.name]));
 }
 
 /**

@@ -7,6 +7,7 @@ import { priorityLabel, competitionDayLabel } from "@/types/planning";
 import { competitionCountdown } from "@/lib/competitionCountdown";
 import { useUpdateCompetitionComment } from "@/features/shared/hooks/retoursComments.mutations";
 import { CompetitionSessionSheet } from "@/features/athlete/components/competition/CompetitionSessionSheet";
+import { CompetitionWatchPanel } from "@/features/shared/components/competition/CompetitionWatchPanel";
 import {
   COMPETITION_SESSION_TYPES, competitionSessionFilled, competitionSessionSummary, competitionSessionToFill,
 } from "@/lib/competitionSession";
@@ -262,6 +263,14 @@ export function CompetitionDayCard({
             </button>
           )}
           {!filled && viewOnly && <div style={{ fontSize: 11, color: C.tx3, fontStyle: "italic" }}>Séance à remplir</div>}
+          {competition.athlete_id && (
+            <CompetitionWatchPanel
+              athleteId={competition.athlete_id}
+              competition={competition}
+              canEdit={!viewOnly}
+              seancePath={(id) => (viewOnly ? `/coach/athletes/${competition.athlete_id}/seance/${id}` : `/athlete/program/activity/${id}`)}
+            />
+          )}
           {sheet}
         </>
       )}

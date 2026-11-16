@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ActivityStream } from "@shared/activityFiles/stream";
 import type { HyroxReferenceSegment, HyroxResult } from "@/features/shared/types/hyrox";
 import {
-  bracketLabel, previousRace, raceShortName, recordGap, runPaceEvolution, segmentPositions, timeSplit,
+  bracketLabel, previousRace, raceShortName, recordGap, runPaceEvolution, timeSplit,
 } from "@/lib/hyrox/raceEvolution";
 import {
   cadenceDrop, compromisedFromTimes, crossRaceWithWatch, raceGains, runCostAfter, shareAboveHr, stationsAtLevel,
@@ -70,17 +70,6 @@ describe("raceEvolution", () => {
     expect(s.stations).toBe(2010);
     expect(s.roxzone).toBe(450);
     expect(s.pct.roxzone).toBe(8.8);
-  });
-
-  it("position par station : top %, évolution en points", () => {
-    const refs = [ref("ski", 300), ref("run_total", 2655), ref("roxzone_total", 450)];
-    const lookup = (_d: string, s: string) => refs.find((r) => r.segment === s);
-    const rows = segmentPositions([result({ ski_s: 300 }), result({ ski_s: 255 })], lookup);
-    const ski = rows.find((r) => r.key === "ski")!;
-    expect(ski.pcts).toEqual([50, 10]);
-    expect(ski.deltaPts).toBe(-40);
-    expect(rows.map((r) => r.key).slice(-2)).toEqual(["run_total", "roxzone_total"]);
-    expect(rows.find((r) => r.key === "sled_push")!.latestPct).toBeNull();
   });
 });
 

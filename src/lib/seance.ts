@@ -427,6 +427,20 @@ export interface EditableLap {
   startS: number;
   endS: number;
   name: string | null;
+  /** Tour tapé à la main hors courbe (posé à un instant, `startS = endS`) : voir `lapEdits.ts`. */
+  manualDurationS?: number | null;
+}
+
+const manual = (l: EditableLap) => typeof l.manualDurationS === "number" && l.manualDurationS > 0;
+/** Prochain tour de courbe après `i` (les tours manuels sont sautés). */
+const nextOnCurve = (laps: readonly EditableLap[], i: number) => {
+  for (let k = i + 1; k < laps.length; k++) if (!manual(laps[k])) return k;
+  return -1;
+};
+
+/** Une limite déplaçable suit le tour `i` (tour de courbe suivi d'un autre tour de courbe). */
+export function hasBoundaryAfter(laps: readonly EditableLap[], i: number): boolean {
+  return !!laps[i] && !manual(laps[i]) && nextOnCurve(laps, i) >= 0;
 }
 
 /** Coupe le tour qui contient `atS` en deux. Rien si `atS` est trop près d'une limite (< 2 s). */
@@ -441,30 +455,45 @@ export function cutLapAt<T extends EditableLap>(laps: readonly T[], atS: number,
   return [...laps.slice(0, i), a, b, ...laps.slice(i + 1)];
 }
 
-/** Fusionne le tour `i` avec le suivant (le nom du premier est gardé). */
+/**
+ * Fusionne le tour `i` avec le tour de courbe suivant (le nom du premier est gardé).
+ * Les tours tapés à la main entre les deux se reposent après le tour fusionné.
+ */
 export function mergeWithNext<T extends EditableLap>(laps: readonly T[], i: number): T[] {
-  if (i < 0 || i >= laps.length - 1) return [...laps];
-  const merged = { ...laps[i], endS: laps[i + 1].endS };
-  return [...laps.slice(0, i), merged, ...laps.slice(i + 2)];
+  if (i < 0 || i >= laps.length - 1 || manual(laps[i])) return [...laps];
+  const j = nextOnCurve(laps, i);
+  if (j < 0) return [...laps];
+  const merged = { ...laps[i], endS: laps[j].endS };
+  const between = laps.slice(i + 1, j).map((l) => ({ ...l, startS: merged.endS, endS: merged.endS }));
+  return [...laps.slice(0, i), merged, ...between, ...laps.slice(j + 1)];
 }
 
-/** Déplace la limite entre le tour `i` et le suivant ; bornée pour garder 1 s à chacun. */
+/**
+ * Déplace la limite entre le tour `i` et le tour de courbe suivant ; bornée pour
+ * garder 1 s à chacun. Les tours tapés à la main entre les deux suivent la limite.
+ */
 export function moveBoundary<T extends EditableLap>(laps: readonly T[], i: number, toS: number): T[] {
-  if (i < 0 || i >= laps.length - 1) return [...laps];
+  if (i < 0 || i >= laps.length - 1 || manual(laps[i])) return [...laps];
+  const j = nextOnCurve(laps, i);
+  if (j < 0) return [...laps];
   const lo = laps[i].startS + 1;
-  const hi = laps[i + 1].endS - 1;
+  const hi = laps[j].endS - 1;
   const t = Math.round(Math.min(hi, Math.max(lo, toS)));
   const out = [...laps];
   out[i] = { ...laps[i], endS: t };
-  out[i + 1] = { ...laps[i + 1], startS: t };
+  for (let k = i + 1; k < j; k++) out[k] = { ...laps[k], startS: t, endS: t };
+  out[j] = { ...laps[j], startS: t };
   return out;
 }
 
 /** Modifie début ou fin d'un tour (saisie précise) : ses voisins suivent. */
 export function setLapBounds<T extends EditableLap>(laps: readonly T[], i: number, startS: number, endS: number): T[] {
+  if (!laps[i] || manual(laps[i])) return [...laps];
   let out = [...laps];
-  if (i > 0) out = moveBoundary(out, i - 1, startS);
-  if (i < out.length - 1) out = moveBoundary(out, i, endS);
+  let p = -1;
+  for (let k = i - 1; k >= 0; k--) if (!manual(out[k])) { p = k; break; }
+  if (p >= 0) out = moveBoundary(out, p, startS);
+  if (nextOnCurve(out, i) >= 0) out = moveBoundary(out, i, endS);
   return out;
 }
 

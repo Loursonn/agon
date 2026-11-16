@@ -28,6 +28,13 @@ describe("parseAthleteMods", () => {
     expect(out).toEqual({ sessionSets: { e1: [{ done: false, kg: 82.5 }], e2: [] } });
   });
 
+  it("addedExercises : entrées mal formées écartées", () => {
+    expect(parseAthleteMods({ addedExercises: [{ id: "ajout-1", name: "Curl" }, { id: "x" }, 3] })).toEqual({
+      addedExercises: [{ id: "ajout-1", name: "Curl" }],
+    });
+    expect(parseAthleteMods({ addedExercises: "x" })).toEqual({ addedExercises: [] });
+  });
+
   it("sessionSets non objet → retiré", () => {
     expect(parseAthleteMods({ sessionSets: [1, 2] })).toEqual({});
   });
