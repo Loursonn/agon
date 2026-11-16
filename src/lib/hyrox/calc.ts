@@ -195,9 +195,10 @@ function refPoints(ref: PercentileRef): Array<[number, number]> {
  * Position d'un temps dans une distribution (1 = le plus rapide, 99 = le plus
  * lent). Interpolation linéaire entre tous les percentiles connus (p1 … p90),
  * extrapolation au-delà avec la pente du dernier intervalle, bornée à 1-99.
+ * Arrondi au plus proche par défaut, vers le haut avec `rounding = "up"`.
  * `null` sans p10 ni p90 (référence trop pauvre).
  */
-export function percentile(value: number, ref: PercentileRef): number | null {
+export function percentile(value: number, ref: PercentileRef, rounding: "nearest" | "up" = "nearest"): number | null {
   if (ref.p10_s == null || ref.p90_s == null) return null;
   const pts = refPoints(ref);
   if (pts.length < 2) return null;
@@ -214,7 +215,9 @@ export function percentile(value: number, ref: PercentileRef): number | null {
     while (value > pts[i + 1][1]) i++;
     pct = at(i);
   }
-  return Math.min(99, Math.max(1, Math.round(pct)));
+  // « up » : arrondi vers le haut, jamais flatteur (verdict et carte à partager).
+  const r = rounding === "up" ? Math.ceil(pct - 1e-9) : Math.round(pct);
+  return Math.min(99, Math.max(1, r));
 }
 
 /** Temps correspondant à une position (inverse de `percentile`), pour les équivalences entre catégories. */

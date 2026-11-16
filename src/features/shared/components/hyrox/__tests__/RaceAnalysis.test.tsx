@@ -22,6 +22,15 @@ vi.mock("@/features/shared/hooks/hyrox/useHyroxTests", () => ({
 vi.mock("@/features/shared/hooks/hyrox/useHyroxRacePlans", () => ({ useHyroxRacePlans: () => ({ data: plans }) }));
 vi.mock("@/features/shared/hooks/hyrox/useHyroxResults", () => ({ useHyroxResults: () => ({ data: [] }), useUpdateHyroxResult: () => ({ mutate: vi.fn(), isPending: false }) }));
 vi.mock("react-router-dom", () => ({ useNavigate: () => vi.fn() }));
+// Références de catégorie : seulement le chrono des hommes open (rang du verdict).
+vi.mock("@/features/shared/hooks/hyrox/useHyroxReferences", () => {
+  const rows = [{ id: "t", division: "men", bracket: "all", segment: "total", p1_s: 3700, p5_s: 4000, p10_s: 4200, p25_s: 4600, p50_s: 5100, p75_s: 5700, p90_s: 6300, source: "pyrox S7-S9 (n=300000)", is_estimate: false, sample_size: 300000 }];
+  return {
+    useHyroxReferences: () => ({ data: rows }),
+    pickRef: (refs: typeof rows, d: string, s: string) => refs.find((r) => r.division === d && r.segment === s) ?? null,
+  };
+});
+vi.mock("@/hooks/useAuth", () => ({ useAuth: () => ({ profile: { id: "lea", full_name: "Léa Démo" } }) }));
 vi.mock("@/features/shared/hooks/useCoCoach", () => ({ useAthleteCoaches: () => ({ data: { referent: { id: "c", full_name: "Agon Démo" }, coCoach: null } }) }));
 
 const { default: RaceAnalysis } = await import("../RaceAnalysis");
@@ -42,12 +51,16 @@ describe("RaceAnalysis", () => {
     watch = { loading: false, activityId: null, detail: null, error: null };
     render(<RaceAnalysis race={race} onBack={() => {}} />);
     expect(screen.getByText("HYROX Paris")).toBeTruthy();
-    // Sans plan : objectif construit sur le run du jour ; aucune position dans la catégorie, seul le rang officiel.
+    // Sans plan : objectif construit sur le run du jour.
     expect(screen.getByText(/^Vs objectif/)).toBeTruthy();
     expect(screen.getAllByText(/run du jour/).length).toBeGreaterThan(0);
     expect(screen.queryByText("Position")).toBeNull();
-    expect(screen.getAllByText(/Top \d+ %/)).toHaveLength(1); // rang officiel 120 / 800, rien d'autre
-    expect(screen.getByText("Rang")).toBeTruthy();
+    // Verdict (lot 6) : 4860 s entre p25 (4600) et p50 (5100) des hommes open → 38 % ; la place officielle passe dans le verdict.
+    expect(screen.getByText("TOP 38 %")).toBeTruthy();
+    expect(screen.getByText("Confirmé")).toBeTruthy();
+    expect(screen.getByText(/Sur 300\s000 courses Hommes open, saisons 7 à 9 \(pyrox\)/)).toBeTruthy();
+    expect(screen.getByText("Place")).toBeTruthy();
+    expect(screen.queryByText("Rang")).toBeNull();
     expect(screen.getAllByText(/Aucune activité de montre/).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("tab", { name: "Stratégie" }));
     expect(screen.getByText("Et avec une meilleure stratégie ?")).toBeTruthy();
@@ -55,6 +68,18 @@ describe("RaceAnalysis", () => {
     expect(screen.queryByText(/Déjà dans ses axes/)).toBeNull(); // l'axe du bilan : coach seulement
     fireEvent.click(screen.getByRole("tab", { name: "Runs" }));
     expect(screen.getByText(/Allure par km/)).toBeTruthy();
+  });
+
+  it("athlète : « Partager ma course » ouvre la carte, nom affiché par défaut", () => {
+    watch = { loading: false, activityId: null, detail: null, error: null };
+    // jsdom ne dessine pas : la carte reste vide, on vérifie les réglages.
+    HTMLCanvasElement.prototype.getContext = (() => null) as unknown as HTMLCanvasElement["getContext"];
+    render(<RaceAnalysis race={race} onBack={() => {}} audience="athlete" />);
+    fireEvent.click(screen.getByRole("button", { name: /Partager ma course/ }));
+    expect(screen.getByRole("radio", { name: "Post 4:5" }).getAttribute("aria-checked")).toBe("true");
+    expect((screen.getByRole("checkbox", { name: "Afficher mon nom" }) as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByRole("checkbox", { name: /Afficher ma place/ }) as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByText(/Le frein et la source du classement restent toujours/)).toBeTruthy();
   });
 
   it("avec montre : attribution affichée et constats de la montre", () => {
@@ -81,6 +106,8 @@ describe("RaceAnalysis", () => {
     expect(screen.getAllByText("Seuils de course").length).toBeGreaterThan(0);
     expect(screen.getByText("Objectif")).toBeTruthy();
     expect(screen.queryByText("Médiane")).toBeNull();
+    // Q3 du lot 6 : la carte à partager est réservée à l'athlète.
+    expect(screen.queryByRole("button", { name: /Partager/ })).toBeNull();
     plans = [];
   });
 });
