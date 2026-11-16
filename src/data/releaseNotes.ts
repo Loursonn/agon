@@ -38,6 +38,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-16-fix-affichages-telephone",
+    date: "2026-11-16",
+    kind: "fix",
+    title: "Trois corrections d'affichage côté athlète",
+    summary: "Le dernier bouton d'une page n'est plus caché, et la comparaison du volume de course est juste en début de semaine.",
+    sections: [
+      {
+        title: "Ce qui change",
+        points: [
+          "Quand le rappel « Séance non terminée » est affiché, l'athlète peut descendre jusqu'au dernier bouton de la page (par exemple « Voir le débrief » en HYROX) : il n'est plus caché dessous.",
+          "Volume de course : la semaine en cours se compare à la semaine dernière au même jour, et plus à la semaine dernière complète. Un lundi matin n'affiche plus « −100 % ».",
+          "Étapes d'une blessure sur téléphone : libellés courts (Réhab, Fin réhab, Réathlé), les mots ne sont plus coupés en deux.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-16-hyrox-meilleure-strategie",
     date: "2026-11-16",
     kind: "feature",

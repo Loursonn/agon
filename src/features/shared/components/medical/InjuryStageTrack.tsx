@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { C, alpha } from "@/lib/theme";
 import { useInjuryStageHistory, useSetInjuryStage } from "@/features/shared/hooks/useMedicalEntries";
 import {
@@ -26,7 +27,7 @@ export function InjuryStageTrack({ entry, athleteId, canEdit, compact = false }:
   entry: Pick<MedicalEntry, "id" | "status" | "recovery_stage">;
   athleteId: string;
   canEdit: boolean;
-  /** Libellés courts (téléphone, listes serrées). */
+  /** Libellés courts forcés (sinon choisis selon la largeur disponible). */
   compact?: boolean;
 }) {
   const { data: history = [] } = useInjuryStageHistory(athleteId);
@@ -35,10 +36,20 @@ export function InjuryStageTrack({ entry, athleteId, canEdit, compact = false }:
   const at = stageIndex(current);
   const passages = stagePassages(history, entry.id);
   const last = passages[passages.length - 1];
-  const labels = compact ? RECOVERY_STAGE_SHORT : RECOVERY_STAGE_LABEL;
+  // Sous ~460 px, les libellés longs se coupent en plein mot (« Réhabili-tation ») : libellés courts.
+  const ref = useRef<HTMLDivElement>(null);
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(([e]) => setNarrow(e.contentRect.width < 460));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const labels = compact || narrow ? RECOVERY_STAGE_SHORT : RECOVERY_STAGE_LABEL;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+    <div ref={ref} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <div role="group" aria-label="Étape de résolution" style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 4 }}>
         {RECOVERY_STAGES.map((s, i) => {
           const isCurrent = s === current;

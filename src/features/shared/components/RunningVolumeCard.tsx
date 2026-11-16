@@ -10,7 +10,7 @@ import {
   providerAttribution,
   sportLabel,
 } from "@/lib/activityDisplay";
-import { weekDetail, type RunningWeekDetail } from "@/lib/runningVolume";
+import { iso, weekDetail, type RunningWeekDetail } from "@/lib/runningVolume";
 import type { RunningVolume, RunOuting, WatchActivityInput } from "@/features/shared/hooks/useRunningVolume";
 
 const MONTHS_FR = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
@@ -123,7 +123,7 @@ export function RunningVolumeCard({
   const avgKm = done.length ? Math.round((done.reduce((s, w) => s + w.km, 0) / done.length) * 10) / 10 : 0;
 
   const week = useMemo(
-    () => (volume.weeks[sel] ? weekDetail(outings, others, volume.weeks[sel].monday) : null),
+    () => (volume.weeks[sel] ? weekDetail(outings, others, volume.weeks[sel].monday, iso(new Date())) : null),
     [outings, others, volume.weeks, sel],
   );
 
@@ -397,7 +397,11 @@ function WeekHero({
           </span>
         ) : null}
         <span className="text-[10px] text-agon-tx3">
-          {week.deltaKm != null ? `vs semaine précédente (${fmtKm(week.prevKm)})` : "Semaine précédente : —"}
+          {week.deltaKm != null
+            ? week.prevToSameDay
+              ? `vs même jour la semaine dernière (${fmtKm(week.prevKm)})`
+              : `vs semaine précédente (${fmtKm(week.prevKm)})`
+            : week.prevToSameDay ? "Semaine dernière à ce jour : —" : "Semaine précédente : —"}
         </span>
       </div>
     </div>

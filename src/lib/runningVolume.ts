@@ -82,8 +82,10 @@ export interface RunningWeekDetail {
   durationS: number | null;
   /** D+ cumulé des sorties qui l'ont mesuré, null si aucune */
   elevationGainM: number | null;
-  /** Km de la semaine précédente (0 = aucune course) */
+  /** Km de la semaine précédente (0 = aucune course) ; semaine en cours : jusqu'au même jour */
   prevKm: number;
+  /** Semaine en cours : la comparaison s'arrête au même jour de la semaine précédente */
+  prevToSameDay: boolean;
   /** Écart avec la semaine précédente, null s'il n'y a rien à comparer */
   deltaKm: number | null;
   /** Écart en %, null si la semaine précédente est vide */
@@ -97,14 +99,18 @@ export function weekDetail(
   outings: RunOuting[],
   others: WatchActivityInput[],
   monday: string,
+  /** Jour courant (yyyy-MM-dd) : une semaine en cours se compare au même jour de la précédente */
+  today?: string,
 ): RunningWeekDetail {
   const mon = new Date(`${monday}T12:00:00`);
   const sunday = iso(addDays(mon, 6));
   const prevMonday = iso(addDays(mon, -7));
-  const prevSunday = iso(addDays(mon, -1));
+  // Lundi matin, « −100 % » face à une semaine complète ne veut rien dire (Hugo, 16/11/2026).
+  const prevToSameDay = today != null && today >= monday && today < sunday;
+  const prevEnd = prevToSameDay ? iso(addDays(new Date(`${today}T12:00:00`), -7)) : iso(addDays(mon, -1));
   const runs = outings.filter((o) => o.date >= monday && o.date <= sunday);
   const km = summarizeKm(runs, monday, sunday).km;
-  const prevKm = summarizeKm(outings, prevMonday, prevSunday).km;
+  const prevKm = summarizeKm(outings, prevMonday, prevEnd).km;
   const sumKnown = (vals: Array<number | null>) => {
     const known = vals.filter((v): v is number => v != null && Number.isFinite(v));
     return known.length ? known.reduce((a, b) => a + b, 0) : null;
@@ -119,6 +125,7 @@ export function weekDetail(
     durationS: sumKnown(runs.map((r) => r.durationS)),
     elevationGainM: sumKnown(runs.map((r) => r.elevationGainM)),
     prevKm,
+    prevToSameDay,
     deltaKm: hasAny ? round1(km - prevKm) : null,
     deltaPct: prevKm > 0 ? Math.round(((km - prevKm) / prevKm) * 100) : null,
   };

@@ -81,6 +81,21 @@ describe("weekDetail", () => {
     expect(w.elevationGainM).toBeNull();
   });
 
+  it("semaine en cours : comparée à la précédente au même jour", () => {
+    const outings = [o("2026-10-05", 10), o("2026-10-08", 12), o("2026-10-13", 6)];
+    // Mardi 13 : la semaine précédente compte jusqu'au mardi 6 (10 km), pas les 22 km.
+    const w = weekDetail(outings, [], "2026-10-12", "2026-10-13");
+    expect(w.prevToSameDay).toBe(true);
+    expect(w.prevKm).toBe(10);
+    expect(w.deltaKm).toBe(-4);
+    // Lundi matin sans sortie, semaine précédente vide au lundi : rien à comparer.
+    const lundi = weekDetail([o("2026-10-06", 10)], [], "2026-10-12", "2026-10-12");
+    expect(lundi.deltaKm).toBeNull();
+    // Semaine passée, ou dimanche : semaine complète.
+    expect(weekDetail(outings, [], "2026-10-12", "2026-10-18").prevToSameDay).toBe(false);
+    expect(weekDetail(outings, [], "2026-10-12", "2026-10-25").prevKm).toBe(22);
+  });
+
   it("semaine précédente vide : écart en km, pas de pourcentage", () => {
     const w = weekDetail([o("2026-10-13", 5)], [], "2026-10-12");
     expect(w.deltaKm).toBe(5);
