@@ -9,7 +9,7 @@ const specs = [
   ["hyrox_objective_versions", "true"], ["hyrox_objective_grid", "true"],
 ];
 const out = [
-  `-- Données de référence (bibliothèques : aucune donnée d'athlète ni de coach), exportées de la prod le ${new Date().toISOString().slice(0, 10)}.`,
+  `-- Données de référence (bibliothèques : aucune donnée d'athlète ni de coach), exportées de la base de test (agon-test, au niveau de la prod) le ${new Date().toISOString().slice(0, 10)}.`,
   "-- created_by remis à NULL. Régénérer : voir supabase/tests/ci/README.md.",
   "SET session_replication_role = replica;", "",
 ];
