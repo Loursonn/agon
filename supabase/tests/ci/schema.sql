@@ -10555,6 +10555,10 @@ CREATE INDEX "activity_streams_athlete_started" ON "public"."activity_streams" U
 
 
 
+CREATE INDEX "activity_streams_laps_edited_by_idx" ON "public"."activity_streams" USING "btree" ("laps_edited_by") WHERE ("laps_edited_by" IS NOT NULL);
+
+
+
 CREATE INDEX "activity_zone_summaries_athlete" ON "public"."activity_zone_summaries" USING "btree" ("athlete_id");
 
 
