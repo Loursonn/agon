@@ -93,7 +93,7 @@ Chaque lecture est journalisée.
 | GET | `/drafts?status=pending\|applied\|rejected\|undone&athlete_id=…` | Propositions et leur sort |
 | POST | `/drafts/:id/appliquer` | Appliquer une proposition déposée |
 | POST | `/drafts/:id/annuler` | Annuler une proposition appliquée (`{ "forcer": true }` si besoin, voir plus bas) |
-| GET | `/exercices?q=squat` | Chercher un exercice dans ta bibliothèque (`&details=1` : avec sa vidéo) |
+| GET | `/exercices?q=squat` | Chercher un exercice dans ta bibliothèque : `[{ name, video }]` (`video` : il a déjà sa vidéo de démo ; `&details=1` : avec `youtube_id`) |
 | GET | `/seances-energie?q=vma` | Chercher une séance énergétique dans ta banque (sans `q` : les 50 dernières) |
 | GET | `/tests?q=squat` | Chercher un test dans ta banque de tests (nom exact à reprendre dans `create_test`) |
 
@@ -152,11 +152,12 @@ lieu.
 
 | op | Champs |
 |---|---|
-| `add_exercice` | `session_id`, `bloc_id`, `position?`, `exercice: { exercise_name, mode?: "classique"\|"libre", libre_text?, comment?, params }` |
+| `add_exercice` | `session_id`, `bloc_id`, `position?`, `exercice: { exercise_name (ou exercise_ref), mode?: "classique"\|"libre", libre_text?, comment?, params }` |
 | `update_exercice` | `session_id`, `exercice_id`, `a_partir_de` (obligatoire avec `params`), `params?`, `comment?`, `libre_text?` |
 | `remove_exercice` | `session_id`, `exercice_id` |
 | `set_bloc_instructions` | `session_id`, `bloc_id`, `instructions` |
 | `set_exercise_video` | `exercise_name`, `youtube`, `remplacer?` |
+| `create_exercise` | `name`, `youtube`, `ref?`, `ex_type?`, `category?`, `equipment?`, `instructions?` |
 
 `a_partir_de` : numéro de l'occurrence de la séance à partir de laquelle la
 modification vaut — en général `prochaine_occurrence`. Elle vaut jusqu'à la
@@ -182,9 +183,9 @@ lien dans la consigne (`comment`).
   donne l'ID actuel). Même vidéo : rien ne change.
 - `POST /drafts/:id/annuler` remet la vidéo d'avant, sauf si elle a été changée
   depuis.
-- `GET /exercices?q=…&details=1` renvoie `[{ name, youtube_id }]` : utile pour
-  voir lesquels ont déjà une vidéo. Sans `details`, la réponse reste une liste
-  de noms.
+- `GET /exercices?q=…` renvoie `[{ name, video }]` : `video: false` →
+  `set_exercise_video` ; exercice absent → `create_exercise`. Avec
+  `&details=1` : `[{ name, youtube_id, video }]`.
 
 ```bash
 curl -s -X POST -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
@@ -192,6 +193,47 @@ curl -s -X POST -H "Authorization: Bearer $KEY" -H "Content-Type: application/js
     "kind": "programme",
     "title": "Vidéos de démo",
     "ops": [{ "op": "set_exercise_video", "exercise_name": "Squat", "youtube": "https://youtu.be/<id>" }]
+  }'
+```
+
+`create_exercise` ajoute à la banque un exercice qui n'y est pas, **avec sa
+vidéo de démo** : l'athlète a le bouton vidéo dès sa séance. Accepté dans les
+propositions `programme`, `semaine` et `plan`.
+
+- `name` : 80 caractères. Si un exercice de ta bibliothèque (public ou à toi)
+  a déjà ce nom — casse, accents et ponctuation ignorés — refus : utilise
+  `set_exercise_video` sur l'existant.
+- `youtube` : obligatoire, ID ou URL comme pour `set_exercise_video`.
+- `ex_type` : `muscu` (défaut), `halterophilie`, `mobilite`, `plio`, `vitesse`.
+  `category`, `equipment` : texte libre (40 car.), `instructions` : 1000 car.
+- `ref` : nom court pour le citer ensuite (`"exercise_ref": "pallof"` dans un
+  exercice de séance). Sinon, le nom suffit.
+- **L'ordre compte** : un `add_exercice` ou un `create_session` placé *après*
+  le `create_exercise` y est relié (`exercise_id` rempli) ; placé avant, il
+  reste hors bibliothèque.
+- Inséré quand la proposition est appliquée, pas au dépôt. Public (banque
+  commune) si tu es coach certifié ou admin Agon, sinon privé à ta banque —
+  dans les deux cas, tes athlètes voient la vidéo.
+- `POST /drafts/:id/annuler` le retire de la banque, sauf s'il est utilisé
+  ailleurs depuis (programme d'un autre athlète, séance déjà faite, retour,
+  record) : il reste, et la réponse le dit (`exercices_conserves`).
+
+```bash
+curl -s -X POST -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
+  $BASE/athletes/<id>/drafts -d '{
+    "kind": "semaine",
+    "title": "Gainage anti-rotation jeudi",
+    "body": "Ajout du Pallof press, absent de la banque, avec sa vidéo.",
+    "ops": [
+      { "op": "create_exercise", "ref": "pallof", "name": "Pallof press",
+        "youtube": "https://youtu.be/<id>", "category": "Core", "equipment": "Élastique" },
+      { "op": "create_session", "ref": "gainage", "name": "Gainage", "blocs": [
+        { "name": "Core", "category": "Mixte", "exercices": [
+          { "exercise_ref": "pallof", "params": { "nb_series": 3, "reps": 12 }, "comment": "Côté par côté" }
+        ] }
+      ] },
+      { "op": "place_session", "ref": "gainage", "date": "<AAAA-MM-JJ>" }
+    ]
   }'
 ```
 
@@ -227,6 +269,7 @@ ce qui est déjà prévu, l'assistant lit `GET /summary` sur la semaine à venir
 
 | op | Champs |
 |---|---|
+| `create_exercise` | comme en programme : un exercice ajouté à la banque, avec sa vidéo, avant les séances qui l'utilisent |
 | `create_session` | `ref`, `name`, `short?`, `blocs: [{ name, category?, instructions?, exercices: [exercice] }]` |
 | `place_session` | `date`, et `session_id` (séance du programme) **ou** `ref` (séance créée plus haut) |
 | `create_energy_session` | `ref`, `name`, `session_kind`, `structure_type?`, `notes?`, `intervals` |

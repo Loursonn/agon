@@ -38,6 +38,25 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-17-assistant-cree-exercice-banque",
+    date: "2026-11-17",
+    kind: "feature",
+    title: "Votre assistant Claude peut ajouter un exercice à votre banque, avec sa vidéo",
+    summary:
+      "Quand un exercice manque dans la banque, l'assistant peut le créer avec sa vidéo YouTube et l'utiliser tout de suite dans une séance : l'athlète a le bouton vidéo.",
+    sections: [
+      {
+        title: "Ce qui change pour vous",
+        points: [
+          "La proposition de l'assistant affiche « Nouvel exercice dans la banque : <nom> (vidéo) » avant que vous l'appliquiez.",
+          "L'exercice n'est créé que si vous appliquez la proposition. Coach certifié : il rejoint la banque commune ; sinon, il reste dans votre banque.",
+          "Annuler la proposition retire l'exercice, sauf s'il sert déjà ailleurs : il reste alors, et l'assistant vous le dit.",
+          "Si l'exercice existe déjà, l'assistant lui ajoute sa vidéo au lieu d'en créer un second.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-17-fix-ia-date-naissance-pas-coupee",
     date: "2026-11-17",
     kind: "fix",

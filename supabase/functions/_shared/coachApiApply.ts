@@ -23,6 +23,8 @@ import {
   type DraftOp,
   type GoalsOp,
   type GoalsShape,
+  type NewExerciseOp,
+  normName,
   type PlanningOp,
   type ProgOp,
   type ProgSessionShape,
@@ -105,7 +107,12 @@ async function syncFiches(db: Db, athleteId: string, coachId: string) {
 }
 
 async function run(input: ApplyInput, journal: UndoStep[]): Promise<GoalsShape | undefined> {
-  const { db, athleteId, coachId, kind, ops } = input;
+  const { db, athleteId, coachId, kind } = input;
+
+  // Exercices nouveaux d'abord : les séances de la proposition s'y rattachent.
+  const newExercises = input.ops.filter((o): o is NewExerciseOp => o.op === "create_exercise");
+  if (newExercises.length > 0) await applyNewExercises(db, coachId, newExercises, journal);
+  const ops = input.ops.filter((o) => o.op !== "create_exercise");
 
   if (kind === "programme" || kind === "planning") {
     // Les vidéos vont dans la banque d'exercices, pas dans le programme : une
@@ -155,6 +162,72 @@ async function run(input: ApplyInput, journal: UndoStep[]): Promise<GoalsShape |
 }
 
 type VideoOp = Extract<ProgOp, { op: "set_exercise_video" }>;
+
+/**
+ * Exercices ajoutés à la banque. Tout coach peut en créer (policy
+ * `exercises_insert_coach`) ; l'exercice n'est public que pour un admin ou
+ * un coach certifié (la banque commune), sinon il reste privé au coach. Le
+ * doublon est revérifié ici : un exercice du même nom a pu être créé depuis
+ * le dépôt de la proposition.
+ */
+async function applyNewExercises(db: Db, coachId: string, ops: NewExerciseOp[], journal: UndoStep[]) {
+  const [me, visible] = await Promise.all([
+    db.from("profiles").select("is_admin, is_certified_coach").eq("id", coachId).maybeSingle()
+      .then((r: { data: Row | null; error: { message: string } | null }) => check(r, "profiles")),
+    db.from("exercises").select("id, name").or(`is_public.eq.true,created_by.eq.${coachId}`).limit(5000)
+      .then((r: { data: Row[]; error: { message: string } | null }) => check(r, "exercises")),
+  ]);
+  const isPublic = me?.is_admin === true || me?.is_certified_coach === true;
+  const taken = new Map((visible ?? []).map((r: Row) => [normName(String(r.name ?? "")), r]));
+  const rows: Row[] = [];
+  for (const op of ops) {
+    const t = taken.get(normName(op.name));
+    if (t?.id === op.exercise_id) continue;
+    if (t) throw new ApplyConflict(`« ${t.name} » existe déjà dans la banque (créé depuis la proposition)`);
+    rows.push({
+      id: op.exercise_id,
+      name: op.name,
+      ex_type: op.ex_type,
+      youtube_id: op.youtube_id,
+      category: op.category ?? null,
+      equipment: op.equipment ?? null,
+      instructions: op.instructions ?? null,
+      created_by: coachId,
+      is_public: isPublic,
+      is_verified: false,
+    });
+  }
+  if (rows.length === 0) return;
+  const data = check<Row[]>(await db.from("exercises").insert(rows).select("id, name"), "exercises");
+  journal.push({ t: "exercise_created", exercises: data.map((r) => ({ id: r.id as string, name: r.name as string })) });
+}
+
+/**
+ * Exercices créés par la proposition encore utilisés ailleurs : dans le
+ * programme d'un athlète (n'importe lequel, l'exercice public a pu être repris),
+ * un retour sur exercice, un tour de montre ou un record.
+ */
+async function exercisesInUse(db: Db, ids: string[]): Promise<Set<string>> {
+  const used = new Set<string>();
+  const [comments, laps, prs] = await Promise.all([
+    db.from("workout_exercise_comments").select("exercise_id").in("exercise_id", ids),
+    db.from("activity_laps").select("exercise_id").in("exercise_id", ids),
+    db.from("exercise_pr_logs").select("exercise_ref").in("exercise_ref", ids),
+  ]);
+  for (const r of check<Row[]>(comments, "workout_exercise_comments")) used.add(r.exercise_id as string);
+  for (const r of check<Row[]>(laps, "activity_laps")) used.add(r.exercise_id as string);
+  for (const r of check<Row[]>(prs, "exercise_pr_logs")) used.add(r.exercise_ref as string);
+  for (const id of ids) {
+    if (used.has(id)) continue;
+    const progs = check<Row[]>(
+      await db.from("app_data").select("athlete_id").eq("key", "asp:prog")
+        .contains("value", [{ blocs: [{ exercices: [{ exercise_id: id }] }] }]).limit(1),
+      "app_data",
+    );
+    if (progs.length > 0) used.add(id);
+  }
+  return used;
+}
 
 /**
  * Vidéos de démo dans la banque d'exercices. L'API écrit avec la clé de
@@ -326,6 +399,8 @@ export interface UndoReport {
   kept: number;
   /** Étapes en échec (mode `bestEffort` seulement). */
   failed: string[];
+  /** Exercices créés par la proposition, restés dans la banque : utilisés ailleurs. */
+  keptExercises: string[];
 }
 
 /**
@@ -375,6 +450,13 @@ export function parseUndo(raw: unknown): UndoStep[] {
       && (o.before === null || typeof o.before === "string")
     ) {
       out.push({ t: "exercise_video", exercise_id: o.exercise_id, before: o.before as string | null, after: o.after });
+    } else if (o.t === "exercise_created" && Array.isArray(o.exercises)) {
+      out.push({
+        t: "exercise_created",
+        exercises: o.exercises
+          .filter((x): x is Row => !!x && typeof x === "object" && typeof (x as Row).id === "string")
+          .map((x) => ({ id: x.id as string, name: typeof x.name === "string" ? x.name : "" })),
+      });
     } else if (o.t === "habit_tracker" && Array.isArray(o.habit_ids)) {
       out.push({ t: "habit_tracker", habit_ids: o.habit_ids.filter((x): x is string => typeof x === "string") });
     }
@@ -413,8 +495,13 @@ export async function undoSteps(
 
   let kept = 0;
   const failed: string[] = [];
+  const keptExercises: string[] = [];
   for (const s of [...steps].reverse()) {
     try {
+      if (s.t === "exercise_created") {
+        keptExercises.push(...await undoExercisesCreated(db, coachId, s.exercises));
+        continue;
+      }
       kept += await undoOne(db, athleteId, coachId, s);
     } catch (e) {
       if (!bestEffort) throw e;
@@ -422,7 +509,22 @@ export async function undoSteps(
     }
   }
   if (steps.length > 0) await syncFiches(db, athleteId, coachId);
-  return { kept, failed };
+  return { kept, failed, keptExercises };
+}
+
+/**
+ * Retire de la banque les exercices créés par la proposition. Passe en
+ * dernier (première étape du journal) : le programme est déjà revenu à son
+ * état d'avant, ce qui y reste vient d'ailleurs. Renvoie les noms gardés.
+ */
+async function undoExercisesCreated(db: Db, coachId: string, exercises: { id: string; name: string }[]): Promise<string[]> {
+  if (exercises.length === 0) return [];
+  const used = await exercisesInUse(db, exercises.map((e) => e.id));
+  const remove = exercises.filter((e) => !used.has(e.id)).map((e) => e.id);
+  if (remove.length > 0) {
+    check(await db.from("exercises").delete().eq("created_by", coachId).in("id", remove), "exercises");
+  }
+  return exercises.filter((e) => used.has(e.id)).map((e) => e.name);
 }
 
 /** Défait une étape ; renvoie le nombre d'éléments gardés (réalisés). */

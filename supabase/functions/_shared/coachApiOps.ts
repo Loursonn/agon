@@ -178,7 +178,30 @@ export type ProgOp =
     youtube_id: string;
     /** Remplace une vidéo déjà en place (sinon refus). */
     remplacer?: boolean;
-  };
+  }
+  | NewExerciseOp;
+
+/**
+ * Exercice ajouté à la banque, avec sa vidéo de démo. Inséré à l'application
+ * de la proposition ; les séances créées plus loin dans la même proposition
+ * le retrouvent par son nom (ou sa `ref`). Public si le coach est certifié ou
+ * admin, sinon privé au coach : décidé à l'application.
+ */
+export type NewExerciseOp = {
+  op: "create_exercise";
+  /** Fixé à la validation : les séances de la proposition s'y rattachent. */
+  exercise_id: string;
+  name: string;
+  youtube_id: string;
+  ex_type: ExType;
+  category?: string;
+  equipment?: string;
+  instructions?: string;
+};
+
+/** Types d'exercice de la banque (`src/lib/exerciseTypes.ts`). */
+export const EX_TYPES = ["muscu", "halterophilie", "mobilite", "plio", "vitesse"] as const;
+export type ExType = typeof EX_TYPES[number];
 
 export type PlanningOp = {
   op: "set_session_schedule";
@@ -215,7 +238,8 @@ export type WeekOp =
     dominante: DayDominante | null;
     color: string;
     note: string;
-  };
+  }
+  | NewExerciseOp;
 
 export type DraftOp = ProgOp | PlanningOp | GoalsOp | WeekOp | PlanOp | CareOp;
 
@@ -406,6 +430,11 @@ export interface ValidateCtx {
   plan?: PlanState;
   /** Banque d'exercices et droits du coach. Obligatoire pour `set_exercise_video`. */
   videos?: VideoBank;
+  /**
+   * Exercices créés plus haut dans la proposition (`create_exercise`), par
+   * `ref`. Tenu par `validateDraft`, pas par l'appelant.
+   */
+  newExercises?: { refs: Map<string, { id: string; name: string }>; names: Set<string> };
 }
 
 /** Exercice de la banque visible du coach, avec sa vidéo actuelle. */
@@ -454,16 +483,80 @@ export function parseYoutubeId(input: string): string | null {
   return id && YOUTUBE_ID.test(id) ? id : null;
 }
 
+function youtubeField(v: unknown, path: string): string {
+  if (typeof v !== "string") fail(path, "texte attendu : ID YouTube (11 caractères) ou URL de la vidéo");
+  const youtubeId = parseYoutubeId(v);
+  if (!youtubeId) {
+    fail(path, "vidéo YouTube non reconnue : ID de 11 caractères ou URL (watch?v=, youtu.be/, shorts/, embed/)");
+  }
+  return youtubeId;
+}
+
+/**
+ * `create_exercise` : un exercice absent de la banque, avec sa vidéo. Refusé
+ * si un exercice visible du coach porte déjà ce nom (même normalisation que
+ * le rattachement des séances) : pour une vidéo sur un exercice existant,
+ * c'est `set_exercise_video`.
+ */
+function parseCreateExercise(raw: Obj, path: string, ctx: ValidateCtx): NewExerciseOp {
+  onlyKeys(raw, ["op", "ref", "name", "youtube", "ex_type", "category", "equipment", "instructions"], path);
+  const name = reqText(raw.name, LIMITS.exerciseName, `${path}.name`).replace(/\s+/g, " ");
+  const key = normName(name);
+  if (!key) fail(`${path}.name`, "le nom doit contenir des lettres ou des chiffres");
+  const created = ctx.newExercises;
+  if (!ctx.library || !created) fail(path, "banque d'exercices indisponible");
+  const ref = raw.ref === undefined ? undefined : parseRef(raw.ref, `${path}.ref`, created.refs);
+  const youtubeId = youtubeField(raw.youtube, `${path}.youtube`);
+  if (created.names.has(key)) {
+    fail(`${path}.name`, `« ${name} » est déjà créé plus haut dans cette proposition`);
+  }
+  const existing = ctx.library.get(key);
+  if (existing) {
+    fail(`${path}.name`, `« ${existing.name} » existe déjà dans la banque : ne pas le recréer. Pour lui donner une vidéo : set_exercise_video avec exercise_name « ${existing.name} » (proposition programme)`);
+  }
+  const exType = raw.ex_type === undefined
+    ? "muscu"
+    : (EX_TYPES.includes(raw.ex_type as ExType) ? raw.ex_type as ExType : fail(`${path}.ex_type`, `${EX_TYPES.join(", ")} attendu`));
+  const op: NewExerciseOp = { op: "create_exercise", exercise_id: ctx.newId(), name, youtube_id: youtubeId, ex_type: exType };
+  if (raw.category !== undefined) {
+    const t = cleanText(raw.category, 40, `${path}.category`);
+    if (t) op.category = t;
+  }
+  if (raw.equipment !== undefined) {
+    const t = cleanText(raw.equipment, 40, `${path}.equipment`);
+    if (t) op.equipment = t;
+  }
+  if (raw.instructions !== undefined) {
+    const t = cleanText(raw.instructions, LIMITS.instructions, `${path}.instructions`);
+    if (t) op.instructions = t;
+  }
+  // Les exercices de séance qui suivent s'y rattachent par le nom ou la ref.
+  const entry = { id: op.exercise_id, name };
+  ctx.library.set(key, entry);
+  created.names.add(key);
+  if (ref) created.refs.set(ref, entry);
+  return op;
+}
+
 /** Exercice ajouté par l'assistant, dans un bloc existant ou une séance créée. */
 function parseNewExercice(e: unknown, ep: string, ctx: ValidateCtx): ExerciceShape {
   if (!isObj(e)) fail(ep, "objet attendu");
-  onlyKeys(e, ["exercise_name", "mode", "libre_text", "comment", "params"], ep);
-  const name = reqText(e.exercise_name, LIMITS.exerciseName, `${ep}.exercise_name`);
+  onlyKeys(e, ["exercise_name", "exercise_ref", "mode", "libre_text", "comment", "params"], ep);
+  let name: string;
+  let lib: { id: string; name: string } | undefined;
+  if (e.exercise_ref !== undefined) {
+    // Exercice créé plus haut dans la proposition (`create_exercise`).
+    lib = typeof e.exercise_ref === "string" ? ctx.newExercises?.refs.get(e.exercise_ref) : undefined;
+    if (!lib) fail(`${ep}.exercise_ref`, "aucun exercice créé plus haut avec cette ref (create_exercise avant la séance)");
+    name = lib.name;
+  } else {
+    name = reqText(e.exercise_name, LIMITS.exerciseName, `${ep}.exercise_name`);
+    lib = ctx.library?.get(normName(name));
+  }
   const mode = e.mode ?? "classique";
   if (mode !== "classique" && mode !== "libre") {
     fail(`${ep}.mode`, "« classique » ou « libre » attendu (les méthodes se choisissent dans Agon)");
   }
-  const lib = ctx.library?.get(normName(name));
   const exercice: ExerciceShape = {
     id: ctx.newId(),
     exercise_id: lib?.id ?? "",
@@ -545,11 +638,7 @@ function parseProgOp(raw: Obj, path: string, ctx: ValidateCtx): ProgOp {
     case "set_exercise_video": {
       onlyKeys(raw, ["op", "exercise_name", "youtube", "remplacer"], path);
       const name = reqText(raw.exercise_name, LIMITS.exerciseName, `${path}.exercise_name`);
-      if (typeof raw.youtube !== "string") fail(`${path}.youtube`, "texte attendu : ID YouTube (11 caractères) ou URL de la vidéo");
-      const youtubeId = parseYoutubeId(raw.youtube);
-      if (!youtubeId) {
-        fail(`${path}.youtube`, "vidéo YouTube non reconnue : ID de 11 caractères ou URL (watch?v=, youtu.be/, shorts/, embed/)");
-      }
+      const youtubeId = youtubeField(raw.youtube, `${path}.youtube`);
       if (raw.remplacer !== undefined && typeof raw.remplacer !== "boolean") fail(`${path}.remplacer`, "true ou false attendu");
       const bank = ctx.videos;
       if (!bank) fail(path, "banque d'exercices indisponible");
@@ -573,8 +662,11 @@ function parseProgOp(raw: Obj, path: string, ctx: ValidateCtx): ProgOp {
       };
     }
 
+    case "create_exercise":
+      return parseCreateExercise(raw, path, ctx);
+
     default:
-      return fail(`${path}.op`, "add_exercice, update_exercice, remove_exercice, set_bloc_instructions ou set_exercise_video attendu");
+      return fail(`${path}.op`, "add_exercice, update_exercice, remove_exercice, set_bloc_instructions, set_exercise_video ou create_exercise attendu");
   }
 }
 
@@ -733,6 +825,9 @@ function weekParser(ctx: ValidateCtx, plan: boolean) {
         return { op: "create_session", session };
       }
 
+      case "create_exercise":
+        return parseCreateExercise(raw, path, ctx);
+
       case "create_energy_session": {
         onlyKeys(raw, ["op", "ref", "name", "session_kind", "structure_type", "notes", "intervals"], path);
         const ref = parseRef(raw.ref, `${path}.ref`, energyRefs);
@@ -819,7 +914,9 @@ function weekParser(ctx: ValidateCtx, plan: boolean) {
   return { parse, sessionRefs, energyRefs };
 }
 
-const WEEK_OPS = ["create_session", "place_session", "create_energy_session", "place_energy_session", "set_day_theme"] as const;
+const WEEK_OPS = [
+  "create_exercise", "create_session", "place_session", "create_energy_session", "place_energy_session", "set_day_theme",
+] as const;
 
 function parseWeekOps(rawOps: Obj[], ctx: ValidateCtx): WeekOp[] {
   const p = weekParser(ctx, false);
@@ -907,6 +1004,9 @@ export function validateDraft(raw: unknown, ctx: ValidateCtx): Result<ValidDraft
     raw.ops.forEach((o: unknown, i: number) => {
       if (!isObj(o)) fail(`ops[${i}]`, "objet attendu");
     });
+    // `create_exercise` complète la bibliothèque pour les opérations qui
+    // suivent : sur une copie, l'appelant garde la sienne.
+    ctx = { ...ctx, library: ctx.library ? new Map(ctx.library) : undefined, newExercises: { refs: new Map(), names: new Set() } };
     if (kind === "semaine") {
       const ops = parseWeekOps(raw.ops as Obj[], ctx);
       return { ok: true, value: { kind: "semaine", title, body, ops } };
@@ -1052,6 +1152,7 @@ export function applyProgOps(
         break;
 
       case "set_exercise_video":
+      case "create_exercise":
         // Banque d'exercices, pas le programme : appliqué à part.
         break;
 
