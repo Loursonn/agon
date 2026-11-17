@@ -38,6 +38,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-17-fix-ia-date-naissance-pas-coupee",
+    date: "2026-11-17",
+    kind: "fix",
+    title: "Date de naissance : l'IA n'est finalement pas coupée le 22 novembre",
+    summary:
+      "Contrairement à ce qu'annonçait la nouveauté du 14 novembre, un athlète sans date de naissance garde l'accès aux analyses par IA après le 21 novembre.",
+    sections: [
+      {
+        title: "Ce qui change pour vous",
+        points: [
+          "Le message « d'ici le 21 novembre pour garder l'IA » n'est plus affiché à vos athlètes.",
+          "La date de naissance reste demandée une fois à chaque athlète qui ne l'a pas encore renseignée, et la mention sur sa fiche (Profil, bloc Identité) reste en place.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-16-fix-moins-de-requetes",
     date: "2026-11-16",
     kind: "fix",
