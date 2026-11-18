@@ -7,7 +7,8 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
   MEASUREMENT_FIELDS, BIOMETRY_FIELDS, SEGMENT_FIELDS, MYJUMP_FIELDS, ALL_MEASUREMENT_FIELDS, PHOTO_SLOTS, ALL_MEASUREMENT_KEYS,
-  type MeasurementField, type MeasurementKey, type PhotoSlot, type MeasurementLog,
+  CLASSIC_BIOMETRY_FIELDS, ADVANCED_BIOMETRY_FIELDS,
+  type BiometryLevel, type MeasurementField, type MeasurementKey, type PhotoSlot, type MeasurementLog,
 } from '@/features/shared/types/measurements';
 import {
   useMeasurementLogs, useCreateMeasurementLog,
@@ -45,6 +46,11 @@ interface Props {
   viewOnly?: boolean;
   /** Ouvre directement le formulaire "Nouvelle saisie" (saisie planifiée par le coach) */
   initialNew?: boolean;
+  /**
+   * Biométrie planifiée : niveaux demandés en plus de la classique (poids,
+   * taille, tours, photos). Absent : saisie libre, tous les champs.
+   */
+  levels?: BiometryLevel[];
   onClose: () => void;
 }
 
@@ -155,10 +161,11 @@ const UNIT = 'text-[11px] text-agon-tx3';
 // ── Entry form (création + édition) ────────────────────────────────────────────
 
 function EntryForm({
-  athleteId, editLog, photoUrls, onDone,
+  athleteId, editLog, photoUrls, levels, onDone,
 }: {
   athleteId: string;
   editLog?: MeasurementLog;
+  levels?: BiometryLevel[];
   photoUrls: Record<string, string>;
   onDone: () => void;
 }) {
@@ -330,23 +337,47 @@ function EntryForm({
         </div>
       </div>
 
-      {/* Biométrie : stature, envergure */}
-      <div>
-        <SectionLabel icon={<MoveVertical size={12} color={C.g} />} text="Biométrie (cm)" />
-        <div className="flex flex-col gap-2">{BIOMETRY_FIELDS.map(singleField)}</div>
-      </div>
+      {levels ? (
+        <>
+          {/* Biométrie planifiée : classique toujours, niveaux cochés par le coach */}
+          <div>
+            <SectionLabel icon={<MoveVertical size={12} color={C.g} />} text="Biométrie (cm)" />
+            <div className="flex flex-col gap-2">{CLASSIC_BIOMETRY_FIELDS.map(singleField)}</div>
+          </div>
+          {levels.includes('avancee') && (
+            <div>
+              <SectionLabel icon={<Ruler size={12} color={C.g} />} text="Biométrie avancée (cm)" />
+              <div className="flex flex-col gap-2">{ADVANCED_BIOMETRY_FIELDS.map(singleField)}</div>
+            </div>
+          )}
+          {levels.includes('myjump') && (
+            <div>
+              <SectionLabel icon={<Activity size={12} color={C.g} />} text="Mesures MyJump (cm)" />
+              <div className="flex flex-col gap-2">{MYJUMP_FIELDS.map(singleField)}</div>
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          {/* Biométrie : stature, envergure */}
+          <div>
+            <SectionLabel icon={<MoveVertical size={12} color={C.g} />} text="Biométrie (cm)" />
+            <div className="flex flex-col gap-2">{BIOMETRY_FIELDS.map(singleField)}</div>
+          </div>
 
-      {/* Longueurs de segment */}
-      <div>
-        <SectionLabel icon={<Ruler size={12} color={C.g} />} text="Segments (cm)" />
-        <div className="flex flex-col gap-2">{SEGMENT_FIELDS.map(singleField)}</div>
-      </div>
+          {/* Longueurs de segment */}
+          <div>
+            <SectionLabel icon={<Ruler size={12} color={C.g} />} text="Segments (cm)" />
+            <div className="flex flex-col gap-2">{SEGMENT_FIELDS.map(singleField)}</div>
+          </div>
 
-      {/* Les deux longueurs que l'app MyJump demande */}
-      <div>
-        <SectionLabel icon={<Activity size={12} color={C.g} />} text="Mesures MyJump (cm)" />
-        <div className="flex flex-col gap-2">{MYJUMP_FIELDS.map(singleField)}</div>
-      </div>
+          {/* Les deux longueurs que l'app MyJump demande */}
+          <div>
+            <SectionLabel icon={<Activity size={12} color={C.g} />} text="Mesures MyJump (cm)" />
+            <div className="flex flex-col gap-2">{MYJUMP_FIELDS.map(singleField)}</div>
+          </div>
+        </>
+      )}
 
       {/* Photos */}
       <div>
@@ -416,7 +447,7 @@ function SectionLabel({ icon, text }: { icon: React.ReactNode; text: string }) {
 
 // ── Drawer ────────────────────────────────────────────────────────────────────
 
-export function MensurationsDrawer({ athleteId, viewOnly, initialNew, onClose }: Props) {
+export function MensurationsDrawer({ athleteId, viewOnly, initialNew, levels, onClose }: Props) {
   // Auto-resume draft if one exists
   const [mode, setMode] = useState<Mode>(() => {
     if (viewOnly) return { kind: 'list' };
@@ -463,6 +494,7 @@ export function MensurationsDrawer({ athleteId, viewOnly, initialNew, onClose }:
             <EntryForm
               athleteId={athleteId}
               editLog={mode.kind === 'edit' ? mode.log : undefined}
+              levels={mode.kind === 'new' ? levels : undefined}
               photoUrls={urls}
               onDone={() => setMode({ kind: 'list' })}
             />

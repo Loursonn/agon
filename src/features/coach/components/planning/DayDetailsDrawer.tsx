@@ -25,6 +25,8 @@ import { NutritionDayView } from "./day-details/NutritionDayView";
 import { EnergyDetailView } from "./day-details/EnergyDetailView";
 import { FreeActivityDetailView } from "./day-details/FreeActivityDetailView";
 import { EnergyEventPreview } from "./day-details/EnergyEventPreview";
+import { BiometryLevelsEditor } from "./day-details/BiometryLevelsEditor";
+import { isBiometric } from "./calendar/calendarUtils";
 
 // ── DayDetailsDrawer ──────────────────────────────────────────────────────────
 
@@ -338,7 +340,14 @@ export function DayDetailsDrawer({
                     Tests
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {tests.map(eventOrWatch)}
+                    {tests.map((e) => isBiometric(e)
+                      ? (
+                        <div key={e.id} style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                          {eventOrWatch(e)}
+                          <BiometryLevelsEditor event={e} athleteId={athleteId} />
+                        </div>
+                      )
+                      : eventOrWatch(e))}
                   </div>
                 </section>
               )}

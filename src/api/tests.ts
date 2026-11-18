@@ -11,6 +11,7 @@ import type {
   UpdateTestDefinitionInput,
 } from "@/features/shared/types/tests";
 import type { IsoDay } from "@shared/domain/dates";
+import type { BiometryLevel } from "@/features/shared/types/measurements";
 import { check, db, unwrap, unwrapRows } from "./client";
 import { invalidateReferences } from "./references";
 
@@ -383,6 +384,8 @@ export interface TestSessionFill {
   description: string | null;
   results_note: string | null;
   results_structured: Record<string, unknown> | null;
+  /** Fiche du test, null sans fiche. */
+  doc_id?: string | null;
 }
 
 /** Séance de test telle que l'affiche la semaine / le programme de l'athlète. */
@@ -392,6 +395,10 @@ export interface TestSessionSummary {
   title: string;
   date: string;
   completed: boolean;
+  /** Fiche du test, null sans fiche. */
+  doc_id?: string | null;
+  /** Biométrie : niveaux ajoutés à la classique. */
+  biometry_levels?: BiometryLevel[];
 }
 
 /** Séances de test d'un athlète (prévues et faites), par date croissante. Lève en cas d'erreur. */
@@ -399,7 +406,7 @@ export async function listTestSessions(athleteId: string): Promise<TestSessionSu
   const rows = unwrapRows(
     await untyped()
       .from("test_sessions")
-      .select("id,type,title,date,completed")
+      .select("id,type,title,date,completed,doc_id,biometry_levels")
       .eq("athlete_id", athleteId)
       .order("date", { ascending: true }),
     "Tests programmés non chargés",
@@ -414,7 +421,7 @@ export async function getTestSessionForFill(
   const session = unwrap(
     await untyped()
       .from("test_sessions")
-      .select("id, title, type, date, completed, description, results_note, results_structured")
+      .select("id, title, type, date, completed, description, results_note, results_structured, doc_id")
       .eq("id", sessionId)
       .maybeSingle(),
     "Test non chargé",
@@ -578,12 +585,16 @@ export interface TestSessionWithResults {
 export interface TestSessionBrief {
   id: string; title: string; type: string; date: string; completed: boolean;
   description: string | null; results_note: string | null;
+  /** Fiche du test (coach_test_fiches), null sans fiche. */
+  doc_id: string | null;
+  /** Biométrie : niveaux ajoutés à la classique. */
+  biometry_levels: BiometryLevel[];
 }
 
 /** Séances de test d'un athlète sur une plage, par date. */
 export async function listTestSessionsBetween(athleteId: string, from: IsoDay, to: IsoDay): Promise<TestSessionBrief[]> {
   const rows = unwrapRows<Record<string, unknown>>(
-    (await db().from("test_sessions").select("id, title, type, date, completed, description, results_note")
+    (await db().from("test_sessions").select("id, title, type, date, completed, description, results_note, doc_id, biometry_levels")
       .eq("athlete_id", athleteId).gte("date", from).lte("date", to).order("date")) as never,
     "Lecture des tests impossible",
   );
@@ -592,13 +603,20 @@ export async function listTestSessionsBetween(athleteId: string, from: IsoDay, t
     completed: t.completed === true,
     description: (t.description as string | null) ?? null,
     results_note: (t.results_note as string | null) ?? null,
+    doc_id: (t.doc_id as string | null) ?? null,
+    biometry_levels: Array.isArray(t.biometry_levels) ? (t.biometry_levels as BiometryLevel[]) : [],
   }));
 }
 
-export async function createTestSession(p: { athleteId: string; coachId: string; title: string; type: string; date: IsoDay }): Promise<void> {
+export async function createTestSession(p: {
+  athleteId: string; coachId: string; title: string; type: string; date: IsoDay;
+  /** Biométrie : niveaux ajoutés à la classique. */
+  biometryLevels?: BiometryLevel[];
+}): Promise<void> {
   check(
     await db().from("test_sessions").insert({
       athlete_id: p.athleteId, coach_id: p.coachId, title: p.title, type: p.type, date: p.date, completed: false,
+      ...(p.biometryLevels?.length ? { biometry_levels: p.biometryLevels } : {}),
     } as never),
     "Création du test impossible",
   );
@@ -624,5 +642,51 @@ export async function listMacrocycleTestResults(athleteId: string, macrocycleId:
       .select("id, test_id, value, test_date, notes, test:tests(name, unit, higher_is_better)")
       .eq("athlete_id", athleteId).eq("macrocycle_id", macrocycleId).order("test_date")) as never,
     "Lecture des résultats de test impossible",
+  );
+}
+
+// ── Fiche d'un test (coach_test_fiches) et niveaux de biométrie ─────────────
+
+/** Clé de la biométrie dans coach_test_fiches (les tests y sont rangés par id). */
+export const BIOMETRY_TEST_KEY = "biometrie";
+
+export const testFicheKeys = {
+  coach: (coachId: string) => ["tests", "_fiches", coachId] as const,
+};
+
+/** Fiche rattachée à chaque test du coach : clé = id du test ou « biometrie ». */
+export async function listCoachTestFiches(coachId: string): Promise<Record<string, string>> {
+  const rows = unwrapRows(
+    await db().from("coach_test_fiches").select("test_key, doc_id").eq("coach_id", coachId),
+    "Lecture des fiches de test impossible",
+  );
+  return Object.fromEntries(rows.map((r) => [r.test_key, r.doc_id]));
+}
+
+/** Rattache (ou retire, docId null) la fiche d'un test. Les tests encore à faire suivent (trigger). */
+export async function setCoachTestFiche(coachId: string, testKey: string, docId: string | null): Promise<void> {
+  if (docId) {
+    check(
+      await db().from("coach_test_fiches").upsert(
+        { coach_id: coachId, test_key: testKey, doc_id: docId, updated_at: new Date().toISOString() },
+        { onConflict: "coach_id,test_key" },
+      ),
+      "Fiche du test non enregistrée",
+    );
+  } else {
+    check(
+      await db().from("coach_test_fiches").delete().eq("coach_id", coachId).eq("test_key", testKey),
+      "Fiche du test non retirée",
+    );
+  }
+}
+
+/** Biométrie : niveaux ajoutés à la classique. */
+export type { BiometryLevel };
+
+export async function setBiometryLevels(testSessionId: string, levels: BiometryLevel[]): Promise<void> {
+  check(
+    await db().from("test_sessions").update({ biometry_levels: levels }).eq("id", testSessionId),
+    "Niveaux de biométrie non enregistrés",
   );
 }

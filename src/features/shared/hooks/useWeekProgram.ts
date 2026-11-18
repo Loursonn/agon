@@ -1,3 +1,4 @@
+import type { BiometryLevel } from "@/features/shared/types/measurements";
 import { STALE_MS } from "@/lib/queryCache";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -27,6 +28,10 @@ export interface TestSess {
   title: string;
   date: string;
   completed: boolean;
+  /** Fiche du test, null sans fiche. */
+  doc_id?: string | null;
+  /** Biométrie : niveaux ajoutés à la classique. */
+  biometry_levels?: BiometryLevel[];
 }
 
 export interface DayProgram {

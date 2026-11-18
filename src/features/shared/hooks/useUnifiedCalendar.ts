@@ -1,3 +1,4 @@
+import type { BiometryLevel } from "@/features/shared/types/measurements";
 /**
  * useUnifiedCalendar — single source of truth for all calendar data.
  *
@@ -98,14 +99,16 @@ export function useCreateTestSession() {
       title,
       type,
       date,
+      biometryLevels,
     }: {
       athleteId: string;
       coachId: string;
       title: string;
       type: string;
       date: string;
+      biometryLevels?: BiometryLevel[];
     }) => {
-      await createTestSession({ athleteId, coachId, title, type, date });
+      await createTestSession({ athleteId, coachId, title, type, date, biometryLevels });
     },
     onSuccess: (_data, vars) => {
       void invalidateTests(qc, vars.athleteId);
