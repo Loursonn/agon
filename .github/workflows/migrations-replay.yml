@@ -69,7 +69,7 @@ jobs:
           cp "$RUNNER_TEMP/failed.txt" "$RUNNER_TEMP/${{ matrix.side }}-failed.txt"
           wc -l "$RUNNER_TEMP/${{ matrix.side }}.sql"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: schema-${{ matrix.side }}
           path: |
@@ -105,7 +105,7 @@ jobs:
           echo "Lignes de diff (prod → migrations) : $(/usr/bin/grep -cE '^[-+][^-+]' out/schema.diff || true)" >> "$GITHUB_STEP_SUMMARY"
           { echo '```diff'; head -400 out/schema.diff; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           [ "$rc" = 0 ] && [ ! -s out/migrations-failed.txt ] && echo "DIFF VIDE" || { echo "Écarts : voir le résumé"; exit 1; }
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: schema-diff
