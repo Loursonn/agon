@@ -10,7 +10,8 @@ export type MeasurementKey =
 /** Biométrie : stature, envergure et mesures demandées par l'app MyJump. */
 export type BiometryKey =
   | 'height_cm' | 'wingspan_cm' | 'leg_length_cm' | 'jump_start_height_cm'
-  | 'thigh_length_cm' | 'shank_length_cm' | 'arm_length_cm';
+  | 'thigh_length_cm' | 'shank_length_cm' | 'arm_length_cm'
+  | 'forearm_length_cm' | 'leg_standing_cm';
 
 export type PhotoSlot =
   | 'face' | 'cote' | 'dos' | 'jambes_face' | 'jambes_dos';
@@ -45,11 +46,30 @@ export const MYJUMP_FIELDS: MeasurementField[] = [
   { key: 'jump_start_height_cm', label: 'Hauteur de départ',            hint: 'Accroupi genoux à 90°, du grand trochanter au sol.' },
 ];
 
+/** Biométrie planifiée : niveaux que le coach ajoute à la classique. */
+export type BiometryLevel = 'avancee' | 'myjump';
+
+export const BIOMETRY_LEVEL_OPTIONS: { key: BiometryLevel; label: string; detail: string }[] = [
+  { key: 'avancee', label: 'Avancée', detail: 'envergure, longueurs de cuisse, jambe et bras' },
+  { key: 'myjump',  label: 'MyJump',  detail: 'longueur du membre inférieur, hauteur de départ' },
+];
+
 /** Longueurs de segment (cm). Les champs bras / cuisse / mollet plus haut sont des tours. */
 export const SEGMENT_FIELDS: MeasurementField[] = [
   { key: 'thigh_length_cm', label: 'Longueur de cuisse', hint: 'Debout, côté externe : du grand trochanter (haut de la hanche) à l’interligne du genou.' },
   { key: 'shank_length_cm', label: 'Longueur de jambe',  hint: 'De l’interligne du genou à la malléole externe (bosse de la cheville).' },
   { key: 'arm_length_cm',   label: 'Longueur de bras',   hint: 'Bras le long du corps : de l’acromion (pointe de l’épaule) au coude.' },
+  { key: 'forearm_length_cm', label: 'Longueur d’avant-bras', hint: 'De la pointe du coude (olécrane) à la bosse de l’os côté petit doigt au poignet (tête de l’ulna).' },
+  { key: 'leg_standing_cm',   label: 'Longueur de jambe debout', hint: 'Debout : de la pointe osseuse à l’avant du bassin (EIAS) à la malléole interne (bosse intérieure de la cheville).' },
+];
+
+/** Biométrie classique (toujours demandée) : la taille debout. */
+export const CLASSIC_BIOMETRY_FIELDS: MeasurementField[] = BIOMETRY_FIELDS.filter((f) => f.key === 'height_cm');
+
+/** Biométrie avancée : envergure et longueurs de segment (stables, demandées quand le coach coche « Avancée »). */
+export const ADVANCED_BIOMETRY_FIELDS: MeasurementField[] = [
+  ...BIOMETRY_FIELDS.filter((f) => f.key !== 'height_cm'),
+  ...SEGMENT_FIELDS,
 ];
 
 /** Tous les champs, dans l'ordre d'affichage (tours, biométrie, segments, MyJump). */
@@ -63,6 +83,7 @@ export const ALL_MEASUREMENT_KEYS: MeasurementKey[] = [
   'mollet', 'mollet_g', 'mollet_d',
   'height_cm', 'wingspan_cm', 'leg_length_cm', 'jump_start_height_cm',
   'thigh_length_cm', 'shank_length_cm', 'arm_length_cm',
+  'forearm_length_cm', 'leg_standing_cm',
 ];
 
 export const PHOTO_SLOTS: { key: PhotoSlot; label: string }[] = [
@@ -102,6 +123,8 @@ export interface MeasurementLog {
   thigh_length_cm: number | null;
   shank_length_cm: number | null;
   arm_length_cm: number | null;
+  forearm_length_cm: number | null;
+  leg_standing_cm: number | null;
   photos: MeasurementPhotos;
   created_at: string;
 }
