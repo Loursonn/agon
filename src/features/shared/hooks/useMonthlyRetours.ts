@@ -75,7 +75,7 @@ function findBlockForDate(
 
 // ── Core fetch ────────────────────────────────────────────────────────────────
 
-async function fetchMonthData(athleteId: string, monthStart: Date): Promise<MonthlyRetourData> {
+export async function fetchMonthData(athleteId: string, monthStart: Date): Promise<MonthlyRetourData> {
   const start = format(startOfMonth(monthStart), "yyyy-MM-dd");
   const end   = format(endOfMonth(monthStart),   "yyyy-MM-dd");
 
