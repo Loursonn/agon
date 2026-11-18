@@ -115,6 +115,8 @@ export interface FreeActivityDetail {
   duration?: number;  // minutes
   intensity?: number; // 1-5
   note?: string;
+  /** Activité de montre liée : ouvre la vue séance complète (FC, allure…). */
+  activityId?: string;
 }
 
 // ── WeeklyRetourData ──────────────────────────────────────────────────────────

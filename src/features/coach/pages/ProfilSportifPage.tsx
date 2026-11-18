@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { getWellnessHistory, wellnessKeys } from "@/api/wellness";
 import { recentWeights } from "@/api/profile";
 import MeasurementComparison from "@/features/coach/components/MeasurementComparison";
+import { MorphoAnatomySection } from "@/features/coach/components/profil/MorphoAnatomySection";
 import CategoryProfiles from "@/features/coach/components/CategoryProfiles";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { WeightChart } from "@/components/athlete/StatsCharts";
@@ -719,7 +720,12 @@ export default function ProfilSportifPage() {
           </div>
 
           <div className="flex flex-col gap-3">
-            <SectionHead n={6} title="Records personnels (1RM)" />
+            <SectionHead n={6} title="Bilan morpho-anatomique" hint="Ce que les leviers et les muscles changent à la programmation. Observations à remplir dans l'onglet Observations des mensurations." />
+            <MorphoAnatomySection athleteId={athleteId!} />
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <SectionHead n={7} title="Records personnels (1RM)" />
             <PRLogsSection
               athleteId={athleteId!}
               exercises={Object.values(exos).flat()}
@@ -738,7 +744,7 @@ export default function ProfilSportifPage() {
           </div>
 
           <div className="flex flex-col gap-3">
-            <SectionHead n={7} title="Profil par catégorie" />
+            <SectionHead n={8} title="Profil par catégorie" />
             <CategoryProfiles athleteId={athleteId!} />
           </div>
         </div>

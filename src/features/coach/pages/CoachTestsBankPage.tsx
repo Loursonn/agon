@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FlaskConical, Plus, Pencil, Trash2, ChevronDown, ChevronUp, TrendingUp, TrendingDown } from 'lucide-react';
+import { FlaskConical, FileText, Ruler, Plus, Pencil, Trash2, ChevronDown, ChevronUp, TrendingUp, TrendingDown } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { C, alpha, H } from "@/lib/theme";
 import { DISPLAY, KICK, MONO, SectionHead } from '@/features/shared/components/ordi/OrdiUi';
@@ -21,6 +21,9 @@ import type {
 } from '@/features/shared/types/tests';
 import { TEST_CATEGORY_LABEL, TEST_CATEGORY_COLOR, TEST_CATEGORY_ORDER, ARTICULATIONS, PHYSIO_METRICS, isPickableTest } from '@/features/shared/types/tests';
 import type { ExtrapOp } from '@/features/shared/types/tests';
+import { BIOMETRY_TEST_KEY } from '@/api/tests';
+import { useCoachTestFiches } from '@/features/shared/hooks/tests/useTestFiches';
+import { TestFicheSelect } from '@/features/coach/components/tests/TestFicheSelect';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -183,6 +186,9 @@ function TestCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const { profile } = useAuth();
+  const { data: testFiches = {} } = useCoachTestFiches(profile?.id);
+  const hasFiche = !!testFiches[test.id];
   // Planche CoachTests : carte teintée de la couleur de la catégorie.
   const cc = (test.category && TEST_CATEGORY_COLOR[test.category as TestCategory]) || C.ac;
 
@@ -216,6 +222,11 @@ function TestCard({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {hasFiche && (
+            <span style={{ ...PILL, color: C.tx2, background: C.s2, border: '1px solid ' + C.brdL, padding: '2px 8px', display: 'inline-flex', alignItems: 'center', gap: 4 }} title="Fiche rattachée">
+              <FileText size={11} /> Fiche
+            </span>
+          )}
           {test.category && (
             <span style={{ ...PILL, color: C.ink, background: cc }}>
               {TEST_CATEGORY_LABEL[test.category as TestCategory] ?? test.category}
@@ -301,8 +312,39 @@ function TestCard({
               </div>
             ))}
           </div>
+          <TestFicheSelect testKey={test.id} />
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Biométrie (mensurations, photos, longueurs) ──────────────────────────────
+
+function BiometryCard() {
+  const cc = C.ame;
+  return (
+    <div style={{
+      background: alpha(cc, 0.12), borderRadius: 14, border: '1px solid ' + alpha(cc, 0.4),
+      boxShadow: `inset 3px 0 0 ${cc}`, padding: '14px 18px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{
+          width: 36, height: 36, boxSizing: 'border-box', borderRadius: 10, flexShrink: 0,
+          background: alpha(cc, 0.16), border: '1px solid ' + alpha(cc, 0.45),
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Ruler size={16} color={cc} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 500, color: C.tx }}>Biométrie</div>
+          <div style={{ fontSize: 12, color: C.tx3, lineHeight: 1.5 }}>
+            Classique (toujours) : poids, taille debout, tours, photos · Avancée : envergure, longueurs de cuisse, jambe et bras · MyJump : membre inférieur, hauteur de départ.
+            Les niveaux se cochent sur la biométrie planifiée.
+          </div>
+        </div>
+      </div>
+      <TestFicheSelect testKey={BIOMETRY_TEST_KEY} />
     </div>
   );
 }
@@ -610,6 +652,11 @@ export default function CoachTestsBankPage() {
         <ListSkeleton rows={5} />
       ) : (
         <>
+          {/* Biométrie : test planifiable depuis le planning, avec sa fiche */}
+          <section style={{ marginBottom: 32 }}>
+            <BiometryCard />
+          </section>
+
           {/* Presets groupés par catégorie */}
           <section style={{ marginBottom: 32, display: 'flex', flexDirection: 'column', gap: 22 }}>
             {shownCats.map((cat, idx) => {

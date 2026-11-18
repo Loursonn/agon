@@ -1,7 +1,7 @@
 import { type IsoDay, addDays, localIsoDay } from "@shared/domain/dates";
 import { localISO } from "@/lib/date";
 import { computeOccurrences } from "@/lib/sessionOccurrence";
-import { listTestSessionsBetween } from "./tests";
+import { listTestSessionsBetween, type BiometryLevel } from "./tests";
 import { listCompetitions } from "./competitions";
 import { activeCompetitions, isCancelled } from "@shared/domain/competitions";
 import { listLifeEvents } from "./lifeEvents";
@@ -116,6 +116,10 @@ export interface TestBrief {
   completed: boolean;
   description: string | null;
   results_note: string | null;
+  /** Fiche du test, null sans fiche. */
+  doc_id: string | null;
+  /** Biométrie : niveaux ajoutés à la classique. */
+  biometry_levels: BiometryLevel[];
 }
 
 /** Compétition posée sur un jour (comme une séance, en tête du jour) */
@@ -334,6 +338,7 @@ export async function getActivePlan(athleteId: string, weekOffset = 0): Promise<
     push(testsByDate, t.date, {
       id: t.id, title: t.title, type: t.type, date: t.date, completed: t.completed ?? false,
       description: t.description ?? null, results_note: t.results_note ?? null,
+      doc_id: t.doc_id, biometry_levels: t.biometry_levels,
     });
   }
   for (const wl of wLogs) {

@@ -28,8 +28,6 @@ const MOD_STATUS_TONE: Record<string, string> = {
   completed: "bg-agon-succes-doux text-agon-succes",
   missed: "bg-agon-erreur/[0.12] text-agon-erreur",
 };
-import { MuscleVolumePanel } from "@/features/coach/components/programmation/MuscleVolumePanel";
-import { useMuscleVolume } from "@/features/coach/components/programmation/hooks/useMuscleVolume";
 import { localISO } from "@/lib/date";
 import { PageSkeleton } from "@/features/shared/components/skeletons";
 import { KPICard } from "@/features/coach/components/KPICard";
@@ -54,8 +52,12 @@ import { InjuryStageTrack } from "@/features/shared/components/medical/InjurySta
 import { stageOf } from "@/lib/injuryStage";
 import type { EnergySessionDetail } from "@/features/shared/types/retours.types";
 import { watchOrigins } from "@/lib/watchRunLabel";
+import { linkFreeActivities, watchOthersAsFreeActivities, watchRunsAsFreeActivities } from "@/lib/watchFreeRuns";
+import { RetoursWeekFocus } from "@/features/coach/components/retours/period/RetoursWeekFocus";
+import { RetoursPeriodSection } from "@/features/coach/components/retours/period/RetoursPeriodSection";
+import { RetoursCycleView } from "@/features/coach/components/retours/period/RetoursCycleView";
 
-type ViewMode = "month" | "week";
+type ViewMode = "month" | "week" | "cycle";
 type DetailView = "wellness" | "workouts" | "tests" | "competitions" | "nutrition" | null;
 
 const DETAIL_VIEWS = ["wellness", "workouts", "tests", "competitions", "nutrition"] as const;
@@ -63,16 +65,6 @@ const DETAIL_VIEWS = ["wellness", "workouts", "tests", "competitions", "nutritio
 /** `?detail=wellness` ouvre directement le détail : utilisé par les alertes de l'accueil coach. */
 function detailFromParam(raw: string | null): DetailView {
   return DETAIL_VIEWS.includes(raw as (typeof DETAIL_VIEWS)[number]) ? (raw as DetailView) : null;
-}
-
-/** Séries par muscle : 4 semaines avant → 3 après la semaine consultée, prévu et terminé. */
-function RetoursMuscleVolume({ athleteId, weekStart }: { athleteId: string | undefined; weekStart: Date }) {
-  const { weeks, byWeek, isLoading } = useMuscleVolume(
-    athleteId,
-    localISO(subWeeks(weekStart, 4)),
-    localISO(addWeeks(weekStart, 3)),
-  );
-  return <MuscleVolumePanel weeks={weeks} byWeek={byWeek} isLoading={isLoading} showDone title="" />;
 }
 
 export default function RetoursPage() {
@@ -138,7 +130,10 @@ export default function RetoursPage() {
   const periodStart = format(viewMode === "month" ? selectedMonth : selectedWeek, "yyyy-MM-dd");
   const periodEnd   = format(viewMode === "month" ? endOfMonth(selectedMonth) : addDays(selectedWeek, 6), "yyyy-MM-dd");
   // Même calcul que le volume du profil : saisie + montre, une sortie comptée une fois.
-  const { runs, summaryBetween, matchByPlanned } = useRunningVolume(athleteId, freeSessions, periodStart);
+  // Historique chargé dès 4 semaines avant la période : la ligne « Course » du tableau des séries remonte jusque-là.
+  const { runs, outings, others: watchOthers, summaryBetween, matchByPlanned, matchByActivity } = useRunningVolume(
+    athleteId, freeSessions, format(subWeeks(viewMode === "month" ? selectedMonth : selectedWeek, 4), "yyyy-MM-dd"),
+  );
   const { km: runKm, watchKm: runWatchKm } = summaryBetween(periodStart, periodEnd);
   // « Garmin [modèle] » : attribution exigée là où un total inclut des km Garmin.
   const runOrigins = watchOrigins(runs, periodStart, periodEnd);
@@ -164,8 +159,19 @@ export default function RetoursPage() {
   const withWatch = (list: EnergySessionDetail[]): EnergySessionDetail[] =>
     list.map((e) => ({ ...e, watch_run: matchByPlanned.get(e.id) ?? null }));
   const weekCurrentRaw = weekData?.current_week;
+  // Sorties de montre rattachées à aucune séance prévue : affichées comme activité libre du jour.
+  // Activités libres saisies : rattachées à leur activité de montre (vue séance au clic).
+  const linkedFree = linkFreeActivities(weekCurrentRaw?.free_activities ?? [], outings, watchOthers);
+  const watchFree = (from: string, to: string) => [
+    ...watchRunsAsFreeActivities(outings, matchByActivity, from, to),
+    ...watchOthersAsFreeActivities(watchOthers.filter((a) => !linkedFree.usedOtherIds.has(a.id)), from, to),
+  ];
   const weekCurrent = weekCurrentRaw
-    ? { ...weekCurrentRaw, energy_sessions: withWatch(weekCurrentRaw.energy_sessions) }
+    ? {
+        ...weekCurrentRaw,
+        energy_sessions: withWatch(weekCurrentRaw.energy_sessions),
+        free_activities: [...linkedFree.free, ...watchFree(periodStart, periodEnd)],
+      }
     : weekCurrentRaw;
   const monthData = monthDataRaw
     ? { ...monthDataRaw, energy_sessions: withWatch(monthDataRaw.energy_sessions) }
@@ -288,6 +294,31 @@ export default function RetoursPage() {
     );
   }
 
+  if (viewMode === "cycle") {
+    return (
+      <div className={PAGE}>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className={cn(RETOURS_TITLE, "mb-1.5")}>Retours</h1>
+            <div className={cn(KICK, "text-agon-accent")}>Évolution sur un cycle</div>
+          </div>
+          <div className="flex rounded-[4px] bg-agon-s2 p-0.5">
+            {(["week", "month", "cycle"] as ViewMode[]).map((m) => (
+              <button key={m} onClick={() => setViewMode(m)} className={cn(
+                "cursor-pointer rounded-[6px] border-none px-2.5 py-1 text-[11px] [transition:all_120ms]",
+                viewMode === m ? "bg-agon-s1 font-bold text-agon-tx" : "bg-transparent font-medium text-agon-tx3",
+              )}>
+                {m === "week" ? "Semaine" : m === "month" ? "Mois" : "Cycle"}
+              </button>
+            ))}
+          </div>
+        </div>
+        {tabSwitch}
+        <RetoursCycleView athleteId={athleteId} runSummary={summaryBetween} />
+      </div>
+    );
+  }
+
   return (
     <div className={PAGE}>
 
@@ -302,12 +333,12 @@ export default function RetoursPage() {
         <div className="flex items-center gap-2">
           {/* Month/Week toggle */}
           <div className="flex rounded-[4px] bg-agon-s2 p-0.5">
-            {(["week", "month"] as ViewMode[]).map((m) => (
+            {(["week", "month", "cycle"] as ViewMode[]).map((m) => (
               <button key={m} onClick={() => setViewMode(m)} className={cn(
                 "cursor-pointer rounded-[6px] border-none px-2.5 py-1 text-[11px] [transition:all_120ms]",
                 viewMode === m ? "bg-agon-s1 font-bold text-agon-tx" : "bg-transparent font-medium text-agon-tx3",
               )}>
-                {m === "week" ? "Semaine" : "Mois"}
+                {m === "week" ? "Semaine" : m === "month" ? "Mois" : "Cycle"}
               </button>
             ))}
           </div>
@@ -601,10 +632,23 @@ export default function RetoursPage() {
         </div>
       )}
 
-      {/* ── Séries par muscle par semaine ── */}
+      {/* ── Volume : semaine consultée, ou comparatif des semaines du mois ── */}
       <div className="mt-6 flex flex-col gap-3">
-        <SectionHead n={modifications.length > 0 ? 2 : 1} title="Séries par muscle et par semaine" />
-        <RetoursMuscleVolume athleteId={athleteId} weekStart={selectedWeek} />
+        <SectionHead
+          n={modifications.length > 0 ? 2 : 1}
+          title={viewMode === "month" ? "Le mois semaine par semaine" : "Volume de la semaine : séries et course"}
+        />
+        {viewMode === "month" && monthData ? (
+          <RetoursPeriodSection
+            athleteId={athleteId}
+            from={format(selectedMonth, "yyyy-MM-dd")}
+            to={format(endOfMonth(selectedMonth), "yyyy-MM-dd")}
+            data={monthData}
+            runSummary={summaryBetween}
+          />
+        ) : (
+          <RetoursWeekFocus athleteId={athleteId} monday={weekStartStr} runSummary={summaryBetween} outings={outings} />
+        )}
       </div>
 
       {/* ── Blessures ── */}

@@ -2,7 +2,9 @@ import { AllCompetitionsSheet } from "@/features/athlete/components/AllCompetiti
 import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
 import { C } from "@/lib/theme";
 import { cn } from "@/lib/utils";
-import { CalendarDays, Check, GraduationCap, Plane, Trash2, Trophy } from "lucide-react";
+import { CalendarDays, Check, FileText, GraduationCap, Plane, Trash2, Trophy } from "lucide-react";
+import { useFicheViewer } from "@/features/shared/hooks/fiches/useFicheViewer";
+import type { BiometryLevel } from "@/features/shared/types/measurements";
 import { CitationFigure } from "@/features/shared/components/CitationDuJour";
 import { CoachRetourCard } from "@/features/athlete/components/CoachRetourCard";
 import { CompetitionDayCard, type CompetitionDayCardData } from "@/features/athlete/components/CompetitionDayCard";
@@ -77,6 +79,9 @@ export default function TodayPage() {
   const [showOtherSessions, setShowOtherSessions] = useState(false);
   const [testPreviewId, setTestPreviewId] = useState<string | null>(null);
   const [mensuOpen, setMensuOpen] = useState(false);
+  // Biométrie planifiée ouverte : niveaux demandés par le coach.
+  const [mensuLevels, setMensuLevels] = useState<BiometryLevel[] | undefined>(undefined);
+  const ficheViewer = useFicheViewer();
   const [eventForm, setEventForm] = useState<null | "competition" | "voyage">(null);
   const { user: authUser } = useAuth();
   const [showAllComps, setShowAllComps] = useState(false);
@@ -171,7 +176,7 @@ export default function TodayPage() {
   // Mesure biométrique planifiée → formulaire Mensurations/Photos, sinon TestEntryPage
   const openTest = (id: string) => {
     const t = weekDays.flatMap((d) => d.tests).find((x) => x.id === id);
-    if (t?.type === "biometric") setMensuOpen(true);
+    if (t?.type === "biometric") { setMensuLevels(t.biometry_levels ?? []); setMensuOpen(true); }
     else setTestPreviewId(id);
   };
   const allDoneToday = workouts.length > 0 && workouts.every((w) => w.isCompleted);
@@ -659,15 +664,26 @@ export default function TodayPage() {
               const bio = t.type === "biometric";
               const tc = t.completed ? TYPE_COLOR.fait : TYPE_COLOR.test;
               return (
-                <TintCard key={t.id} as="button" color={tc} onClick={() => { openTest(t.id); haptic(); }}>
-                  <div className="min-w-0 flex-1">
-                    <div className="agon-mono text-[10px] uppercase tracking-[0.12em] text-agon-tx3">{bio ? "Biométrie" : "Test"}</div>
-                    <div className="mt-0.5 truncate text-[15px] font-medium text-agon-tx">{t.title}</div>
-                  </div>
-                  {t.completed
-                    ? <Check size={18} color={TYPE_COLOR.fait} />
-                    : <TypePill color={tc}>Remplir →</TypePill>}
-                </TintCard>
+                <div key={t.id} className="flex flex-col gap-1.5">
+                  <TintCard as="button" color={tc} onClick={() => { openTest(t.id); haptic(); }}>
+                    <div className="min-w-0 flex-1">
+                      <div className="agon-mono text-[10px] uppercase tracking-[0.12em] text-agon-tx3">{bio ? "Biométrie" : "Test"}</div>
+                      <div className="mt-0.5 truncate text-[15px] font-medium text-agon-tx">{t.title}</div>
+                    </div>
+                    {t.completed
+                      ? <Check size={18} color={TYPE_COLOR.fait} />
+                      : <TypePill color={tc}>Remplir →</TypePill>}
+                  </TintCard>
+                  {t.doc_id && (
+                    <button
+                      type="button"
+                      onClick={() => { ficheViewer.open(t.doc_id!); haptic(); }}
+                      className="flex cursor-pointer items-center gap-1.5 self-start border-none bg-transparent px-1 py-0.5 font-[inherit] text-[13px] text-agon-tx2 underline-offset-2 hover:underline"
+                    >
+                      <FileText size={14} /> Voir la fiche du test
+                    </button>
+                  )}
+                </div>
               );
             })}
           </TodaySection>
@@ -887,7 +903,8 @@ export default function TodayPage() {
           athleteId={athleteId ?? ""}
           viewOnly={viewOnly}
           initialNew
-          onClose={() => setMensuOpen(false)}
+          levels={mensuLevels}
+          onClose={() => { setMensuOpen(false); setMensuLevels(undefined); }}
         />
       )}
 

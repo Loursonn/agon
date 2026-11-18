@@ -1,5 +1,6 @@
 import { sessionPainText } from "@/lib/sessionPain";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { WatchRunTag } from "@/features/shared/components/WatchRunTag";
 import { isToday, format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -441,20 +442,26 @@ function TestRow({ test }: { test: DayTest }) {
 
 // ── Free activity compact row ─────────────────────────────────────────────────
 
-function FreeActivityRow({ activity }: { activity: FreeActivityDetail }) {
+function FreeActivityRow({ activity, athleteId }: { activity: FreeActivityDetail; athleteId?: string }) {
   const [open, setOpen] = useState(false);
-  const hasDetail = activity.duration != null || activity.intensity != null || !!activity.note;
+  const navigate = useNavigate();
+  // Activité de montre : la séance complète (FC, allure, tours) plutôt qu'un dépliant.
+  const seance = activity.activityId && athleteId ? `/coach/athletes/${athleteId}/seance/${activity.activityId}` : null;
+  const hasDetail = !seance && (activity.duration != null || activity.intensity != null || !!activity.note);
 
   return (
     <div className={cardShell(statusColors("completed"), BAR.free)}>
       <div
-        onClick={() => hasDetail && setOpen((v) => !v)}
-        className={cn(ROW_HEAD, hasDetail ? "cursor-pointer" : "cursor-default")}
+        onClick={() => (seance ? navigate(seance) : hasDetail && setOpen((v) => !v))}
+        title={seance ? "Ouvrir la séance (FC, allure, tours)" : undefined}
+        className={cn(ROW_HEAD, seance || hasDetail ? "cursor-pointer" : "cursor-default")}
       >
         <CardTitle dot="bg-agon-succes" done>{activity.sportEmoji ? activity.sportEmoji + " " : ""}{activity.name}</CardTitle>
         <div className="flex w-full items-center gap-[5px]">
           <StatusPill cols={{ ...statusColors("completed"), label: "Activité" }} />
           <span className="flex-1" />
+          {seance && activity.duration != null && <span className={cn(MINI, "text-agon-tx3")}>{activity.duration} min</span>}
+          {seance && <span className={cn(MINI, "text-agon-accent")}>Voir →</span>}
           {activity.intensity != null && (
             <span className={cn(MINI, "text-agon-tx3")}>RPE {activity.intensity}</span>
           )}
@@ -760,7 +767,7 @@ export function DayColumn({ date, workouts, energy, tests, wellness, previousWor
           {freeActivities.length > 0 && (
             <div className="flex flex-col gap-1">
               {freeActivities.map((f) => (
-                <FreeActivityRow key={f.id} activity={f} />
+                <FreeActivityRow key={f.id} activity={f} athleteId={athleteId} />
               ))}
             </div>
           )}

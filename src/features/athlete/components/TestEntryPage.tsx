@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronLeft, FlaskConical, Gauge, UserRound } from "lucide-react";
+import { Check, ChevronLeft, FileText, FlaskConical, Gauge, UserRound } from "lucide-react";
+import { useFicheViewer } from "@/features/shared/hooks/fiches/useFicheViewer";
 import { toast } from "sonner";
 import { completeTestSession, getTestSessionForFill, invalidateTests, type TestSessionFill } from "@/api/tests";
 import { useAthleteTestResults } from "@/features/shared/hooks/tests/useAthleteTests";
@@ -205,6 +206,7 @@ interface Saved {
  */
 export function TestEntryPage({ testId, athleteId, coachName, onClose, resultPath = (id) => `/athlete/test?valeur=${id}` }: Props) {
   const qc = useQueryClient();
+  const ficheViewer = useFicheViewer();
   const navigate = useNavigate();
   const [test, setTest] = useState<TestSessionFill | null>(null);
   const [definition, setDefinition] = useState<TestDefinitionWithVariables | null>(null);
@@ -434,6 +436,18 @@ export function TestEntryPage({ testId, athleteId, coachName, onClose, resultPat
                 {definition?.protocol?.text || test.description || definition?.description}
               </div>
             </div>
+          )}
+
+          {test.doc_id && (
+            <button
+              type="button"
+              onClick={() => ficheViewer.open(test.doc_id!)}
+              className="flex w-full cursor-pointer items-center gap-2.5 rounded-[14px] border border-agon-brd bg-agon-s1 px-3.5 py-3 text-left font-[inherit] text-agon-tx"
+            >
+              <FileText size={17} className="text-agon-tx2" />
+              <span className="flex-1 text-[13.5px] font-medium">Fiche du test</span>
+              <span className="text-[12.5px] text-agon-accent">Voir →</span>
+            </button>
           )}
 
           {coachFilled ? (

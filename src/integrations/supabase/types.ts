@@ -1267,6 +1267,42 @@ export type Database = {
           },
         ]
       }
+      coach_test_fiches: {
+        Row: {
+          coach_id: string
+          doc_id: string
+          test_key: string
+          updated_at: string
+        }
+        Insert: {
+          coach_id: string
+          doc_id: string
+          test_key: string
+          updated_at?: string
+        }
+        Update: {
+          coach_id?: string
+          doc_id?: string
+          test_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_test_fiches_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_test_fiches_doc_id_fkey"
+            columns: ["doc_id"]
+            isOneToOne: false
+            referencedRelation: "docs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_invitations: {
         Row: {
           created_at: string
@@ -3408,10 +3444,12 @@ export type Database = {
           cuisse_g: number | null
           date: string
           epaules: number | null
+          forearm_length_cm: number | null
           hanche: number | null
           height_cm: number | null
           id: string
           jump_start_height_cm: number | null
+          leg_standing_cm: number | null
           leg_length_cm: number | null
           mollet: number | null
           mollet_d: number | null
@@ -3436,10 +3474,12 @@ export type Database = {
           cuisse_g?: number | null
           date?: string
           epaules?: number | null
+          forearm_length_cm?: number | null
           hanche?: number | null
           height_cm?: number | null
           id?: string
           jump_start_height_cm?: number | null
+          leg_standing_cm?: number | null
           leg_length_cm?: number | null
           mollet?: number | null
           mollet_d?: number | null
@@ -3464,10 +3504,12 @@ export type Database = {
           cuisse_g?: number | null
           date?: string
           epaules?: number | null
+          forearm_length_cm?: number | null
           hanche?: number | null
           height_cm?: number | null
           id?: string
           jump_start_height_cm?: number | null
+          leg_standing_cm?: number | null
           leg_length_cm?: number | null
           mollet?: number | null
           mollet_d?: number | null
@@ -3658,6 +3700,50 @@ export type Database = {
             columns: ["cycle_id"]
             isOneToOne: false
             referencedRelation: "cycles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      morpho_observations: {
+        Row: {
+          abdomen: string | null
+          athlete_id: string
+          cage: string | null
+          clavicules: string | null
+          coude_valgus: string | null
+          muscles: Json
+          note: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          abdomen?: string | null
+          athlete_id: string
+          cage?: string | null
+          clavicules?: string | null
+          coude_valgus?: string | null
+          muscles?: Json
+          note?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          abdomen?: string | null
+          athlete_id?: string
+          cage?: string | null
+          clavicules?: string | null
+          coude_valgus?: string | null
+          muscles?: Json
+          note?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "morpho_observations_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -5226,12 +5312,14 @@ export type Database = {
       test_sessions: {
         Row: {
           athlete_id: string
+          biometry_levels: string[]
           coach_id: string | null
           completed: boolean | null
           created_at: string | null
           custom_type: string | null
           date: string
           description: string | null
+          doc_id: string | null
           id: string
           planning_block_id: string | null
           reference_file_type: string | null
@@ -5244,12 +5332,14 @@ export type Database = {
         }
         Insert: {
           athlete_id: string
+          biometry_levels?: string[]
           coach_id?: string | null
           completed?: boolean | null
           created_at?: string | null
           custom_type?: string | null
           date?: string
           description?: string | null
+          doc_id?: string | null
           id?: string
           planning_block_id?: string | null
           reference_file_type?: string | null
@@ -5262,12 +5352,14 @@ export type Database = {
         }
         Update: {
           athlete_id?: string
+          biometry_levels?: string[]
           coach_id?: string | null
           completed?: boolean | null
           created_at?: string | null
           custom_type?: string | null
           date?: string
           description?: string | null
+          doc_id?: string | null
           id?: string
           planning_block_id?: string | null
           reference_file_type?: string | null
