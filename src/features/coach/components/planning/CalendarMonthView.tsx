@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, eachDayOfInterval, parseISO, differenceInCalendarWeeks } from "date-fns";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -22,6 +23,7 @@ import { DayDetailsDrawer } from "./DayDetailsDrawer";
 import { groupScheduleByDate, useDocSchedule } from "@/features/shared/hooks/fiches/useDocSchedule";
 import { FicheViewerHost } from "@/features/shared/components/fiches/FicheViewerHost";
 import { QuickAddDialog } from "./QuickAddDialog";
+import { BiometryLevelsDialog } from "./day-details/BiometryLevelsDialog";
 import { buildProjectionCoverage, isProjectionCovered } from "@/lib/planningProjection";
 import { usePlannedVsDone } from "@/features/shared/hooks/usePlannedVsDone";
 import { watchCardsOfDay } from "@/lib/planningCard";
@@ -73,6 +75,7 @@ export function CalendarMonthView({
   const [drawerDay, setDrawerDay]       = useState<Date | null>(null);
   const [drawerInitialEvent, setDrawerInitialEvent] = useState<CalEvent | null>(null);
   const [quickAddDay, setQuickAddDay]   = useState<Date | null>(null);
+  const [pendingBioDate, setPendingBioDate] = useState<string | null>(null);
   const [activeDragId, setActiveDragId]     = useState<string | null>(null);
   const [activeDragEvent, setActiveDragEvent] = useState<CalEvent | null>(null);
 
@@ -117,7 +120,7 @@ export function CalendarMonthView({
   const { data: allCycles = [] } = useQuery({
     queryKey: cycleKeys.athleteCycles(athleteId),
     enabled: !!athleteId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     // Tous les cycles portant directement l'athlète (autonomes OU rattachés à un
     // méso avec athlete_id renseigné — cycles de l'assistant) + ceux de ses mésos.
     queryFn: () => listAthleteCycles(athleteId),
@@ -308,13 +311,8 @@ export function CalendarMonthView({
           date:  dateStr,
         });
       } else if (sess.sessionType === "biometric") {
-        createTestSession({
-          athleteId,
-          coachId,
-          title: BIO_TITLE,
-          type:  "biometric",
-          date:  dateStr,
-        });
+        // Choix du type de biométrie avant de la poser (classique + niveaux).
+        setPendingBioDate(dateStr);
       } else {
         assignWorkout({
           sessionId: sess.id,
@@ -615,6 +613,17 @@ export function CalendarMonthView({
       />
 
       {/* Quick-add dialog (also from empty slot click) */}
+      {pendingBioDate && (
+        <BiometryLevelsDialog
+          date={pendingBioDate}
+          onCancel={() => setPendingBioDate(null)}
+          onConfirm={(levels) => {
+            createTestSession({ athleteId, coachId, title: BIO_TITLE, type: "biometric", date: pendingBioDate, biometryLevels: levels });
+            setPendingBioDate(null);
+          }}
+        />
+      )}
+
       <QuickAddDialog
         open={!!quickAddDay}
         onClose={() => setQuickAddDay(null)}

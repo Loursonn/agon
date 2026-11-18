@@ -60,7 +60,11 @@ export default tseslint.config(
       "react-refresh": reactRefresh,
     },
     rules: {
-      ...reactHooks.configs.recommended.rules,
+      // v7 : `recommended` ajoute les règles du React Compiler (≈110 erreurs
+      // sur le code actuel). On garde les deux règles historiques ; adopter
+      // les nouvelles est un chantier à part.
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
     },

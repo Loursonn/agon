@@ -138,7 +138,12 @@ export type UndoStep =
    * Vidéo d'un exercice de la banque changée : remettre `before`, seulement
    * si la vidéo est toujours `after` (un changement fait depuis reste).
    */
-  | { t: "exercise_video"; exercise_id: string; before: string | null; after: string };
+  | { t: "exercise_video"; exercise_id: string; before: string | null; after: string }
+  /**
+   * Exercices ajoutés à la banque : à supprimer, sauf ceux utilisés ailleurs
+   * depuis (programme d'un athlète, retour, tour de montre, record).
+   */
+  | { t: "exercise_created"; exercises: { id: string; name: string }[] };
 
 export function pick(table: RowTable, r: Row): Row {
   const out: Row = {};

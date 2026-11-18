@@ -1,218 +1,293 @@
 /**
- * Carte à partager d'une course HYROX (planche HyroxAnaTel, écran 04) :
- * image 9:16 (1080 × 1920) dessinée sur le téléphone, rien n'est envoyé.
- * Chrono, record, rang, mini-frise, 8 stations, coach ; FC masquable.
+ * Carte à partager d'une course HYROX (lot 6, maquette validée par Hugo le
+ * 16/11/2026) : post 4:5 (1080 × 1350) ou story 9:16 (1080 × 1920), dessinée
+ * sur l'appareil, rien n'est envoyé. Chrono, « top X % » de la catégorie,
+ * radar des rangs par station, points forts, frein (toujours présent), objectif
+ * du jour et source du classement (toujours présente). Nom, place et chrono
+ * possible : au choix de l'athlète. Aucune donnée de montre.
  */
-import { STATION_META, type HyroxResult, type StationKey } from "@/features/shared/types/hyrox";
-import type { RaceWatchAnalysis } from "@/lib/hyrox/raceWatch";
-import { fmtClock, fmtPace } from "@/lib/seance";
-import { roxzoneTotal, runTotal, stationsTotal } from "@/lib/hyrox/calc";
-import { C, H as HC } from "@/lib/theme";
+import type { HyroxResult } from "@/features/shared/types/hyrox";
+import { fmtClock } from "@/lib/seance";
+import { topRange, type RaceVerdict } from "@/lib/hyrox/verdict";
+import { C, alpha } from "@/lib/theme";
+import { fmtGap } from "./raceAnalysisShared";
+
+export type ShareFormat = "post" | "story";
 
 export interface ShareCardInput {
   race: HyroxResult;
-  analysis: RaceWatchAnalysis | null;
-  divisionLabel: string;
-  isRecord: boolean;
-  coachName: string | null;
-  /** « Garmin Forerunner 265 » : obligatoire si la FC est affichée. */
-  attribution: string | null;
-  theme: "dark" | "light";
-  showHr: boolean;
-  /** FC à dessiner (une valeur par seconde de course, ou moins). */
-  hrSeries: Array<number | null> | null;
+  verdict: RaceVerdict;
+  format: ShareFormat;
+  /** Nom affiché si non nul (case « Afficher mon nom », cochée par défaut, Q2). */
+  athleteName: string | null;
+  showPlace: boolean;
+  showPossible: boolean;
 }
 
-const W = 1080;
-const H = 1920;
+/** Dimensions logiques (la maquette, à 50 %) ; l'image est dessinée × 2. */
+export const SHARE_SIZE: Record<ShareFormat, { w: number; h: number }> = {
+  post: { w: 540, h: 675 },
+  story: { w: 540, h: 960 },
+};
+const SCALE = 2;
 
-function cssVar(name: string, fallback: string): string {
-  if (typeof document === "undefined") return fallback;
-  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  return v || fallback;
-}
-
-function palette(theme: "dark" | "light") {
-  const dark = theme === "dark";
+/** Couleurs de la carte : tokens de tokens.css (`C` contient des valeurs concrètes, utilisables par le canvas). */
+function palette() {
   return {
-    bg: dark ? cssVar("--agon-bg", C.bg) : HC.creme,
-    card: dark ? HC.basalte3 : C.tx,
-    tx: dark ? C.tx : C.bg,
-    tx2: dark ? HC.grege : HC.taupeFonce,
-    tx3: dark ? C.tx3 : HC.taupe,
-    gold: cssVar("--agon-or-vif", HC.orMat),
-    station: cssVar("--agon-ocre-vif", HC.orangeBrule),
-    run: cssVar("--agon-hyrox-course", C.hyroxCourse),
-    rox: dark ? HC.brunGris : HC.lin,
-    hr: cssVar("--agon-rouge", HC.rougeDoux),
+    bg: C.bg,
+    tx: C.tx,
+    tx2: C.tx2,
+    tx3: C.tx3,
+    gold: C.ac,
+    green: C.g,
+    orange: C.o,
+    grid: C.brdL,
+    rule: C.brd,
+    median: alpha(C.tx2, 0.55),
+    fill: alpha(C.ac, 0.18),
   };
 }
 
-const STATION_ORDER: StationKey[] = ["ski", "sled_push", "sled_pull", "bbj", "row", "farmers", "lunges", "wall_balls"];
-const STATION_SHORT: Record<StationKey, string> = {
-  ski: "SkiErg", sled_push: "Sled push", sled_pull: "Sled pull", bbj: "Burpees",
-  row: "Rameur", farmers: "Farmers carry", lunges: "Lunges", wall_balls: "Wall balls",
+const DISPLAY = '"Archivo", system-ui, sans-serif';
+const UI = '"Geist", system-ui, sans-serif';
+const DATA = '"Geist Mono", ui-monospace, monospace';
+
+/** Libellés courts du radar (ordre de `effortProfile`). */
+const RADAR_LABEL: Record<string, string> = {
+  run: "Course", ski: "SkiErg", sled_push: "Push", sled_pull: "Pull", bbj: "BBJ", row: "Rameur",
+  farmers: "Farmers", lunges: "Fentes", wall_balls: "WB", roxzone: "Roxzone",
 };
 
-const font = (weight: number, size: number, mono = false) =>
-  `${weight} ${size}px ${mono ? '"Geist Mono", ui-monospace, monospace' : '"Archivo", "Geist", system-ui, sans-serif'}`;
-
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
+/** Charge les polices avant de dessiner (sinon le canvas prend la police système). */
+export async function loadShareFonts(): Promise<void> {
+  const fonts = typeof document !== "undefined" ? document.fonts : undefined;
+  if (!fonts?.load) return;
+  try {
+    await Promise.all([
+      fonts.load(`700 60px ${DISPLAY}`), fonts.load(`500 15px ${DISPLAY}`),
+      fonts.load(`400 15px ${UI}`), fonts.load(`400 20px ${DATA}`),
+    ]);
+  } catch {
+    /* polices système */
+  }
 }
 
-/** Dessine la carte. Rend le canvas (1080 × 1920). */
-export function drawShareCard(canvas: HTMLCanvasElement, input: ShareCardInput): HTMLCanvasElement {
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return canvas;
-  const p = palette(input.theme);
-  const { race, analysis } = input;
-  const pad = 88;
+type Ctx = CanvasRenderingContext2D & { letterSpacing?: string; fontStretch?: string };
 
-  ctx.fillStyle = p.bg;
-  ctx.fillRect(0, 0, W, H);
+function text(ctx: Ctx, s: string, x: number, y: number, o: { font: string; color: string; align?: CanvasTextAlign; spacing?: number; wide?: boolean }) {
+  ctx.font = o.font;
+  ctx.fillStyle = o.color;
+  ctx.textAlign = o.align ?? "left";
+  if ("letterSpacing" in ctx) ctx.letterSpacing = `${o.spacing ?? 0}px`;
+  if ("fontStretch" in ctx) ctx.fontStretch = o.wide ? "expanded" : "normal";
+  ctx.fillText(s, x, y);
+  return ctx.measureText(s).width;
+}
 
-  // En-tête
-  ctx.fillStyle = p.gold;
-  ctx.font = font(800, 44);
-  ctx.textBaseline = "top";
-  ctx.fillText("AGON", pad, 96);
-  ctx.textAlign = "right";
-  ctx.fillStyle = p.station;
-  ctx.fillText("HYROX", W - pad, 96);
-  ctx.textAlign = "left";
-
-  ctx.fillStyle = p.tx;
-  ctx.font = font(300, 84);
-  ctx.fillText(race.event_name.toUpperCase().slice(0, 22), pad, 230);
-  ctx.fillStyle = p.tx2;
-  ctx.font = font(500, 34, true);
-  const d = race.date.split("-");
-  ctx.fillText(`${d[2]}.${d[1]}.${d[0]} · ${input.divisionLabel.toUpperCase()}`, pad, 336);
-
-  // Chrono
-  ctx.fillStyle = p.tx;
-  ctx.font = font(500, 220, true);
-  ctx.fillText(fmtClock(race.total_s), pad - 8, 420);
-  let y = 670;
-  if (input.isRecord) {
-    ctx.fillStyle = p.gold;
-    roundRect(ctx, pad, y, 300, 64, 32);
-    ctx.fill();
-    ctx.fillStyle = p.bg;
-    ctx.font = font(700, 30, true);
-    ctx.fillText("RECORD PERSO", pad + 32, y + 17);
+/** Retour à la ligne simple (mots). */
+function wrap(ctx: Ctx, s: string, maxW: number): string[] {
+  const out: string[] = [];
+  let line = "";
+  for (const w of s.split(" ")) {
+    const next = line ? `${line} ${w}` : w;
+    if (line && ctx.measureText(next).width > maxW) { out.push(line); line = w; } else line = next;
   }
-  if (race.rank_overall && race.participants_overall) {
-    ctx.fillStyle = p.tx2;
-    ctx.font = font(500, 34, true);
-    const top = Math.max(1, Math.round((race.rank_overall / race.participants_overall) * 100));
-    ctx.fillText(`${race.rank_overall} / ${race.participants_overall} · top ${top} %`, input.isRecord ? pad + 330 : pad, y + 14);
-  }
+  if (line) out.push(line);
+  return out;
+}
 
-  // Mini-frise : segments à l'échelle du temps, FC par-dessus.
-  y = 800;
-  const fw = W - 2 * pad;
-  const total = analysis?.segments.at(-1)?.endS ?? race.total_s;
-  if (analysis) {
-    for (const s of analysis.segments) {
-      const x = pad + (s.startS / total) * fw;
-      const w = Math.max(2, ((s.endS - s.startS) / total) * fw - 2);
-      ctx.fillStyle = s.kind === "run" ? p.run : s.kind === "station" ? p.station : p.rox;
-      ctx.fillRect(x, y + 150, w, 36);
-    }
-    ctx.fillStyle = p.tx3;
-    ctx.font = font(500, 24, true);
-    analysis.segments.filter((s) => s.kind === "run").forEach((s, i) => {
-      ctx.fillText(String(i + 1), pad + (s.startS / total) * fw + 4, y + 198);
-    });
-  }
-  const hr = input.showHr ? input.hrSeries : null;
-  if (hr && hr.length > 1) {
-    const vals = hr.filter((v): v is number => v != null);
-    const lo = Math.min(...vals);
-    const hi = Math.max(...vals);
-    ctx.strokeStyle = p.hr;
-    ctx.lineWidth = 5;
+function radar(ctx: Ctx, verdict: RaceVerdict, cx: number, cy: number, r: number, labelSize: number, p: ReturnType<typeof palette>) {
+  const axes = verdict.axes;
+  const n = axes.length;
+  if (n < 3) return;
+  const pt = (i: number, v: number): [number, number] => {
+    const a = ((-90 + (i * 360) / n) * Math.PI) / 180;
+    return [cx + (r * v * Math.cos(a)) / 100, cy + (r * v * Math.sin(a)) / 100];
+  };
+  const path = (vals: Array<number | null>) => {
     ctx.beginPath();
     let started = false;
-    hr.forEach((v, i) => {
+    vals.forEach((v, i) => {
       if (v == null) return;
-      const x = pad + (i / (hr.length - 1)) * fw;
-      const yy = y + 130 - ((v - lo) / Math.max(1, hi - lo)) * 120;
-      if (started) ctx.lineTo(x, yy); else { ctx.moveTo(x, yy); started = true; }
+      const [x, y] = pt(i, v);
+      if (started) ctx.lineTo(x, y); else { ctx.moveTo(x, y); started = true; }
     });
-    ctx.stroke();
-    const avg = Math.round(vals.reduce((n, v) => n + v, 0) / vals.length);
-    ctx.fillStyle = p.tx2;
-    ctx.font = font(500, 28, true);
-    ctx.fillText(`FC moy. ${avg} bpm`, pad, y - 6);
-    if (input.attribution) {
-      ctx.textAlign = "right";
-      ctx.fillStyle = p.tx3;
-      ctx.fillText(input.attribution, W - pad, y - 6);
-      ctx.textAlign = "left";
-    }
+    ctx.closePath();
+  };
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = p.grid;
+  for (const v of [100, 75, 25]) { path(axes.map(() => v)); ctx.stroke(); }
+  axes.forEach((_, i) => { const [x, y] = pt(i, 100); ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x, y); ctx.stroke(); });
+  ctx.setLineDash([4, 4]);
+  ctx.strokeStyle = p.median;
+  ctx.lineWidth = 1.2;
+  path(axes.map(() => 50));
+  ctx.stroke();
+  ctx.setLineDash([]);
+  path(axes.map((a) => a.rankValue));
+  ctx.fillStyle = p.fill;
+  ctx.fill();
+  ctx.strokeStyle = p.gold;
+  ctx.lineWidth = 2;
+  ctx.lineJoin = "round";
+  ctx.stroke();
+  axes.forEach((a, i) => {
+    const [x, y] = pt(i, 116);
+    const align: CanvasTextAlign = Math.abs(x - cx) < 4 ? "center" : x > cx ? "left" : "right";
+    text(ctx, RADAR_LABEL[a.key] ?? a.label, x, y + labelSize / 3, { font: `400 ${labelSize}px ${UI}`, color: p.tx2, align });
+  });
+}
+
+function eventLine(race: HyroxResult): string {
+  const [y, m, d] = race.date.split("-");
+  return `${race.event_name.toUpperCase()} · ${d}.${m}.${y}`;
+}
+
+function objectiveText(v: RaceVerdict): string | null {
+  const o = v.objective;
+  if (!o) return null;
+  return o.deltaS === 0 ? "pile dans l'objectif" : o.deltaS < 0 ? `battu de ${fmtGap(o.deltaS)}` : `manqué de ${fmtGap(o.deltaS)}`;
+}
+
+function sourceText(v: RaceVerdict): string {
+  const l = v.level;
+  if (!l) return "Pas de classement de catégorie pour cette course.";
+  const n = l.sampleSize != null ? `${l.sampleSize.toLocaleString("fr-FR")} courses ` : "";
+  return `Rang sur ${n}${l.categoryLabel}${l.source ? `, ${l.source}` : ""}. Pointillés : la médiane.`;
+}
+
+function footer(ctx: Ctx, v: RaceVerdict, w: number, h: number, padX: number, bottom: number, size: number, p: ReturnType<typeof palette>) {
+  const y = h - bottom;
+  ctx.strokeStyle = p.rule;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(padX, y - 3 * size);
+  ctx.lineTo(w - padX, y - 3 * size);
+  ctx.stroke();
+  const brandW = text(ctx, "analysé par Agon", w - padX, y, { font: `400 ${size}px ${DATA}`, color: p.tx3, align: "right" });
+  ctx.font = `400 ${size}px ${UI}`;
+  const lines = wrap(ctx, sourceText(v), w - 2 * padX - brandW - 12);
+  const lh = size * 1.4;
+  lines.forEach((l, i) => text(ctx, l, padX, y - (lines.length - 1 - i) * lh, { font: `400 ${size}px ${UI}`, color: p.tx3 }));
+}
+
+function drawPost(ctx: Ctx, input: ShareCardInput, p: ReturnType<typeof palette>) {
+  const { race, verdict: v } = input;
+  const { w, h } = SHARE_SIZE.post;
+  const pad = 34;
+  ctx.textBaseline = "alphabetic";
+  text(ctx, "AGON", pad, 32 + 15, { font: `500 15px ${DISPLAY}`, color: p.tx, spacing: 4.2, wide: true });
+  text(ctx, eventLine(race), w - pad, 32 + 13, { font: `400 11px ${DATA}`, color: p.tx2, align: "right", spacing: 0.9 });
+
+  const who = [input.athleteName, v.categoryLabel].filter(Boolean).join(" · ");
+  text(ctx, who, pad, 92, { font: `400 15px ${UI}`, color: p.tx2 });
+  text(ctx, fmtClock(race.total_s), pad - 3, 162, { font: `400 72px ${DATA}`, color: p.tx, spacing: -1.4 });
+  if (input.showPlace && v.place) {
+    text(ctx, "PLACE", w - pad, 132, { font: `400 10px ${DATA}`, color: p.tx3, align: "right", spacing: 1.6 });
+    const ofW = text(ctx, ` / ${v.place.of.toLocaleString("fr-FR")}`, w - pad, 160, { font: `400 14px ${DATA}`, color: p.tx3, align: "right" });
+    text(ctx, `${v.place.rank}ᵉ`, w - pad - ofW, 160, { font: `400 20px ${DATA}`, color: p.tx, align: "right" });
   }
 
-  // 8 stations
-  y = 1060;
-  const colW = (W - 2 * pad - 24) / 2;
-  STATION_ORDER.forEach((k, i) => {
-    const x = pad + (i % 2) * (colW + 24);
-    const yy = y + Math.floor(i / 2) * 118;
-    ctx.fillStyle = p.card;
-    roundRect(ctx, x, yy, colW, 100, 20);
-    ctx.fill();
-    ctx.fillStyle = p.station;
-    ctx.fillRect(x, yy + 22, 6, 56);
-    ctx.fillStyle = p.tx2;
-    ctx.font = font(500, 30);
-    ctx.fillText(STATION_SHORT[k] ?? STATION_META[k].label, x + 30, yy + 32);
-    const v = (race as unknown as Record<string, number | null>)[`${k}_s`];
-    ctx.textAlign = "right";
-    ctx.fillStyle = p.tx;
-    ctx.font = font(600, 38, true);
-    ctx.fillText(fmtClock(v), x + colW - 28, yy + 28);
-    ctx.textAlign = "left";
-  });
-
-  y = 1560;
-  // Totaux de la planche : « Course 38:55 · Stations 33:30 · Roxzone 6:17 » (absent → « — »).
-  const runSum = runTotal(race);
-  const totals: Array<[string, string]> = [
-    ["Course", fmtClock(runSum)],
-    ["Stations", fmtClock(stationsTotal(race))],
-    ["Roxzone", fmtClock(roxzoneTotal(race))],
-  ];
-  const tw = (W - 2 * pad) / 3;
-  totals.forEach(([label, v], i) => {
-    ctx.fillStyle = p.tx3;
-    ctx.font = font(500, 28, true);
-    ctx.fillText(label.toUpperCase(), pad + i * tw, y);
-    ctx.fillStyle = p.tx;
-    ctx.font = font(600, 52, true);
-    ctx.fillText(v, pad + i * tw, y + 40);
-  });
-
-  // Pied
-  ctx.fillStyle = p.tx3;
-  ctx.font = font(500, 28, true);
-  if (runSum != null) ctx.fillText(`Allure moy. ${fmtPace(runSum / 8)} /km`, pad, H - 150);
-  if (input.coachName) {
-    ctx.textAlign = "right";
-    ctx.fillStyle = p.tx2;
-    ctx.fillText(`Coaché par ${input.coachName}`, W - pad, H - 150);
-    ctx.textAlign = "left";
+  let y = 196;
+  if (v.level) {
+    const topW = text(ctx, `TOP ${v.level.topPct} %`, pad, y + 52, { font: `700 60px ${DISPLAY}`, color: p.gold, wide: true });
+    const [a, ...rest] = `des ${v.level.categoryLabel}`.split(" ");
+    text(ctx, `${a} ${rest.slice(0, -1).join(" ")}`.trim(), pad + topW + 12, y + 30, { font: `400 15px ${UI}`, color: p.tx });
+    text(ctx, rest.slice(-1).join(""), pad + topW + 12, y + 49, { font: `400 15px ${UI}`, color: p.tx });
+    y += 74;
   }
+
+  // Radar à gauche, lecture à droite.
+  const hasRadar = v.axes.some((a) => a.rankValue != null);
+  if (hasRadar) radar(ctx, v, pad + 125, y + 120, 92, 10.5, p);
+  const colX = hasRadar ? pad + 280 : pad;
+  let cy = y + 30;
+  const block = (label: string, color: string, value: string, sub: string | null) => {
+    text(ctx, label.toUpperCase(), colX, cy, { font: `400 10px ${DATA}`, color, spacing: 1.6 });
+    text(ctx, value, colX, cy + 21, { font: `400 14px ${UI}`, color: p.tx });
+    if (sub) text(ctx, sub, colX, cy + 39, { font: `400 12px ${DATA}`, color });
+    cy += sub ? 62 : 46;
+  };
+  const pr = v.profile;
+  if (pr?.strengths.length) block(pr.strengths.length > 1 ? "Points forts" : "Point fort", p.green, pr.strengths.map((a) => a.label).join(", "), topRange(pr.strengths));
+  if (pr?.brakes.length) block("Frein", p.orange, pr.brakes[0].label, `top ${pr.brakes[0].topPct} %`);
+  const obj = objectiveText(v);
+  if (obj && v.objective) {
+    text(ctx, "OBJECTIF DU JOUR", colX, cy, { font: `400 10px ${DATA}`, color: p.tx3, spacing: 1.6 });
+    text(ctx, obj, colX, cy + 21, { font: `400 14px ${DATA}`, color: v.objective.deltaS <= 0 ? p.green : p.orange });
+    cy += 46;
+  }
+  if (input.showPossible && v.margin) {
+    text(ctx, "POSSIBLE", colX, cy, { font: `400 10px ${DATA}`, color: p.tx3, spacing: 1.6 });
+    text(ctx, `${fmtClock(v.margin.possibleS)} (−${fmtGap(v.margin.gainS)})`, colX, cy + 21, { font: `400 14px ${DATA}`, color: p.tx });
+  }
+  footer(ctx, v, w, h, pad, 26, 10, p);
+}
+
+function drawStory(ctx: Ctx, input: ShareCardInput, p: ReturnType<typeof palette>) {
+  const { race, verdict: v } = input;
+  const { w, h } = SHARE_SIZE.story;
+  const pad = 40;
+  text(ctx, "AGON", pad, 72 + 17, { font: `500 17px ${DISPLAY}`, color: p.tx, spacing: 4.8, wide: true });
+  text(ctx, eventLine(race), w - pad, 72 + 14, { font: `400 12px ${DATA}`, color: p.tx2, align: "right", spacing: 1 });
+
+  let y = 150;
+  const who = [input.athleteName, v.categoryLabel].filter(Boolean).join(" · ");
+  text(ctx, who, pad, y, { font: `400 17px ${UI}`, color: p.tx2 });
+  text(ctx, fmtClock(race.total_s), pad - 4, y + 90, { font: `400 92px ${DATA}`, color: p.tx, spacing: -1.8 });
+  y += 120;
+  const parts: Array<{ s: string; c: string }> = [];
+  if (input.showPlace && v.place) parts.push({ s: `${v.place.rank}ᵉ sur ${v.place.of.toLocaleString("fr-FR")}`, c: p.tx2 });
+  const obj = objectiveText(v);
+  if (obj && v.objective) {
+    if (parts.length) parts.push({ s: " · ", c: p.tx2 });
+    parts.push({ s: "objectif du jour ", c: p.tx2 }, { s: obj, c: v.objective.deltaS <= 0 ? p.green : p.orange });
+  }
+  let x = pad;
+  for (const part of parts) x += text(ctx, part.s, x, y, { font: `400 15px ${DATA}`, color: part.c });
+  y += 24;
+
+  if (v.level) {
+    text(ctx, `TOP ${v.level.topPct} %`, pad, y + 80, { font: `700 84px ${DISPLAY}`, color: p.gold, wide: true });
+    text(ctx, `des ${v.level.categoryLabel}`, pad, y + 112, { font: `400 18px ${UI}`, color: p.tx });
+    y += 130;
+  }
+  if (v.axes.some((a) => a.rankValue != null)) {
+    radar(ctx, v, w / 2, y + 165, 130, 13, p);
+    y += 335;
+  }
+
+  const pr = v.profile;
+  const colW = (w - 2 * pad - 16) / 2;
+  const col = (cx: number, label: string, color: string, value: string) => {
+    text(ctx, label.toUpperCase(), cx, y, { font: `400 11px ${DATA}`, color, spacing: 1.8 });
+    ctx.font = `400 16px ${UI}`;
+    wrap(ctx, value, colW).slice(0, 2).forEach((l, i) => text(ctx, l, cx, y + 24 + i * 21, { font: `400 16px ${UI}`, color: p.tx }));
+  };
+  if (pr?.strengths.length) col(pad, `${pr.strengths.length > 1 ? "Points forts" : "Point fort"} · ${topRange(pr.strengths)}`, p.green, pr.strengths.map((a) => a.label).join(", "));
+  if (pr?.brakes.length) col(pad + colW + 16, `Frein · top ${pr.brakes[0].topPct} %`, p.orange, pr.brakes[0].label);
+  if (input.showPossible && v.margin) {
+    // Sous le frein (une ligne), pour ne pas toucher le pied de carte.
+    const px = pr ? pad + colW + 16 : pad;
+    const py = pr ? y + 56 : y;
+    text(ctx, "POSSIBLE", px, py, { font: `400 11px ${DATA}`, color: p.tx3, spacing: 1.8 });
+    text(ctx, `${fmtClock(v.margin.possibleS)} (−${fmtGap(v.margin.gainS)})`, px, py + 24, { font: `400 16px ${DATA}`, color: p.tx });
+  }
+  footer(ctx, v, w, h, pad, 60, 11, p);
+}
+
+/** Dessine la carte sur le canvas (taille réelle : 1080 × 1350 ou 1080 × 1920). */
+export function drawShareCard(canvas: HTMLCanvasElement, input: ShareCardInput): HTMLCanvasElement {
+  const { w, h } = SHARE_SIZE[input.format];
+  canvas.width = w * SCALE;
+  canvas.height = h * SCALE;
+  const ctx = canvas.getContext("2d") as Ctx | null;
+  if (!ctx) return canvas;
+  const p = palette();
+  ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+  ctx.fillStyle = p.bg;
+  ctx.fillRect(0, 0, w, h);
+  if (input.format === "post") drawPost(ctx, input, p); else drawStory(ctx, input, p);
   return canvas;
 }
 

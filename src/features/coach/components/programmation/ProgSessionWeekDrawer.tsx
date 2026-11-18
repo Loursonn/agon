@@ -10,7 +10,7 @@
  *                ouvre l'éditeur complet (SessionBlocEditor).
  */
 import { SessionPainDetail } from "@/features/shared/components/SessionPain";
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { blocColor } from "@/lib/peps";
 import { toast } from "sonner"
 import { X, Copy, AlertTriangle, Video } from "lucide-react"
@@ -24,6 +24,7 @@ import { maxDefinedWeek, resolveExerciceParams, resolveVideoRequest, toMultiWeek
 import { formatSetsReps, hasIso, isIsoAt } from "@/lib/formatSetsReps"
 import { IsoBadge } from "@/features/shared/components/IsoBadge"
 import { useCoachSessionOverride } from "@/features/shared/hooks/useCoachSessionOverride"
+import { compareDone, type Cmp } from "@/lib/compareDone"
 
 /** Statuts : fait = succès, manqué = erreur, partiel / à programmer = alerte (remplacent vert, rouge vif et ambre hérités). */
 type Tone = "succes" | "erreur" | "alerte"
@@ -34,10 +35,6 @@ const TONE_SOFT: Record<Tone, string> = {
   alerte: "border-agon-alerte/25 bg-agon-alerte/10",
 }
 const TONE_DOT: Record<Tone, string> = { succes: "bg-agon-succes", erreur: "bg-agon-erreur", alerte: "bg-agon-alerte" }
-const COL_HEAD: Record<"succes" | "alerte", string> = {
-  succes: "border-agon-succes bg-agon-succes/[0.039] text-agon-succes",
-  alerte: "border-agon-alerte bg-agon-alerte/[0.039] text-agon-alerte",
-}
 const SMALL_BTN = "cursor-pointer rounded-[4px] px-2.5 py-1 text-[10px] font-bold"
 
 interface Props {
@@ -116,17 +113,6 @@ function BlocLabel({ bloc, index }: { bloc: Bloc; index: number }) {
   )
 }
 
-function ColHeader({ label, tone, right }: { label: string; tone: "succes" | "alerte"; right?: React.ReactNode }) {
-  return (
-    <div className={cn("flex shrink-0 items-center justify-between gap-2 border-b-2 px-3 py-2", COL_HEAD[tone])}>
-      <span className="text-[11px] font-extrabold uppercase tracking-[0.5px]">
-        {label}
-      </span>
-      <div className="flex items-center gap-1.5">{right}</div>
-    </div>
-  )
-}
-
 function EmptyCol({ msg, sub }: { msg: string; sub?: string }) {
   return (
     <div className="px-3 py-[30px] text-center text-agon-tx3">
@@ -136,39 +122,19 @@ function EmptyCol({ msg, sub }: { msg: string; sub?: string }) {
   )
 }
 
-function ActionBtn({ onClick, title, children, primary = false }: {
-  onClick: () => void; title: string; children: React.ReactNode; primary?: boolean
-}) {
-  return (
-    <button
-      onClick={onClick}
-      title={title}
-      className={cn(
-        "flex cursor-pointer items-center gap-1 rounded-[5px] border px-[9px] py-1 text-[10px] font-bold",
-        primary ? "border-agon-alerte bg-agon-alerte text-agon-ink" : "border-agon-alerte/[0.376] bg-agon-alerte/10 text-agon-alerte",
-      )}
-    >{children}</button>
-  )
-}
-
 // ─── Colonne 1 : une carte par exercice (prévu + réalisé) ─────────────────────
 
-function SetChip({ set, plannedReps, iso }: { set: SessionSetLog; plannedReps?: number; iso: boolean }) {
-  const ok = set.done && (plannedReps === undefined || (set.reps !== undefined && set.reps >= plannedReps))
-  const tone: Tone = !set.done ? "erreur" : ok ? "succes" : "alerte"
-  const text = !set.done
-    ? "—"
-    : [
-        set.kg != null ? `${set.kg} kg` : null,
-        set.reps !== undefined ? `× ${set.reps}${iso ? " s" : ""}` : null,
-        set.rir != null ? `RIR ${set.rir}` : null,
-      ].filter(Boolean).join(" ")
-  return (
-    <span className={cn("rounded-[5px] border px-2 py-[3px] text-[11px] font-semibold text-agon-tx", TONE_SOFT[tone])}>{text}</span>
-  )
+/** Couleur d'une case réalisée face au prévu : plus dur = vert, plus facile = rouge, identique = gris. */
+const CMP_CLS: Record<Cmp, string> = {
+  egal:   "bg-agon-s1 text-agon-tx2",
+  plus:   "bg-agon-succes/15 text-agon-succes",
+  moins:  "bg-agon-erreur/15 text-agon-erreur",
+  neutre: "bg-agon-s1 text-agon-tx3",
 }
 
-function ExerciceCard({ exercice, params, sets, comment, week, videoSent, showRealise }: {
+const CELL = "rounded-[5px] py-[3px] text-center text-[12px] font-bold tabular-nums"
+
+function RealiseTable({ exercice, params, sets, comment, week, videoSent, showRealise }: {
   exercice: Exercice
   params: ExerciceParams | null
   sets: SessionSetLog[]
@@ -179,33 +145,48 @@ function ExerciceCard({ exercice, params, sets, comment, week, videoSent, showRe
   showRealise: boolean
 }) {
   const video = resolveVideoRequest(exercice, week)
-  const plannedReps: (number | undefined)[] = params
-    ? (params.reps.mode === "par_serie"
-        ? params.reps.values
-        : Array(params.nb_series).fill(params.reps.value))
-    : []
+  const kgComparable = params?.charge_unit === "kg"
+  const rows = Math.max(sets.length, params?.nb_series ?? 0)
   return (
-    <div className="mb-1.5 rounded-[4px] border border-agon-brd-l bg-agon-s2 px-[11px] py-[9px]">
-      <div className="flex items-center gap-1.5">
-        <span className="text-[13px] font-bold text-agon-tx">{exercice.exercise_name || "—"}</span>
-        {params && hasIso(params) && <IsoBadge size={9} />}
+    <div className="flex flex-col gap-1.5">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <span className="flex items-center gap-1.5 text-[13px] font-bold text-agon-tx">
+          {exercice.exercise_name || "—"}{params && hasIso(params) && <IsoBadge size={9} />}
+        </span>
+        <span className="text-[10.5px] text-agon-tx3">
+          {params ? <>prévu {formatSetsReps(params)} · {fmtCharge(params)} · {fmtRIR(params)}</> : exercice.libre_text || "Pas de paramètres"}
+        </span>
       </div>
-      <div className="mt-[3px] text-[11px] text-agon-tx3">
-        {params
-          ? <>Prévu · <span className="font-semibold text-agon-tx2">{formatSetsReps(params)} · {fmtCharge(params)} · {fmtRIR(params)}</span></>
-          : exercice.libre_text || "Pas de paramètres"}
-      </div>
-      {sets.length > 0 ? (
-        <div className="mt-1.5 flex flex-wrap gap-1">
-          {sets.map((set, i) => <SetChip key={i} set={set} plannedReps={plannedReps[i]} iso={isIsoAt(params, i)} />)}
+      {sets.length > 0 && params && !params.cluster ? (
+        <div className="grid max-w-[300px] grid-cols-[28px_repeat(3,minmax(0,1fr))] items-center gap-1">
+          <span />
+          <span className="text-center text-[9px] font-bold uppercase text-agon-tx3">{hasIso(params) ? "s" : "reps"}</span>
+          <span className="text-center text-[9px] font-bold uppercase text-agon-tx3">kg</span>
+          <span className="text-center text-[9px] font-bold uppercase text-agon-tx3">RIR</span>
+          {Array.from({ length: rows }, (_, k) => {
+            const set = sets[k]
+            const pReps = pvAt(params.reps, k)
+            const pKg = kgComparable ? pvAt(params.charge, k) : null
+            const pRir = pvAt(params.rir, k)
+            return [
+              <span key={`n${k}`} className="text-[10.5px] font-bold text-agon-tx3">S{k + 1}</span>,
+              ...(!set?.done
+                ? [<span key={`x${k}`} className={cn(CELL, "col-span-3", CMP_CLS.moins)}>non faite</span>]
+                : [
+                    <span key={`r${k}`} title={pReps != null ? `prévu ${pReps}` : undefined} className={cn(CELL, CMP_CLS[compareDone(set.reps, pReps)])}>{set.reps ?? "—"}</span>,
+                    <span key={`k${k}`} title={pKg != null ? `prévu ${pKg} kg` : undefined} className={cn(CELL, CMP_CLS[compareDone(set.kg, pKg)])}>{set.kg ?? "—"}</span>,
+                    <span key={`i${k}`} title={pRir != null ? `prévu RIR ${pRir}` : undefined} className={cn(CELL, CMP_CLS[compareDone(set.rir, pRir, false)])}>{set.rir ?? "—"}</span>,
+                  ]),
+            ]
+          })}
         </div>
+      ) : sets.length > 0 ? (
+        <div className="text-[11px] text-agon-tx2">{sets.filter(x => x.done).length} série(s) faite(s)</div>
       ) : showRealise && params ? (
-        <div className="mt-[5px] text-[11px] font-semibold text-agon-erreur">Non réalisé</div>
+        <div className="text-[11px] font-semibold text-agon-erreur">Non réalisé</div>
       ) : null}
       {comment && (
-        <div className="mt-1.5 rounded-[6px] bg-agon-alerte/10 px-2 py-1 text-[10px] italic text-agon-tx2">
-          {comment}
-        </div>
+        <div className="rounded-[6px] bg-agon-alerte/10 px-2 py-1 text-[11px] italic text-agon-tx2">« {comment} »</div>
       )}
       {video && <VideoBadge note={video.note} sent={sets.length > 0 || showRealise ? videoSent : undefined} />}
     </div>
@@ -236,18 +217,22 @@ function CellInput({ value, onChange, step = 1, width = "w-14", placeholder }: {
 const TH = "px-1 pb-[3px] pt-0 text-left text-[8px] font-bold uppercase tracking-[0.4px] text-agon-tx3"
 const TD = "px-1 py-0.5"
 
-function NextRow({ exercice, params, onPatch }: {
+function NextRow({ exercice, params, onPatch, onComment, onMore }: {
   exercice: Exercice
   params: ExerciceParams | null
   onPatch: (mutate: (p: ExerciceParams) => ExerciceParams) => void
+  onComment: (text: string) => void
+  onMore: () => void
 }) {
   const n = params?.nb_series ?? 0
   const iso = hasIso(params)
   const showCharge = params?.charge_unit !== "PDC"
+  const showRepsMax = !!params?.reps_max && Array.from({ length: n }, (_, i) => pvAt(params.reps_max!, i)).some(v => v != null)
   return (
-    <div className="mb-1.5 rounded-[4px] border border-agon-alerte/[0.188] bg-agon-s2 px-[11px] py-[9px]">
+    <div className="flex flex-col gap-1.5">
       <div className="flex items-center gap-1.5">
         <span className="flex-1 text-[13px] font-bold text-agon-tx">{exercice.exercise_name || "—"}</span>
+        <button onClick={onMore} title="Méthode, tempo, unité, vidéo… (éditeur complet)" className="cursor-pointer rounded-[5px] border border-agon-brd-l bg-transparent px-2 py-[3px] text-[10.5px] text-agon-tx3">Plus d&apos;options ›</button>
         {params && !params.cluster && (
           <div className="flex gap-1">
             <button
@@ -281,8 +266,8 @@ function NextRow({ exercice, params, onPatch }: {
           <thead>
             <tr>
               <th className={TH}>Série</th>
-              <th className={TH}>{iso ? "Durée min" : "Reps min"}</th>
-              <th className={TH}>{iso ? "Durée max" : "Reps max"}</th>
+              <th className={TH}>{iso ? (showRepsMax ? "Durée min" : "Durée") : (showRepsMax ? "Reps min" : "Reps")}</th>
+              {showRepsMax && <th className={TH}>{iso ? "Durée max" : "Reps max"}</th>}
               {showCharge && <th className={TH}>{params.charge_unit === "%RM" ? "Charge %" : "Charge kg"}</th>}
               <th className={TH}>RIR</th>
             </tr>
@@ -295,13 +280,15 @@ function NextRow({ exercice, params, onPatch }: {
                   <CellInput width="w-[54px]" value={pvAt(params.reps, i)}
                     onChange={v => onPatch(p => ({ ...p, reps: pvSetAt(p.reps, i, v ?? 0, p.nb_series) }))} />
                 </td>
-                <td className={TD}>
-                  <CellInput width="w-[54px]" placeholder="—" value={pvAt(params.reps_max, i)}
-                    onChange={v => onPatch(p => ({
-                      ...p,
-                      reps_max: pvSetAt<number | null>(p.reps_max ?? { mode: "global", value: null }, i, v, p.nb_series),
-                    }))} />
-                </td>
+                {showRepsMax && (
+                  <td className={TD}>
+                    <CellInput width="w-[54px]" placeholder="—" value={pvAt(params.reps_max, i)}
+                      onChange={v => onPatch(p => ({
+                        ...p,
+                        reps_max: pvSetAt<number | null>(p.reps_max ?? { mode: "global", value: null }, i, v, p.nb_series),
+                      }))} />
+                  </td>
+                )}
                 {showCharge && (
                   <td className={TD}>
                     <CellInput width="w-[66px]" step={0.5} value={pvAt(params.charge, i)}
@@ -317,6 +304,13 @@ function NextRow({ exercice, params, onPatch }: {
           </tbody>
         </table>
       )}
+      <input
+        aria-label={`Commentaire pour la prochaine séance : ${exercice.exercise_name}`}
+        placeholder="Commentaire pour la prochaine séance…"
+        defaultValue={exercice.comment ?? ""}
+        onBlur={e => { if (e.target.value !== (exercice.comment ?? "")) onComment(e.target.value) }}
+        className="w-full max-w-[380px] rounded-[6px] border border-agon-brd-l bg-agon-s1 px-2 py-1.5 text-[12px] text-agon-alerte placeholder:text-agon-tx3"
+      />
     </div>
   )
 }
@@ -329,6 +323,13 @@ export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, o
   const [activeWeek, setActiveWeek] = useState(initialWeek)
   useEffect(() => { setActiveWeek(initialWeek) }, [initialWeek])
   const [advanced, setAdvanced] = useState(false)
+  // « Plus d'options » : ouvre l'édition avancée et l'amène à l'écran (elle est en bas de la page).
+  const advancedRef = useRef<HTMLDivElement>(null)
+  const [scrollToAdvanced, setScrollToAdvanced] = useState(0)
+  useEffect(() => {
+    if (scrollToAdvanced) advancedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }, [scrollToAdvanced])
+  const openAdvanced = () => { setAdvanced(true); setScrollToAdvanced(n => n + 1) }
   const { mutate: saveOverride, isPending: clearingOverride } = useCoachSessionOverride()
   // Bandeau « modif ponctuelle » masqué pour ces logs (choix « Garder »)
   const [keptOverrides, setKeptOverrides] = useState<Set<string>>(new Set())
@@ -366,6 +367,17 @@ export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, o
           const rec = ex.params as Record<string, ExerciceParams>
           return { ...ex, params: { ...rec, [String(nextWeek)]: mutate(structuredClone(base)) } }
         }),
+      })),
+    })
+  }
+
+  /** Commentaire de l'exercice (consigne lue par l'athlète dès la prochaine séance). */
+  function setComment(exId: string, text: string) {
+    onChange({
+      ...editableSession,
+      blocs: editableSession.blocs.map(bloc => ({
+        ...bloc,
+        exercices: bloc.exercices.map(ex => ex.id === exId ? { ...ex, comment: text.trim() || undefined } : ex),
       })),
     })
   }
@@ -469,151 +481,136 @@ export function ProgSessionWeekDrawer({ session, cycleId, athleteId, onChange, o
           ><X size={14} /></button>
         </div>
 
-        {/* ── 2 colonnes ── */}
-        <div className="flex flex-1 overflow-hidden">
+        {/* ── Ressenti + actions ── */}
+        <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-agon-brd px-4 py-2.5">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-agon-tx2">
+            <span className="font-bold text-agon-succes">Séance {activeWeek}</span>
+            {currentLog?.status === "completed" ? (
+              <>
+                <span>{dateLabel(currentLog.scheduledDate, { weekday: "short", day: "numeric", month: "short" })}</span>
+                {currentLog.rpeScore !== null && <span>RPE <strong className="text-agon-tx">{currentLog.rpeScore}</strong></span>}
+                {atMods?.sessionForme != null && <span>Forme <strong className="text-agon-tx">{atMods.sessionForme}/5</strong></span>}
+              </>
+            ) : currentLog ? (
+              getStatusForWeek(activeWeek) === "missed"
+                ? <span className="font-bold text-agon-erreur">Manquée</span>
+                : <span>Prévue le {dateLabel(currentLog.scheduledDate, { day: "numeric", month: "short" })}</span>
+            ) : <span>{loadingLogs ? "…" : "Non planifiée"}</span>}
+            <span className="text-agon-tx3">→</span>
+            <span className="font-bold text-agon-alerte">Séance {nextWeek}</span>
+            <span>{nextLog ? dateLabel(nextLog.scheduledDate, { weekday: "short", day: "numeric", month: "short" }) : "pas encore planifiée"}</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {hasAnySets && (
+              <button
+                onClick={() => copyToNext("realise")}
+                title={`Prévu de la séance ${activeWeek} avec les charges réellement soulevées`}
+                className="flex cursor-pointer items-center gap-1.5 rounded-[8px] border-0 bg-agon-accent px-3.5 py-2 text-[12.5px] font-bold text-agon-ink"
+              ><Copy size={13} /> Reprogrammer la séance {nextWeek} avec le réalisé</button>
+            )}
+            <button
+              onClick={() => copyToNext("prevu")}
+              title={`Reprendre le prévu de la séance ${activeWeek} sur la séance ${nextWeek}`}
+              className="flex cursor-pointer items-center gap-1.5 rounded-[8px] border border-agon-brd-l bg-transparent px-3 py-2 text-[12px] font-semibold text-agon-tx"
+            ><Copy size={12} /> Copier le prévu</button>
+          </div>
+        </div>
 
-          {/* ── Col 1 : SÉANCE N — prévu et réalisé ── */}
-          <div className="flex min-w-0 flex-1 flex-col overflow-hidden border-r border-agon-brd">
-            <ColHeader
-              label={`Séance ${activeWeek} · Prévu et réalisé`}
-              tone="succes"
-              right={
-                currentLog?.status === "completed" ? (
-                  <span className="text-[10px] text-agon-tx3">
-                    {currentLog.rpeScore !== null ? `RPE ${currentLog.rpeScore} · ` : ""}
-                    {dateLabel(currentLog.scheduledDate, { day: "numeric", month: "short" })}
-                  </span>
-                ) : currentLog ? (
-                  getStatusForWeek(activeWeek) === "missed"
-                    ? <span className="text-[10px] font-bold text-agon-erreur">Manquée</span>
-                    : <span className="text-[10px] text-agon-tx3">Prévue le {dateLabel(currentLog.scheduledDate, { day: "numeric", month: "short" })}</span>
-                ) : (
-                  <span className="text-[10px] text-agon-tx3">{loadingLogs ? "…" : "Non planifiée"}</span>
-                )
-              }
-            />
-            <div className="flex-1 overflow-y-auto px-3 pb-8 pt-1">
-              {currentLog?.status === "completed" && Object.keys(currentLog.painLevels ?? {}).length > 0 && (
-                <div className="mt-2"><SessionPainDetail levels={currentLog.painLevels} note={currentLog.painNote} /></div>
-              )}
-              {(atMods?.sessionForme != null || atMods?.sessionComment) && (
-                <div className="mt-2 flex flex-wrap items-baseline gap-2 rounded-[4px] border border-agon-brd-l bg-agon-s2 px-2.5 py-1.5 text-[11px] text-agon-tx">
-                  {atMods?.sessionForme != null && (
-                    <span className={cn(
-                      "rounded-[5px] px-1.5 py-px font-bold",
-                      atMods.sessionForme >= 4 ? "bg-agon-succes/10 text-agon-succes" : atMods.sessionForme >= 3 ? "bg-agon-alerte/10 text-agon-alerte" : "bg-agon-erreur/10 text-agon-erreur",
-                    )}>Forme {atMods.sessionForme}/5</span>
-                  )}
-                  {atMods?.sessionComment && <span className="italic">« {atMods.sessionComment} »</span>}
-                </div>
-              )}
-              {currentOverride && (
-                <div className="mt-2 text-[10px] font-bold text-agon-alerte">Modif ponctuelle appliquée à cette séance</div>
-              )}
-              {prevuBlocs.length === 0 ? (
-                <EmptyCol msg="Aucun bloc" />
-              ) : loadingLogs ? (
-                <EmptyCol msg="Chargement…" />
-              ) : prevuBlocs.map((bloc, bi) => (
-                <div key={bloc.id}>
-                  <BlocLabel bloc={bloc} index={bi} />
-                  {bloc.exercices.map(ex => (
-                    <ExerciceCard
-                      key={ex.id}
-                      exercice={ex}
-                      params={resolveParams(ex, activeWeek)}
-                      sets={(atMods?.sessionSets?.[ex.id] ?? []) as SessionSetLog[]}
-                      comment={atMods?.exerciceComments?.[ex.id]}
-                      week={activeWeek}
-                      videoSent={!!atMods?.videoSent?.[ex.id]}
-                      showRealise={!!currentLog && (currentLog.status === "completed" || hasAnySets)}
-                    />
-                  ))}
-                </div>
-              ))}
+        <div className="flex-1 overflow-y-auto pb-8">
+          {currentLog?.status === "completed" && Object.keys(currentLog.painLevels ?? {}).length > 0 && (
+            <div className="px-4 pt-2"><SessionPainDetail levels={currentLog.painLevels} note={currentLog.painNote} /></div>
+          )}
+          {atMods?.sessionComment && (
+            <div className="px-4 pt-2 text-[12px] italic text-agon-tx2">Séance : « {atMods.sessionComment} »</div>
+          )}
+          {currentOverride && (
+            <div className="px-4 pt-2 text-[11px] font-bold text-agon-alerte">Modif ponctuelle appliquée à la séance {activeWeek}</div>
+          )}
+          {showOverrideBanner && nextOverride && (
+            <div className="mx-4 mt-2 flex flex-col gap-1.5 rounded-[6px] border border-agon-alerte/[0.376] bg-agon-alerte/10 px-2.5 py-2">
+              <div className="flex items-start gap-1.5 text-[11px] text-agon-tx">
+                <AlertTriangle size={13} className="mt-px shrink-0 text-agon-alerte" />
+                <span>La séance {nextWeek} a une modif ponctuelle (Planning) : l&apos;athlète fera cette version, pas tes modifs ici.</span>
+              </div>
+              <div className="flex justify-end gap-1.5">
+                <button onClick={() => setKeptOverrides(prev => new Set(prev).add(nextOverride.id))} className={cn(SMALL_BTN, "border border-agon-brd-l bg-transparent text-agon-tx2")}>Garder</button>
+                <button onClick={clearNextOverride} disabled={clearingOverride} className={cn(SMALL_BTN, "border-0 bg-agon-alerte text-agon-ink", clearingOverride && "opacity-60")}>{clearingOverride ? "…" : "Écraser"}</button>
+              </div>
             </div>
+          )}
+
+          {/* En-têtes de colonnes */}
+          <div className="sticky top-0 z-[1] mt-2 grid grid-cols-2 border-y border-agon-brd bg-agon-bg">
+            <div className="px-4 py-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.5px] text-agon-succes">Séance {activeWeek} · réalisé</div>
+            <div className="border-l border-agon-brd px-4 py-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.5px] text-agon-alerte">Séance {nextWeek} · à programmer <span className="font-medium normal-case tracking-normal text-agon-tx3">(vaut aussi pour les suivantes)</span></div>
           </div>
 
-          {/* ── Col 2 : SÉANCE N+1 — à programmer ── */}
-          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-            <ColHeader
-              label={`Séance ${nextWeek} · À programmer`}
-              tone="alerte"
-              right={
-                <>
-                  <ActionBtn onClick={() => copyToNext("prevu")} title={`Reprendre le prévu de la séance ${activeWeek} sur la séance ${nextWeek}`}>
-                    <Copy size={10} /> Copier le prévu
-                  </ActionBtn>
-                  {hasAnySets && (
-                    <ActionBtn primary onClick={() => copyToNext("realise")} title={`Prévu de la séance ${activeWeek} avec les charges réellement soulevées`}>
-                      <Copy size={10} /> Copier avec le réalisé
-                    </ActionBtn>
-                  )}
-                </>
-              }
-            />
-            <div className="shrink-0 border-b border-agon-brd px-3 py-1.5 text-[10px] text-agon-tx3">
-              {nextLog
-                ? `Prévue le ${dateLabel(nextLog.scheduledDate, { weekday: "short", day: "numeric", month: "short" })}`
-                : "Pas encore planifiée"}
-              {" · vaut aussi pour les séances suivantes"}
+          {editableSession.blocs.length === 0 ? (
+            <EmptyCol msg="Aucun bloc" />
+          ) : loadingLogs ? (
+            <EmptyCol msg="Chargement…" />
+          ) : editableSession.blocs.map((bloc, bi) => (
+            <div key={bloc.id}>
+              <div className="px-4"><BlocLabel bloc={bloc} index={bi} /></div>
+              {bloc.exercices.map(ex => {
+                const done = prevuBlocs.flatMap(b => b.exercices).find(x => x.id === ex.id) ?? ex
+                return (
+                  <div key={ex.id} className="grid grid-cols-1 border-b border-agon-brd md:grid-cols-2">
+                    <div className="px-4 py-2.5">
+                      <RealiseTable
+                        exercice={done}
+                        params={resolveParams(done, activeWeek)}
+                        sets={(atMods?.sessionSets?.[ex.id] ?? []) as SessionSetLog[]}
+                        comment={atMods?.exerciceComments?.[ex.id]}
+                        week={activeWeek}
+                        videoSent={!!atMods?.videoSent?.[ex.id]}
+                        showRealise={!!currentLog && (currentLog.status === "completed" || hasAnySets)}
+                      />
+                    </div>
+                    <div className="border-t border-agon-brd bg-agon-alerte/[0.03] px-4 py-2.5 md:border-l md:border-t-0">
+                      <NextRow
+                        exercice={ex}
+                        params={resolveParams(ex, nextWeek)}
+                        onPatch={mutate => patchNext(ex.id, mutate)}
+                        onComment={text => setComment(ex.id, text)}
+                        onMore={openAdvanced}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-            {showOverrideBanner && nextOverride && (
-              <div className="mx-3 mt-2 flex shrink-0 flex-col gap-1.5 rounded-[4px] border border-agon-alerte/[0.376] bg-agon-alerte/10 px-2.5 py-2">
-                <div className="flex items-start gap-1.5 text-[11px] text-agon-tx">
-                  <AlertTriangle size={13} className="mt-px shrink-0 text-agon-alerte" />
-                  <span>
-                    La séance {nextWeek} a une modif ponctuelle (Planning) : l'athlète fera cette version,
-                    pas tes modifs ici.
-                  </span>
+          ))}
+
+          <div className="flex items-center justify-between gap-2 px-4 pt-3 text-[11px] text-agon-tx3">
+            <span>
+              Réalisé : <span className="text-agon-tx2">gris = comme prévu</span> · <span className="text-agon-succes">vert = plus dur que prévu (plus de reps ou de kg, moins de RIR)</span> · <span className="text-agon-erreur">rouge = plus facile que prévu (moins de reps ou de kg, plus de RIR)</span>
+            </span>
+          </div>
+
+          <div ref={advancedRef} className="scroll-mt-2 px-4">
+            <button
+              onClick={() => setAdvanced(v => !v)}
+              className="mt-3.5 w-full cursor-pointer rounded-[5px] border border-dashed border-agon-brd-l bg-transparent px-2.5 py-1.5 text-[11px] font-semibold text-agon-tx3"
+            >{advanced ? "Masquer l'édition avancée" : `Édition avancée de la séance ${nextWeek} (méthodes, tempo, fiches, vidéo, bloc…)`}</button>
+            {advanced && (
+              <div className="mt-2.5">
+                <div className="mb-2 rounded-[6px] border border-agon-alerte/40 bg-agon-alerte/10 px-3 py-2 text-[12px] font-semibold text-agon-alerte">
+                  Tu modifies la séance {nextWeek}
+                  {nextLog ? ` (${dateLabel(nextLog.scheduledDate, { weekday: "short", day: "numeric", month: "short" })})` : " (pas encore planifiée)"}
+                  <span className="font-normal text-agon-tx2"> · vaut aussi pour les suivantes, jusqu&apos;à celle qui a ses propres valeurs</span>
                 </div>
-                <div className="flex justify-end gap-1.5">
-                  <button
-                    onClick={() => setKeptOverrides(prev => new Set(prev).add(nextOverride.id))}
-                    className={cn(SMALL_BTN, "border border-agon-brd-l bg-transparent text-agon-tx2")}
-                  >Garder</button>
-                  <button
-                    onClick={clearNextOverride}
-                    disabled={clearingOverride}
-                    className={cn(SMALL_BTN, "border-0 bg-agon-alerte text-agon-ink", clearingOverride && "opacity-60")}
-                  >{clearingOverride ? "…" : "Écraser"}</button>
-                </div>
+                <SessionBlocEditor
+                  session={editableSession}
+                  cycleId={cycleId}
+                  athleteId={athleteId}
+                  onChange={onChange}
+                  initialWeek={nextWeek}
+                  hideWeekNav
+                />
               </div>
             )}
-            <div className="flex-1 overflow-y-auto px-3 pb-8 pt-1">
-              {editableSession.blocs.map((bloc, bi) => (
-                <div key={bloc.id}>
-                  <BlocLabel bloc={bloc} index={bi} />
-                  {bloc.exercices.map(ex => (
-                    <NextRow
-                      key={ex.id}
-                      exercice={ex}
-                      params={resolveParams(ex, nextWeek)}
-                      onPatch={mutate => patchNext(ex.id, mutate)}
-                    />
-                  ))}
-                </div>
-              ))}
-
-              <button
-                onClick={() => setAdvanced(v => !v)}
-                className="mt-3.5 w-full cursor-pointer rounded-[5px] border border-dashed border-agon-brd-l bg-transparent px-2.5 py-1.5 text-[11px] font-semibold text-agon-tx3"
-              >{advanced ? "Masquer l'édition avancée" : "Édition avancée (fiches, vidéo, méthodes, bloc…)"}</button>
-              {advanced && (
-                <div className="mt-2.5">
-                  <SessionBlocEditor
-                    session={editableSession}
-                    cycleId={cycleId}
-                    athleteId={athleteId}
-                    onChange={onChange}
-                    initialWeek={nextWeek}
-                    hideWeekNav
-                  />
-                </div>
-              )}
-            </div>
           </div>
-
         </div>
       </div>
     </div>

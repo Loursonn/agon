@@ -129,6 +129,11 @@ export function dayThemeText(t: { label: string; intensity: string | null; domin
   return tags || t.label;
 }
 
+/** « Nouvel exercice dans la banque : Pallof press (vidéo) ». */
+export function newExerciseText(op: { name: string }): string {
+  return `Nouvel exercice dans la banque : ${op.name} (vidéo)`;
+}
+
 export function describeOp(op: DraftOp, names: Names): string {
   switch (op.op) {
     case "add_exercice": {
@@ -153,6 +158,8 @@ export function describeOp(op: DraftOp, names: Names): string {
         : `Retirer les consignes du bloc ${names.bloc(op.session_id, op.bloc_id)} (${names.session(op.session_id)})`;
     case "set_exercise_video":
       return `${op.remplacer ? "Remplacer la vidéo" : "Vidéo"} de démo de ${op.exercise_name} : youtu.be/${op.youtube_id} (vidéo de la banque, visible pour tous les athlètes qui ont cet exercice)`;
+    case "create_exercise":
+      return newExerciseText(op);
     case "set_session_schedule": {
       const day = op.day_of_week === null ? "sans jour fixe" : `le ${DAYS[op.day_of_week]}`;
       const rec = op.recurrence === "once" ? ", une seule fois" : op.recurrence === "weekly" ? ", chaque semaine" : "";

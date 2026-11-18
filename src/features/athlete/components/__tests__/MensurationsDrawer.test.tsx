@@ -9,11 +9,11 @@ vi.mock("sonner", () => ({ toast }));
 
 import { MensurationsDrawer } from "../MensurationsDrawer";
 
-function setup(tables: Record<string, Row[]>, initialNew: boolean) {
+function setup(tables: Record<string, Row[]>, initialNew: boolean, levels?: ("avancee" | "myjump")[]) {
   const db = fakeDb(tables);
   setDbForTests(db.db);
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { networkMode: "always" } } });
-  render(<QueryClientProvider client={qc}><MensurationsDrawer athleteId="a" initialNew={initialNew} onClose={() => {}} /></QueryClientProvider>);
+  render(<QueryClientProvider client={qc}><MensurationsDrawer athleteId="a" initialNew={initialNew} levels={levels} onClose={() => {}} /></QueryClientProvider>);
   return db;
 }
 
@@ -47,6 +47,24 @@ describe("MensurationsDrawer : biométrie et MyJump", () => {
     const summary = await screen.findByTestId("biometry-summary");
     expect(within(summary).getByText("179 cm")).toBeInTheDocument();
     expect(within(summary).getByText("96 cm")).toBeInTheDocument();
-    expect(within(summary).getAllByText("—")).toHaveLength(5);
+    expect(within(summary).getAllByText("—")).toHaveLength(7);
+  });
+
+  it("biométrie planifiée classique : taille et tours, sans longueurs ni MyJump", () => {
+    setup({ measurement_logs: [], test_sessions: [] }, true, []);
+    expect(screen.getByLabelText("Taille (debout)")).toBeInTheDocument();
+    expect(screen.getByText("Tour de taille")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Envergure")).toBeNull();
+    expect(screen.queryByLabelText("Longueur de cuisse")).toBeNull();
+    expect(screen.queryByText("Mesures MyJump (cm)")).toBeNull();
+  });
+
+  it("biométrie planifiée avancée + MyJump : envergure, longueurs et mesures MyJump en plus", () => {
+    setup({ measurement_logs: [], test_sessions: [] }, true, ["avancee", "myjump"]);
+    expect(screen.getByLabelText("Taille (debout)")).toBeInTheDocument();
+    expect(screen.getByText("Biométrie avancée (cm)")).toBeInTheDocument();
+    expect(screen.getByLabelText("Envergure")).toBeInTheDocument();
+    expect(screen.getByLabelText("Longueur de bras")).toBeInTheDocument();
+    expect(screen.getByLabelText("Hauteur de départ")).toBeInTheDocument();
   });
 });

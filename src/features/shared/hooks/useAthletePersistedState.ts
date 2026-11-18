@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
 import {
-  SKEYS, sLoadResult, sSave, cycleKey, sSaveCycle,
+  SKEYS, sLoadResult, sLoadManyResult, pickResult, sSave, cycleKey, sSaveCycle,
   isKeyLoadFailed, isKeyNotLoadedError, KeyNotLoadedError, markKeyLoad,
 } from "@/lib/storage";
 import { mergeLocalIntoServer } from "@/lib/mergeLocal";
@@ -13,7 +13,7 @@ import type {
   BodyWeight, Goals, ArchivedBlock,
   VisibilitySettings, SessionLog, FreeSession,
 } from "../types/athlete";
-import { readAppData, writeAppData } from "@/api/appData";
+import { writeAppData } from "@/api/appData";
 import { listTestSessions } from "@/api/tests";
 import { listAthleteCycles } from "@/api/cycles";
 import { getWellnessHistory, toLegacyToday, toLegacyWellnessHistory } from "@/api/wellness";
@@ -42,6 +42,27 @@ const DEF_VISIBILITY: VisibilitySettings = {
   muscu: true, energy: true, tests: true, wellness: true,
   nutrition: true, pr: true, weight: true,
 };
+
+const MIGRATED_KEY = "asp:percycle_migrated";
+const VISIBILITY_KEY = "asp:visibility";
+
+/**
+ * Clés `app_data` lues au démarrage, en UNE requête (avant : une requête par
+ * clé, ~15 allers-retours vers la base à chaque ouverture de l'app).
+ */
+export const STARTUP_APP_DATA_KEYS: readonly string[] = [
+  SKEYS.exMeta, SKEYS.sets, SKEYS.goals, SKEYS.anotes, SKEYS.custMethods,
+  SKEYS.blockConfig, SKEYS.blockHistory, SKEYS.weekSchedule, SKEYS.sessionLogs,
+  SKEYS.freeSessions, MIGRATED_KEY, VISIBILITY_KEY,
+  // Miroir global du cycle ouvert : affiché en attendant les clés du cycle
+  // (comme avant, quand elles étaient lues à part au montage).
+  SKEYS.exos, SKEYS.sessions, SKEYS.completed,
+];
+
+/** Même contenu JSON (les miroirs identiques ne sont pas réécrits). */
+function sameJson(a: unknown, b: unknown): boolean {
+  try { return JSON.stringify(a) === JSON.stringify(b); } catch { return false; }
+}
 
 /** Cycle ouvert par défaut : celui qui couvre aujourd'hui, sinon le plus récent. */
 async function determineActiveCycleId(athleteId: string): Promise<string | null> {
@@ -96,6 +117,14 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
   // Cycle actuellement ouvert. exos/sessions/completed sont scopés sur lui.
   // null = aucun cycle en base (back-compat : on retombe sur les clés globales).
   const [openCycleId, setOpenCycleIdState] = useState<string | null>(null);
+  // Cycle ouvert pas encore déterminé (chargement initial en cours) : les clés
+  // du cycle attendent, sinon elles partaient une 1re fois sur les clés
+  // globales (cycle null) pour rien, puis sur celles du vrai cycle.
+  const [cycleResolvedFor, setCycleResolvedFor] = useState<string | null>(null);
+  const cycleResolved = cycleResolvedFor === athleteId;
+  // Athlète dont les clés du cycle ouvert sont déjà affichées : le miroir
+  // global (provisoire) ne doit plus les remplacer (rechargement au retour).
+  const cycleShownForRef = useRef<string | null>(null);
   const openCycleRef = useRef<string | null>(null);
   // Résout la clé de stockage selon le cycle ouvert (scopée) ou legacy (globale).
   const keyFor = useCallback(
@@ -213,10 +242,11 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
       // Lecture qui distingue « clé absente » (défaut légitime) de « lecture en
       // erreur » : dans ce cas la clé est enregistrée pour relecture et son
       // écriture reste bloquée d'ici là.
+      const startupP = sLoadManyResult(STARTUP_APP_DATA_KEYS, athleteId);
       const tracked = async <T,>(
         k: string, fb: T, setRaw: Dispatch<SetStateAction<T>>, normalize?: (v: T) => T,
       ): Promise<T> => {
-        const r = await sLoadResult<T>(k, athleteId);
+        const r = pickResult<T>(await startupP, k);
         if (r.ok) return r.value === undefined ? fb : (r.value as T);
         failedRef.current.set(k, makeReloader(fb, setRaw, (v) => save(k, v), normalize));
         return fb;
@@ -250,7 +280,7 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
       // ci-dessous, lancés en même temps qu'elles (avant : deux allers-retours
       // de plus, en série, avant d'afficher quoi que ce soit).
       const activeCycleP = determineActiveCycleId(athleteId);
-      const migratedP = sLoadResult<boolean>("asp:percycle_migrated", athleteId);
+      const migratedP = startupP.then((r) => pickResult<boolean>(r, MIGRATED_KEY));
       activeCycleP.catch(() => { /* relevé par l'await plus bas */ });
       migratedP.catch(() => { /* relevé par l'await plus bas */ });
       const readWellness = () => getWellnessHistory(athleteId, { includeArchived: false });
@@ -288,6 +318,22 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
       setBlockConfigRaw(bc); setBlockHistoryRaw(bh || []);
       setWeekScheduleRaw(ws || {});
       setSessionLogsRaw(sl); setFreeSessionsRaw(fs);
+      // Réglages de visibilité : lus avec les autres clés ; en erreur, on garde
+      // les réglages affichés (par défaut : tout visible).
+      const vis = pickResult<VisibilitySettings>(await startupP, VISIBILITY_KEY);
+      if (vis.ok && vis.value) setVisibilityRaw((v) => ({ ...v, ...vis.value }));
+      // Programme affiché tout de suite depuis le miroir global ; les clés du
+      // cycle ouvert (effet plus bas) le remplacent dès leur arrivée. Lecture
+      // en erreur : rien d'affiché ici, l'effet du cycle gère la relecture.
+      const startup = await startupP;
+      if (startup.ok && cycleShownForRef.current !== athleteId) {
+        const le = startup.values[SKEYS.exos] as ExosMap | undefined;
+        const ls = startup.values[SKEYS.sessions] as Session[] | undefined;
+        const lc = startup.values[SKEYS.completed] as Record<number, string[]> | undefined;
+        setExosRaw(le || {});
+        setSessionsRaw(ls && ls.length ? ls : (DEF_SESSIONS as Session[]));
+        setCompletedSessionsRaw(lc || {});
+      }
 
       // ── Cycle ouvert + migration legacy → par-cycle (une seule fois) ────────
       const activeCycleId = await activeCycleP;
@@ -327,10 +373,11 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
         }
         // Échec → on ne pose pas le drapeau : la migration sera retentée au
         // prochain chargement, quand la connexion sera revenue.
-        if (copiesOk) await save("asp:percycle_migrated", true).catch(() => {});
+        if (copiesOk) await save(MIGRATED_KEY, true).catch(() => {});
       }
       openCycleRef.current = activeCycleId;
       setOpenCycleIdState(activeCycleId);
+      setCycleResolvedFor(athleteId);
       setLoaded(true);
       syncUnloaded();
     })();
@@ -340,20 +387,24 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
   // Rejoué à chaque changement de cycle ouvert (ouverture d'un ancien cycle,
   // création d'un nouveau). Clés scopées si cycle, sinon legacy globales.
   useEffect(() => {
-    if (!athleteId) return;
+    if (!athleteId || !cycleResolved) return;
     let cancelled = false;
     (async () => {
       const id = openCycleId;
       const exKey = id ? cycleKey(SKEYS.exos, id)      : SKEYS.exos;
       const seKey = id ? cycleKey(SKEYS.sessions, id)  : SKEYS.sessions;
       const csKey = id ? cycleKey(SKEYS.completed, id) : SKEYS.completed;
-      const [e, sess, cs] = await Promise.all([
-        sLoadResult<ExosMap>(exKey, athleteId),
-        sLoadResult<Session[]>(seKey, athleteId),
-        sLoadResult<Record<number, string[]>>(csKey, athleteId),
-      ]);
+      // Une seule requête : les clés du cycle et, s'il y a un cycle, les clés
+      // globales du miroir (comparées plus bas pour ne pas les réécrire à
+      // l'identique à chaque ouverture).
+      const legacyKeys = id ? [SKEYS.exos, SKEYS.sessions, SKEYS.completed] : [];
+      const batch = await sLoadManyResult([exKey, seKey, csKey, ...legacyKeys], athleteId);
+      const e = pickResult<ExosMap>(batch, exKey);
+      const sess = pickResult<Session[]>(batch, seKey);
+      const cs = pickResult<Record<number, string[]>>(batch, csKey);
       if (cancelled) return;
       openCycleRef.current = id;
+      cycleShownForRef.current = athleteId;
       const exosVal = e.value || {};
       const sessVal = sess.value && sess.value.length ? sess.value : (DEF_SESSIONS as Session[]);
       const compVal = cs.value || {};
@@ -379,14 +430,20 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
       // les clés globales. On les aligne sur le cycle ouvert pour ne rien régresser.
       // Uniquement les valeurs réellement lues en base : jamais un défaut issu
       // d'une erreur de lecture (réseau, session expirée…), qui écraserait les données.
+      // Déjà identiques en base : rien à écrire (avant : trois blocs réécrits à
+      // chaque ouverture de l'app, une charge inutile pour la base).
       if (id) {
-        if (e.ok && e.value !== undefined)       save(SKEYS.exos, e.value).catch(() => {});
-        if (sess.ok && sess.value?.length)       save(SKEYS.sessions, sess.value).catch(() => {});
-        if (cs.ok && cs.value !== undefined)     save(SKEYS.completed, cs.value).catch(() => {});
+        const differs = (base: string, v: unknown) => !sameJson(batch.values[base], v);
+        if (e.ok && e.value !== undefined && differs(SKEYS.exos, e.value))
+          save(SKEYS.exos, e.value).catch(() => {});
+        if (sess.ok && sess.value?.length && differs(SKEYS.sessions, sess.value))
+          save(SKEYS.sessions, sess.value).catch(() => {});
+        if (cs.ok && cs.value !== undefined && differs(SKEYS.completed, cs.value))
+          save(SKEYS.completed, cs.value).catch(() => {});
       }
     })();
     return () => { cancelled = true; };
-  }, [openCycleId, athleteId, save, refreshNonce]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [openCycleId, athleteId, save, refreshNonce, cycleResolved]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Relecture automatique des clés en erreur ───────────────────────────────
   const retryingRef = useRef(false);
@@ -396,7 +453,11 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
     const aid = athleteId;
     try {
       const entries = [...failedRef.current.entries()];
-      const results = await Promise.all(entries.map(([k, r]) => (r.load ? r.load() : sLoadResult(k, aid))));
+      // Clés `app_data` relues ensemble, en une requête.
+      const plain = entries.filter(([, r]) => !r.load).map(([k]) => k);
+      const batch = plain.length > 0 ? sLoadManyResult(plain, aid) : null;
+      const results = await Promise.all(entries.map(([k, r]) =>
+        r.load ? r.load() : batch!.then((b) => pickResult<unknown>(b, k))));
       if (aid !== athleteIdRef.current) return; // athlète changé pendant la relecture
       entries.forEach(([k, r], i) => {
         const res = results[i];
@@ -438,15 +499,12 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
     };
   }, [hasUnloaded, retryFailed]);
 
-  // ── Visibility settings + test sessions from Supabase ────────────────────
+  // ── Test sessions from Supabase (visibilité : lue au chargement initial) ──
   useEffect(() => {
     if (!athleteId) return;
     listTestSessions(athleteId)
       .then(setTestSessionsRaw)
       .catch(() => { /* garde la liste déjà affichée */ });
-    readAppData<VisibilitySettings>(athleteId, 'asp:visibility')
-      .then(({ value }) => { if (value) setVisibilityRaw(v => ({ ...v, ...value })); })
-      .catch(() => { /* réglages par défaut : tout visible */ });
   }, [athleteId, refreshNonce]);
 
   // ── Wellness midnight reset ────────────────────────────────────────────────
@@ -519,7 +577,7 @@ export function useAthletePersistedState(athleteId: string, opts?: { readOnly?: 
   const setVisibilitySettings = useCallback(async (settings: VisibilitySettings) => {
     setVisibilityRaw(settings);
     try {
-      await writeAppData(athleteId, 'asp:visibility', settings);
+      await writeAppData(athleteId, VISIBILITY_KEY, settings);
       flash(true);
     } catch {
       flash(false);

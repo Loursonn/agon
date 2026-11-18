@@ -31,7 +31,7 @@ INSERT INTO r(k,v) VALUES
   ('02 set_workout_push authenticated (true)', has_function_privilege('authenticated', 'public.set_workout_push(data_source, boolean)', 'EXECUTE')::text),
   ('03 trigger_garmin_workouts authenticated (false)', has_function_privilege('authenticated', 'public.trigger_garmin_workouts()', 'EXECUTE')::text),
   ('04 push_workouts actif par défaut (true)', (SELECT push_workouts FROM provider_connections WHERE athlete_id = (SELECT ath FROM ids) AND provider = 'garmin')::text),
-  ('05 job cron garmin-workouts (true)', EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'garmin-workouts' AND schedule = '*/10 * * * *')::text);
+  ('05 job cron garmin-workouts (true)', EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'garmin-workouts' AND schedule IN ('*/10 * * * *', '*/30 * * * *'))::text);
 
 -- Contraintes
 DO $$

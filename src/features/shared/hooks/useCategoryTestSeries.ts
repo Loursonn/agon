@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useQuery } from '@tanstack/react-query';
 import { getCategoryTestSeries, testKeys } from '@/api/tests';
 import type { TestCategory } from '@/features/shared/types/tests';
@@ -10,6 +11,6 @@ export function useCategoryTestSeries(athleteId: string, category: TestCategory)
     queryKey: testKeys.categorySeries(athleteId, category),
     queryFn: () => getCategoryTestSeries(athleteId, category),
     enabled: !!athleteId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
   });
 }

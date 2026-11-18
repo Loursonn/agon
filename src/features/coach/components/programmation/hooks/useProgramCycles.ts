@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   listAthleteCycles,
@@ -14,7 +15,7 @@ export function useAthleteCycles(athleteId: string | undefined) {
   return useQuery<CycleLite[]>({
     queryKey: programCycleKeys.list(athleteId ?? ""),
     enabled: !!athleteId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     queryFn: () => listAthleteCycles(athleteId!),
   })
 }
@@ -24,7 +25,7 @@ export function useCycleWeeks(cycleId: string | undefined) {
   return useQuery<CycleWeek[]>({
     queryKey: programCycleKeys.weeks(cycleId ?? ""),
     enabled: !!cycleId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     queryFn: () => listCycleWeeks(cycleId!),
   })
 }

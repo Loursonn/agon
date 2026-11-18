@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   coachRetourKeys, getWeeklyRetour, invalidateCoachRetours, listAthleteRetours, reactToRetour, upsertWeeklyRetour,
@@ -22,7 +23,7 @@ export function useWeeklyCoachRetour(athleteId: string | undefined, weekStart: s
     queryKey: coachRetourKeys.week(athleteId, weekStart),
     queryFn: () => getWeeklyRetour(athleteId!, weekStart!),
     enabled: !!athleteId && !!weekStart,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
   });
 }
 
@@ -32,7 +33,7 @@ export function useAthleteRetours(athleteId: string | undefined) {
     queryKey: coachRetourKeys.list(athleteId),
     queryFn: () => listAthleteRetours(athleteId!),
     enabled: !!athleteId,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
   });
 }
 

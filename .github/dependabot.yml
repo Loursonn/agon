@@ -7,6 +7,11 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 3
+    ignore:
+      # TypeScript 7 (réécriture en Go) n'est pas encore accepté par
+      # typescript-eslint (peer < 6.1). Monter de version majeure = chantier voulu.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
     groups:
       mineures:
         update-types: [minor, patch]

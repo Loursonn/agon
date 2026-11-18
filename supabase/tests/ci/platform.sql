@@ -58,8 +58,8 @@ CREATE POLICY test_files_upload ON storage.objects AS PERMISSIVE FOR INSERT TO p
 -- Tâches planifiées (cron.job), mêmes noms et horaires qu'en prod.
 SELECT cron.schedule('account-retention', '30 4 * * 1', 'SELECT public.trigger_account_retention();');
 SELECT cron.schedule('coros-sync', '40 3 * * *', 'SELECT public.trigger_coros_sync();');
-SELECT cron.schedule('garmin-maintenance', '*/15 * * * *', 'SELECT public.trigger_garmin_maintenance();');
-SELECT cron.schedule('garmin-workouts', '*/10 * * * *', 'SELECT public.trigger_garmin_workouts()');
+SELECT cron.schedule('garmin-maintenance', '7 * * * *', 'SELECT public.trigger_garmin_maintenance();');
+SELECT cron.schedule('garmin-workouts', '*/30 * * * *', 'SELECT public.trigger_garmin_workouts()');
 SELECT cron.schedule('mark-missed-workouts', '0 3 * * *', 'SELECT public.run_workout_status_maintenance();');
 SELECT cron.schedule('purge-oauth-states', '10 3 * * *', 'SELECT public.purge_expired_oauth_states();');
 -- Inactives en CI : seule leur définition est testée, pas leur exécution en tâche de fond.

@@ -222,7 +222,24 @@ function hasVideoOp(raw: unknown): boolean {
   return Array.isArray(ops) && ops.some((o) => (o as { op?: unknown } | null)?.op === "set_exercise_video");
 }
 
+/** Noms des exercices que la proposition ajoute à la banque. */
+function newExerciseNames(draft: { ops?: unknown }): string[] {
+  const ops = Array.isArray(draft.ops) ? draft.ops : [];
+  return ops.flatMap((o) => {
+    const x = o as { op?: unknown; name?: unknown } | null;
+    return x?.op === "create_exercise" && typeof x.name === "string" ? [x.name] : [];
+  });
+}
+
 const VIDEO_NOTE = " Vidéo de la banque, visible pour tous les athlètes qui ont cet exercice.";
+
+function newExerciseNote(names: string[], applied: boolean): string {
+  if (names.length === 0) return "";
+  const list = names.map((n) => `« ${n} »`).join(", ");
+  return applied
+    ? ` Nouvel exercice dans la banque : ${list} (avec sa vidéo).`
+    : ` Nouvel exercice dans la banque à l'application : ${list} (avec sa vidéo).`;
+}
 
 /**
  * Séances énergétiques qu'une semaine peut placer chez cet athlète : la
@@ -495,8 +512,12 @@ async function getExercices(admin: SupabaseClient, caller: Caller, url: URL) {
     .limit(20);
   if (error) throw new Error("exercises: " + error.message);
   const rows = data ?? [];
-  if (details) return json({ exercices: rows.map((e) => ({ name: e.name, youtube_id: e.youtube_id || null })) });
-  return json({ exercices: rows.map((e) => e.name) });
+  if (details) {
+    return json({ exercices: rows.map((e) => ({ name: e.name, youtube_id: e.youtube_id || null, video: !!e.youtube_id })) });
+  }
+  // `video` : l'exercice a-t-il déjà sa vidéo de démo ? Sans : set_exercise_video ;
+  // absent de la banque : create_exercise.
+  return json({ exercices: rows.map((e) => ({ name: e.name, video: !!e.youtube_id })) });
 }
 
 /** Banque de séances énergétiques du coach, pour en placer une dans une semaine. */
@@ -757,7 +778,7 @@ async function postDraft(admin: SupabaseClient, caller: Caller, athleteId: strin
   return json({
     ...data,
     message: "Proposition déposée. Elle n'est appliquée que si le coach la valide dans Agon."
-      + (hasVideoOp(draft) ? VIDEO_NOTE : ""),
+      + (hasVideoOp(draft) ? VIDEO_NOTE : "") + newExerciseNote(newExerciseNames(draft), false),
   }, 201);
 }
 
@@ -801,6 +822,10 @@ async function applyStored(admin: SupabaseClient, caller: Caller, draft: StoredD
   if (draft.kind === "axe") return json({ status: "applied", message: "Axe de travail retenu." });
 
   try {
+    // Chaque exercice ajouté à la banque est tracé, comme les autres écritures.
+    for (const n of newExerciseNames(draft)) {
+      await logAccess(admin, caller, ("create_exercise " + n).slice(0, 80), draft.athlete_id);
+    }
     const res = await applyDraft({
       db: admin, athleteId: draft.athlete_id, coachId: caller.coachId, kind: draft.kind, ops: draft.ops, today: todayParis(),
     });
@@ -810,7 +835,7 @@ async function applyStored(admin: SupabaseClient, caller: Caller, draft: StoredD
       status: "applied",
       ...(res.goals ? { goals: res.goals } : {}),
       message: "Appliqué dans Agon. Annulable : POST /drafts/" + draft.id + "/annuler."
-        + (hasVideoOp(draft) ? VIDEO_NOTE : ""),
+        + (hasVideoOp(draft) ? VIDEO_NOTE : "") + newExerciseNote(newExerciseNames(draft), true),
     });
   } catch (e) {
     await admin.from("coach_api_drafts").update({ status: "pending", decided_at: null, applied_via: null }).eq("id", draft.id);
@@ -871,12 +896,16 @@ async function postUndo(admin: SupabaseClient, caller: Caller, draftId: string, 
 
   try {
     const report = await undoSteps(admin, data.athlete_id as string, caller.coachId, parseUndo(data.undo), force);
+    const exercisesNote = report.keptExercises.length > 0
+      ? ` ${report.keptExercises.map((n) => `« ${n} »`).join(", ")} ${report.keptExercises.length > 1 ? "restent" : "reste"} dans la banque d'exercices : déjà utilisé ailleurs.`
+      : "";
     return json({
       status: "undone",
       conserves: report.kept,
-      message: report.kept > 0
+      ...(report.keptExercises.length > 0 ? { exercices_conserves: report.keptExercises } : {}),
+      message: (report.kept > 0
         ? `Annulé. ${report.kept} élément(s) déjà réalisé(s) par l'athlète sont restés en place.`
-        : "Annulé : tout est revenu comme avant.",
+        : report.keptExercises.length > 0 ? "Annulé." : "Annulé : tout est revenu comme avant.") + exercisesNote,
     });
   } catch (e) {
     await admin.from("coach_api_drafts").update({ status: "applied", undone_at: null }).eq("id", draftId);

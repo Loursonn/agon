@@ -3,6 +3,7 @@ import type { Bloc, ProgSession } from "@/features/coach/components/programmatio
 import { planDayChange } from "@/lib/planningProjection";
 import { localIsoDay, type IsoDay } from "@shared/domain/dates";
 import { ApiError, check, db, unwrap, unwrapRows } from "./client";
+import { readAppDataValue } from "./appData";
 
 /**
  * Programme de musculation et banques du coach.
@@ -57,11 +58,8 @@ export function invalidateProgram(qc: QueryClient, ownerId: string): Promise<voi
 // ── Lectures ─────────────────────────────────────────────────────────────────
 
 async function readArray<T>(ownerId: string, key: string, what: string): Promise<T[]> {
-  const row = unwrap(
-    await db().from("app_data").select("value").eq("athlete_id", ownerId).eq("key", key).maybeSingle(),
-    what,
-  );
-  const v = row?.value ?? null;
+  // Regroupée avec les autres lectures `app_data` de la même passe.
+  const v = await readAppDataValue(ownerId, key, what);
   if (v === null) return [];
   if (!Array.isArray(v)) throw new ApiError(what, { message: "valeur inattendue" });
   return v as unknown as T[];

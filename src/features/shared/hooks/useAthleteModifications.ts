@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useQuery } from "@tanstack/react-query";
 import { listAthleteChoices, workoutKeys, type AthleteChoiceLog } from "@/api/workouts";
 import type { AthleteModifications } from "@/features/shared/types/athlete";
@@ -16,7 +17,7 @@ export function useAthleteModifications(athleteId: string) {
   return useQuery({
     queryKey: workoutKeys.choices(athleteId),
     enabled: !!athleteId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     // Saisie déjà passée au parseur tolérant du domaine ; typée ici comme
     // l'attendent les écrans existants.
     queryFn: async (): Promise<AthleteModificationLog[]> =>

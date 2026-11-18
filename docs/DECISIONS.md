@@ -2792,3 +2792,12 @@ Demande d'Hugo (15/11) : « lorsqu'un athlète a une compétition, il faut la me
 - **Trace** : quand le coach modifie les tours, l'athlète voit une mention discrète « Tours modifiés par ton coach », sans
   notification (`activity_streams.laps_edited_by`).
 - HYROX garde son écran « Ajuster les tours » tel quel (pas de tableau entièrement modifiable).
+
+## 2026-11-17 — IA sans date de naissance : coupure annulée
+
+- **Choix d'Hugo** : la phase 2 de la revue juridique C2 (IA sans effet tant que la date de naissance manque, prévue le
+  22/11) est annulée. La migration `supabase/pending/20261114120000_ai_requires_birth_date.sql` n'est pas appliquée.
+- Le préavis athlète « d'ici le 21 novembre » est retiré ; Nouveauté coach `2026-11-17-fix-ia-date-naissance-pas-coupee`.
+- Reste en place : date de naissance demandée une fois à chaque compte (BirthDateGate), accord IA refusé avant 18 ans
+  (`ai_consent_adults_only`), mention côté coach. Risque connu : un compte sans date garde l'IA (conditions Gemini et
+  Claude réservées aux 18 ans et plus).

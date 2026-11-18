@@ -2,6 +2,7 @@
  * Côté professionnel : ses liens actifs vers des athlètes, avec le coach
  * principal de chacun, et l'état de l'accord staff de l'athlète.
  */
+import { STALE_MS } from "@/lib/queryCache";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -33,7 +34,7 @@ export function useMyStaffLinks() {
   return useQuery<MyStaffAthlete[]>({
     queryKey: staffKeys.mine(user?.id ?? ""),
     enabled: !!user,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     queryFn: async () => {
       const rows = await listMyStaffLinks(user!.id);
 
@@ -78,7 +79,7 @@ export function useStaffInvitationPreview(token: string | undefined) {
   return useQuery<StaffInvitationPreview | null>({
     queryKey: staffKeys.invitation(token ?? ""),
     enabled: !!token,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => getStaffInvitationPreview(token!),
   });
 }

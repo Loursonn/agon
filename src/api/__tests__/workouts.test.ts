@@ -4,6 +4,7 @@ import { fakeDb, type Row } from "@shared/__tests__/fakeDb";
 import { mergeEntries } from "@shared/domain/athleteMods";
 import { setDbForTests } from "@/api/client";
 import {
+  listSessionOccurrenceLogs,
   deletePlannedWorkouts, listWorkoutLogs, listUnfinishedWorkouts, getPreviousLoggedWorkout,
   listAthleteChoices, completeWorkout, patchWorkoutEntries, setWorkoutRpe,
   setCoachOverride, reopenWorkout, removeWorkout, skipWorkout, rescheduleWorkoutByAthlete,
@@ -329,5 +330,37 @@ describe("planWorkout avec id (séance libre rejouable)", () => {
     const got = await planWorkout(input);
     expect(got.id).toBe("du-coach");
     expect(tables.workout_logs).toHaveLength(1);
+  });
+});
+
+describe("listSessionOccurrenceLogs — une requête pour toutes les séances", () => {
+  afterEach(() => setDbForTests(null));
+
+  it("toutes les séances en une lecture, sans les annulées ni l'après", async () => {
+    const f = fakeDb({ workout_logs: [
+      { id: "1", athlete_id: "a", session_id: "s1", scheduled_date: "2026-11-02", status: "completed" },
+      { id: "2", athlete_id: "a", session_id: "s2", scheduled_date: "2026-11-03", status: "planned" },
+      { id: "3", athlete_id: "a", session_id: "s2", scheduled_date: "2026-11-04", status: "skipped" },
+      { id: "4", athlete_id: "a", session_id: "s1", scheduled_date: "2026-11-20", status: "planned" },
+      { id: "5", athlete_id: "b", session_id: "s1", scheduled_date: "2026-11-02", status: "planned" },
+      { id: "6", athlete_id: "a", session_id: "s3", scheduled_date: "2026-11-02", status: "planned" },
+    ] });
+    let selects = 0;
+    const from = f.db.from.bind(f.db);
+    setDbForTests({ ...f.db, from: (t: string) => { selects++; return from(t); } });
+    const rows = await listSessionOccurrenceLogs("a", ["s1", "s2", "s1"], "2026-11-10");
+    expect(rows.map((r) => r.id).sort()).toEqual(["1", "2"]);
+    expect(selects).toBe(1);
+  });
+
+  it("plus de 1000 lignes : lues par pages, rien de tronqué", async () => {
+    const logs = Array.from({ length: 1205 }, (_, i) => ({
+      id: String(i).padStart(5, "0"), athlete_id: "a", session_id: i % 2 ? "s1" : "s2",
+      scheduled_date: "2026-01-01", status: "completed",
+    }));
+    setDbForTests(fakeDb({ workout_logs: logs }).db);
+    const rows = await listSessionOccurrenceLogs("a", ["s1", "s2"], "2026-11-10");
+    expect(rows).toHaveLength(1205);
+    expect(new Set(rows.map((r) => r.id)).size).toBe(1205);
   });
 });

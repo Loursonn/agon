@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useState, useMemo } from "react";
 import { parseISO, format, differenceInWeeks } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -59,7 +60,7 @@ function useLastCycleData(athleteId: string) {
   return useQuery({
     queryKey: cycleKeys.lastCycle(athleteId),
     enabled:  !!athleteId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     queryFn: async (): Promise<LastCycleData> => {
       // Tous les cycles de l'athlète (chaîne macro → méso → cycle + autonomes) :
       // le plus récent (par date de début) = celui à reprendre.

@@ -3,6 +3,7 @@
  * `src/api/references.ts`. Toute écriture invalide via `invalidateReferences`
  * (séances énergie, profil sportif, accueil coach, validations).
  */
+import { STALE_MS } from "@/lib/queryCache";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   activateReference,
@@ -27,7 +28,7 @@ export function useActiveReferences(athleteId: string | null | undefined) {
     queryKey: referenceKeys.active(athleteId ?? ""),
     queryFn: () => getActiveReferences(athleteId!),
     enabled: !!athleteId,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
   });
 }
 
@@ -36,7 +37,7 @@ export function useMeasurementHistory(athleteId: string | null | undefined) {
     queryKey: referenceKeys.history(athleteId ?? ""),
     queryFn: () => getMeasurements(athleteId!),
     enabled: !!athleteId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
   });
 }
 
@@ -46,7 +47,6 @@ export function useRecentMeasurements(athleteIds: string[], limit = 8) {
     queryFn: () => getRecentMeasurements(athleteIds, limit),
     enabled: athleteIds.length > 0,
     staleTime: 120_000,
-    refetchOnWindowFocus: true,
   });
 }
 
@@ -57,7 +57,7 @@ export function usePerformanceReviews(scope: { athleteId: string } | { coachId: 
     queryKey: key,
     queryFn: () => getPerformanceReviews(scope),
     enabled: !!id,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
   });
 }
 

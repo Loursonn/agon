@@ -10,6 +10,7 @@
  * le bandeau du jour et le drawer lisent la même ligne, ils doivent se
  * contredire zéro seconde.
  */
+import { STALE_MS } from "@/lib/queryCache";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   dayThemeKeys,
@@ -35,7 +36,7 @@ export function useDayThemesRange(
     queryKey: dayThemeKeys.range(athleteId ?? "", from ?? "", to ?? ""),
     queryFn: () => listDayThemes(athleteId!, from!, to!),
     enabled: !!athleteId && !!from && !!to,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
   });
 }
 
@@ -45,7 +46,7 @@ export function useDayTheme(athleteId: string | undefined, date: string | undefi
     queryKey: dayThemeKeys.day(athleteId ?? "", date ?? ""),
     queryFn: () => getDayTheme(athleteId!, date!),
     enabled: !!athleteId && !!date,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
   });
 }
 

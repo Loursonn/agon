@@ -7,6 +7,7 @@ import {
   dayThemeText,
   ENERGY_KIND_LABEL,
   energyStepLines,
+  newExerciseText,
   paramsText,
 } from "@/lib/coachApiDraftText";
 import type { DraftOp, ExerciceParamsShape, ProgSessionShape, WeekOp } from "@shared/coachApiOps.ts";
@@ -39,6 +40,7 @@ export function WeekDraftPreview({ athleteId, ops, prog }: {
 
   const created = week.flatMap((o) => (o.op === "create_session" ? [o.session] : []));
   const createdEnergy = week.flatMap((o) => (o.op === "create_energy_session" ? [o.energy] : []));
+  const newExercises = week.flatMap((o) => (o.op === "create_exercise" ? [o] : []));
   const sessionName = (id: string) =>
     prog?.find((s) => s.id === id)?.name ?? created.find((s) => s.id === id)?.name ?? "séance supprimée";
   const isNew = (id: string) => created.some((s) => s.id === id) || createdEnergy.some((e) => e.id === id);
@@ -82,6 +84,18 @@ export function WeekDraftPreview({ athleteId, ops, prog }: {
           </div>
         );
       })}
+
+      {newExercises.length > 0 && (
+        <ul style={{ margin: "8px 0 0", padding: "0 0 0 16px" }}>
+          {newExercises.map((e) => (
+            <li key={e.exercise_id} style={{ fontSize: 12, color: C.tx, lineHeight: 1.5 }}>
+              {newExerciseText(e)}
+              {" "}
+              <a href={`https://youtu.be/${e.youtube_id}`} target="_blank" rel="noreferrer" style={{ color: C.coach, fontSize: 11 }}>voir</a>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {created.length > 0 && <div style={sectionTitle}>Séances de musculation créées</div>}
       {created.map((s) => (

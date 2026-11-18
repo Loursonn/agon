@@ -1,35 +1,11 @@
 /**
- * Préavis avant de couper l'IA aux comptes sans date de naissance (revue
- * juridique C2, phase 2 — décision d'Hugo du 2026-11-14 : 7 jours de préavis).
+ * Date de naissance manquante : mention côté coach.
  *
- * Jusqu'au `AI_BIRTH_DATE_DEADLINE` inclus, un compte qui a dit oui à l'IA
- * sans date de naissance connue voit le message ci-dessous sur l'écran de
- * saisie de la date. Le lendemain, la migration
- * `supabase/pending/20261114120000_ai_requires_birth_date.sql` rend l'accord
- * IA sans effet tant que la date manque.
+ * Le préavis athlète « d'ici le 21 novembre pour garder l'IA » a été retiré le
+ * 2026-11-17 : Hugo a annulé la coupure de l'IA aux comptes sans date de
+ * naissance (migration `supabase/pending/20261114120000_ai_requires_birth_date.sql`
+ * non appliquée). La date reste demandée à tous les comptes (BirthDateGate).
  */
-import { localIsoDay } from "@shared/domain/dates";
-
-/** Dernier jour pour renseigner sa date de naissance sans perdre l'IA (AAAA-MM-JJ). */
-export const AI_BIRTH_DATE_DEADLINE = "2026-11-21";
-
-/** « 21 novembre » : la date limite telle qu'on l'écrit aux athlètes. */
-export function aiBirthDateDeadlineLabel(deadline: string = AI_BIRTH_DATE_DEADLINE): string {
-  return new Date(deadline + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
-}
-
-/**
- * Message de préavis pour un compte sans date de naissance, ou null.
- * Seulement s'il a dit oui à l'IA, et jusqu'à la date limite incluse.
- */
-export function aiBirthDateNotice(
-  hasAiConsent: boolean,
-  today: string = localIsoDay(),
-  deadline: string = AI_BIRTH_DATE_DEADLINE,
-): string | null {
-  if (!hasAiConsent || today > deadline) return null;
-  return `Renseigne ta date de naissance d’ici le ${aiBirthDateDeadlineLabel(deadline)} pour garder les analyses de l’IA.`;
-}
 
 /**
  * Mention discrète côté coach : l'athlète n'a pas de date de naissance, elle

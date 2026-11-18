@@ -29,7 +29,6 @@ export function usePlanningMargin(daysAhead = 14) {
     queryFn: () => listCyclesEndingSoon(athleteIds, today, limit),
     enabled: !!user && athleteIds.length > 0,
     staleTime: 120_000,
-    refetchOnWindowFocus: true,
   });
 
   const cycles = useMemo<CycleEndingSoon[]>(() => {

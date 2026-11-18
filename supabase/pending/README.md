@@ -6,6 +6,11 @@ Le job CI « Rejeu des migrations (R2) » compare `supabase/migrations/` au sch�
 
 ## 20261114120000 — IA coupée sans date de naissance (revue juridique C2, phase 2)
 
+> **ANNULÉE par Hugo le 2026-11-17 : ne pas appliquer.** Le préavis athlète (« d'ici le
+> 21 novembre ») a été retiré de l'app le même jour ; la date de naissance reste demandée
+> (BirthDateGate) et l'accord IA donné avant 18 ans reste refusé (trigger
+> `ai_consent_adults_only` existant). Les fichiers restent ici pour mémoire, sans effet.
+
 Durcissement : à appliquer **le 22/11/2026**. Hugo a donné son accord le 14/11, sous condition d'un préavis de 7 jours
 (jusqu'au 21/11 inclus, `AI_BIRTH_DATE_DEADLINE`). Aucune Edge Function à déployer :
 toutes les lectures serveur de l'accord IA passent par la vue `current_consents`

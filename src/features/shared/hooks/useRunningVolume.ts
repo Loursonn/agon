@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getManualRunSources, getWatchRuns, num, providerKeys, type ManualRunSources } from "@/api/providers";
@@ -39,14 +40,14 @@ export function useRunningVolume(
   const manual = useQuery<ManualRunSources>({
     queryKey: providerKeys.manualRuns(athleteId ?? "", from),
     enabled: !!athleteId,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => getManualRunSources(athleteId!, from),
   });
 
   const watch = useQuery<WatchActivityInput[]>({
     queryKey: providerKeys.runs(athleteId ?? "", from),
     enabled: !!athleteId,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => getWatchRuns(athleteId!, from),
   });
 

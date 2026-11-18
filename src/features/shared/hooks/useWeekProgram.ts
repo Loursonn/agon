@@ -1,3 +1,5 @@
+import type { BiometryLevel } from "@/features/shared/types/measurements";
+import { STALE_MS } from "@/lib/queryCache";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAthleteContext } from "@/features/shared/context/AthleteContext";
@@ -26,6 +28,10 @@ export interface TestSess {
   title: string;
   date: string;
   completed: boolean;
+  /** Fiche du test, null sans fiche. */
+  doc_id?: string | null;
+  /** Biométrie : niveaux ajoutés à la classique. */
+  biometry_levels?: BiometryLevel[];
 }
 
 export interface DayProgram {
@@ -71,7 +77,7 @@ export function useWeekProgram(weekStart: string | null): DayProgram[] {
   const { data: workoutLogs = [] } = useQuery({
     queryKey: planningKeys.week(athleteId ?? "", mondayISO),
     enabled: !!athleteId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     queryFn: () => getWeekWorkouts(athleteId!, mondayISO, sundayISO),
   });
 

@@ -48,7 +48,11 @@ export function levelRadius(levelPct: number): { value: number; clipped: boolean
 
 const RUNS = ["run_1", "run_2", "run_3", "run_4", "run_5", "run_6", "run_7", "run_8"] as const;
 
-export function effortProfile(race: HyroxResult, refs: RefLookup, objective: PlanSegments | null): EffortAxis[] {
+export function effortProfile(
+  race: HyroxResult, refs: RefLookup, objective: PlanSegments | null,
+  /** « up » : positions arrondies vers le haut (verdict, carte à partager). */
+  rounding: "nearest" | "up" = "nearest",
+): EffortAxis[] {
   const cat = raceCategory(race);
   const seg = (k: string): number | null => {
     const v = (race as unknown as Record<string, number | null | undefined>)[`${k}_s`];
@@ -66,7 +70,7 @@ export function effortProfile(race: HyroxResult, refs: RefLookup, objective: Pla
   ];
   return axes.map(({ key, label, total, ref: refKey, target: t, per }) => {
     const ref = refs(cat, refKey, POSITION_BRACKET);
-    const pct = total != null && ref ? percentile(total, ref) : null;
+    const pct = total != null && ref ? percentile(total, ref, rounding) : null;
     const levelPct = total != null && t != null ? Math.round((t / total) * 100) : null;
     const lv = levelPct != null ? levelRadius(levelPct) : null;
     const div = (v: number | null | undefined) => (v != null ? Math.round(v / per) : null);

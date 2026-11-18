@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, differenceInWeeks, addDays } from "date-fns";
@@ -24,7 +25,7 @@ function useCycleSessions(athleteId: string, startDate: string, endDate: string)
   return useQuery({
     queryKey: ["cycle-sessions", athleteId, startDate, endDate],
     enabled:  !!athleteId && !!startDate && !!endDate,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: async (): Promise<WorkoutRow[]> => {
       // Scope by the cycle's date span. Cycles are sequential (non-overlapping),
       // and most logs are date-based (microcycle_id null), so date range is the

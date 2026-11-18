@@ -2,6 +2,7 @@
  * useAthleteTrends — agrège wellness / poids / sommeil / records / assiduité
  * sur N jours glissants (Mon profil athlète), + phrases de synthèse (Claude, repli règles).
  */
+import { STALE_MS } from "@/lib/queryCache";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getAiInsights, getTrendSessions, profileKeys } from "@/api/profile";
@@ -24,7 +25,7 @@ export function useAthleteTrends(days: number): { summary: TrendSummary; ready: 
   const { data: logs = NO_LOGS, isSuccess: logsReady } = useQuery({
     queryKey: profileKeys.trendSessions(athleteId, prev.start, cur.end),
     enabled: !!athleteId,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     // Muscu + énergie / spécifique : toutes les séances prescrites
     queryFn: async (): Promise<WorkoutRow[]> => (await getTrendSessions(athleteId, prev.start, cur.end)) as WorkoutRow[],
   });

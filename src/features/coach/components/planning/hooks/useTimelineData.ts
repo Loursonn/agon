@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { listWorkoutLogs } from "@/api/workouts";
@@ -27,7 +28,7 @@ export function useTimelineData(athleteId: string, range: { start: Date; end: Da
   return useQuery({
     queryKey: cycleKeys.timeline(athleteId, start, end),
     enabled:  !!athleteId,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: (): Promise<TimelineData> => getTimeline(athleteId, start, end),
   });
 }
@@ -57,7 +58,7 @@ export function useMicrocycleDays(
   return useQuery({
     queryKey: ["micro-days", athleteId, startDate, endDate],
     enabled:  !!athleteId && !!startDate,
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: async (): Promise<Record<string, WorkoutDayData[]>> => {
       const data = await listWorkoutLogs({ athleteIds: [athleteId], from: startDate, to: endDate, withMods: false });
 

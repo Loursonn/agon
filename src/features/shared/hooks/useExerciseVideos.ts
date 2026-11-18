@@ -1,3 +1,4 @@
+import { STALE_SLOW_MS } from "@/lib/queryCache";
 import { useQuery } from "@tanstack/react-query";
 import { exerciseKeys, getExerciseVideos } from "@/api/exercises";
 
@@ -7,7 +8,7 @@ export function useExerciseVideos(exerciseIds: string[]) {
   return useQuery<Record<string, string>>({
     queryKey: exerciseKeys.videos(key),
     enabled: exerciseIds.length > 0,
-    staleTime: 300_000,
+    staleTime: STALE_SLOW_MS,
     queryFn: () => getExerciseVideos(exerciseIds),
   });
 }

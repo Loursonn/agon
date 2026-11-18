@@ -4,9 +4,11 @@
  * Vue coach : comparaison chronologique des mensurations & photos d'un athlète.
  * - Onglet Mensurations : filtre par item (bras, taille…) → évolution + poids à la même date + delta vs log précédent.
  * - Onglet Photos : filtre par item photo (face, côté…) → comparaison côte à côte chronologique.
+ * - Onglet Observations : abdomen, clavicules, cage, coude et carte musculaire (bilan morpho).
  */
 import { useMemo, useState } from 'react';
-import { Ruler, Camera } from 'lucide-react';
+import { Ruler, Camera, Eye } from 'lucide-react';
+import { MorphoObservationsPanel } from '@/features/coach/components/profil/MorphoObservationsPanel';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -229,7 +231,7 @@ function PhotosTab({ logs }: { logs: MeasurementLog[] }) {
 
 export default function MeasurementComparison({ athleteId }: { athleteId: string }) {
   const { data: logs = [], isLoading } = useMeasurementLogs(athleteId);
-  const [tab, setTab] = useState<'mensu' | 'photos'>('mensu');
+  const [tab, setTab] = useState<'mensu' | 'photos' | 'obs'>('mensu');
 
   return (
     <div className="mb-7">
@@ -249,7 +251,7 @@ export default function MeasurementComparison({ athleteId }: { athleteId: string
           <div className="mb-4"><BiometrySummary logs={logs} /></div>
           {/* Onglets */}
           <div className="mb-4 flex gap-1.5">
-            {([['mensu', 'Mensurations', Ruler], ['photos', 'Photos', Camera]] as const).map(([k, label, Icon]) => {
+            {([['mensu', 'Mensurations', Ruler], ['photos', 'Photos', Camera], ['obs', 'Observations', Eye]] as const).map(([k, label, Icon]) => {
               const active = tab === k;
               return (
                 <button
@@ -266,7 +268,7 @@ export default function MeasurementComparison({ athleteId }: { athleteId: string
             })}
           </div>
 
-          {tab === 'mensu' ? <MeasurementsTab logs={logs} /> : <PhotosTab logs={logs} />}
+          {tab === 'mensu' ? <MeasurementsTab logs={logs} /> : tab === 'photos' ? <PhotosTab logs={logs} /> : <MorphoObservationsPanel athleteId={athleteId} />}
         </div>
       )}
     </div>

@@ -38,6 +38,87 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-17-assistant-cree-exercice-banque",
+    date: "2026-11-17",
+    kind: "feature",
+    title: "Votre assistant Claude peut ajouter un exercice à votre banque, avec sa vidéo",
+    summary:
+      "Quand un exercice manque dans la banque, l'assistant peut le créer avec sa vidéo YouTube et l'utiliser tout de suite dans une séance : l'athlète a le bouton vidéo.",
+    sections: [
+      {
+        title: "Ce qui change pour vous",
+        points: [
+          "La proposition de l'assistant affiche « Nouvel exercice dans la banque : <nom> (vidéo) » avant que vous l'appliquiez.",
+          "L'exercice n'est créé que si vous appliquez la proposition. Coach certifié : il rejoint la banque commune ; sinon, il reste dans votre banque.",
+          "Annuler la proposition retire l'exercice, sauf s'il sert déjà ailleurs : il reste alors, et l'assistant vous le dit.",
+          "Si l'exercice existe déjà, l'assistant lui ajoute sa vidéo au lieu d'en créer un second.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-17-fix-ia-date-naissance-pas-coupee",
+    date: "2026-11-17",
+    kind: "fix",
+    title: "Date de naissance : l'IA n'est finalement pas coupée le 22 novembre",
+    summary:
+      "Contrairement à ce qu'annonçait la nouveauté du 14 novembre, un athlète sans date de naissance garde l'accès aux analyses par IA après le 21 novembre.",
+    sections: [
+      {
+        title: "Ce qui change pour vous",
+        points: [
+          "Le message « d'ici le 21 novembre pour garder l'IA » n'est plus affiché à vos athlètes.",
+          "La date de naissance reste demandée une fois à chaque athlète qui ne l'a pas encore renseignée, et la mention sur sa fiche (Profil, bloc Identité) reste en place.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-16-fix-moins-de-requetes",
+    date: "2026-11-16",
+    kind: "fix",
+    title: "Ouverture plus rapide, serveur moins sollicité",
+    summary:
+      "L'accueil de l'athlète et la fiche athlète demandent beaucoup moins de choses au serveur à l'ouverture : l'app s'affiche plus vite et reste plus stable aux heures chargées.",
+    sections: [
+      {
+        title: "Ce qui change pour vous",
+        points: [
+          "Les données de l'athlète arrivent en quelques requêtes groupées au lieu de plusieurs dizaines.",
+          "Revenir sur l'onglet de l'app ne recharge plus tout : seules les données de plus de 5 minutes sont relues.",
+          "Une modification faite par votre athlète peut mettre jusqu'à 5 minutes à apparaître chez vous (et inversement). Pour la voir tout de suite : rechargez la page.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-16-hyrox-verdict-carte-partage",
+    date: "2026-11-16",
+    kind: "feature",
+    title: "HYROX : le verdict de chaque course, et une carte à partager pour l'athlète",
+    summary:
+      "En haut de l'analyse d'une course : le niveau de l'athlète dans toute sa catégorie, ses points forts et ses freins, et le temps encore à gagner. L'athlète peut en faire une image pour ses réseaux.",
+    sections: [
+      {
+        title: "Le verdict",
+        points: [
+          "Niveau : « top X % » de toute la catégorie sur le chrono (arrondi vers le haut), avec un palier (Élite, Très haut niveau, Avancé, Confirmé, En progression), la place et l'objectif du jour.",
+          "Profil : une phrase qui résume la course (par exemple « Profil ergo : très forte sur les machines, freinée par les charges lourdes »), puis les points forts et les freins, station par station.",
+          "Marge : le chrono possible avec les leviers de la course, qui n'est pas une prédiction.",
+          "Pas de rang pour une simulation ni pour une catégorie sans données de référence : le verdict parle alors seulement de l'objectif.",
+        ],
+      },
+      {
+        title: "La carte à partager (athlète)",
+        points: [
+          "Format post ou story, avec le chrono, le « top X % », le radar des stations, les points forts et le frein.",
+          "L'athlète choisit d'afficher ou non son nom, sa place et le chrono possible ; le frein et la source du classement restent toujours sur la carte.",
+          "Seul l'athlète crée sa carte, sur son téléphone : rien n'est envoyé.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-16-competition-courbe-fc",
     date: "2026-11-16",
     kind: "feature",

@@ -2,6 +2,7 @@
  * Hooks React Query pour la banque de méthodes d'entraînement (src/api/methods.ts).
  * Mutations avec optimistic updates + rollback sur erreur.
  */
+import { STALE_SLOW_MS } from "@/lib/queryCache";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -27,7 +28,7 @@ export function useTrainingMethods(filters?: TrainingMethodFilters) {
   return useQuery<TrainingMethod[]>({
     queryKey: methodKeys.list,
     queryFn: listTrainingMethods,
-    staleTime: 60_000,
+    staleTime: STALE_SLOW_MS,
     select: (data) => filterTrainingMethods(data, filters),
   });
 }

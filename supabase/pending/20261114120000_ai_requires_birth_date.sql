@@ -1,3 +1,4 @@
+-- ANNULÉE par Hugo le 2026-11-17 : NE PAS APPLIQUER (voir supabase/pending/README.md).
 -- Accord IA sans effet tant que la date de naissance n'est pas connue (revue juridique C2, phase 2).
 --
 -- À APPLIQUER SEULEMENT APRÈS la mise en production (main) de l'écran « Ta date de naissance »

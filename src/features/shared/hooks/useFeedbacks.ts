@@ -1,3 +1,4 @@
+import { STALE_MS } from "@/lib/queryCache";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { appContentKeys, appendUserFeedback, getCoachFeedbacks, listUserFeedback } from "@/api/appContent";
 import type { CoachFeedbacks, AppFeedbackEntry } from "../types/athlete";
@@ -8,13 +9,13 @@ export function useFeedbacks(athleteId: string) {
   const { data: coachFeedbacks = {} } = useQuery<CoachFeedbacks>({
     queryKey: appContentKeys.coachFeedback(athleteId),
     queryFn: () => getCoachFeedbacks(athleteId),
-    staleTime: 30_000,
+    staleTime: STALE_MS,
   });
 
   const { data: appFeedbacks = [] } = useQuery<AppFeedbackEntry[]>({
     queryKey: appContentKeys.userFeedback(athleteId),
     queryFn: () => listUserFeedback(athleteId),
-    staleTime: 60_000,
+    staleTime: STALE_MS,
   });
 
   const addFeedbackMutation = useMutation({

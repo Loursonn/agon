@@ -26,6 +26,16 @@ const FKS: { table: string; column: string; ref: string; action: "cascade" | "nu
 
 let seq = 0;
 
+/** `a @> b` sur du jsonb : objets par clés, tableaux élément par élément. */
+function jsonContains(a: unknown, b: unknown): boolean {
+  if (Array.isArray(b)) return Array.isArray(a) && b.every((x) => a.some((y) => jsonContains(y, x)));
+  if (b && typeof b === "object") {
+    if (!a || typeof a !== "object" || Array.isArray(a)) return false;
+    return Object.entries(b as Row).every(([k, v]) => k in (a as Row) && jsonContains((a as Row)[k], v));
+  }
+  return a === b;
+}
+
 /** `ilike` : `%` et `_` comme en SQL, sans tenir compte de la casse. */
 function likeToRegExp(pattern: string): RegExp {
   const body = pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/%/g, ".*").replace(/_/g, ".");
@@ -154,6 +164,8 @@ export function fakeDb(
         ilike: (c: string, pattern: string) => (filters.push((r) => typeof r[c] === "string" && likeToRegExp(pattern).test(r[c] as string)), q),
         /** `like` : comme `ilike`, sensible à la casse. */
         like: (c: string, pattern: string) => (filters.push((r) => typeof r[c] === "string" && new RegExp(likeToRegExp(pattern).source).test(r[c] as string)), q),
+        /** `contains` : contenance jsonb (`@>`), récursive comme dans Postgres. */
+        contains: (c: string, v: unknown) => (filters.push((r) => jsonContains(r[c], v)), q),
         insert: (p: Row | Row[]) => ((op = "insert"), (payload = structuredClone(Array.isArray(p) ? p : [p])), q),
         upsert: (p: Row | Row[], o = {}) => ((op = "upsert"), (payload = structuredClone(Array.isArray(p) ? p : [p])), (opts = o), q),
         update: (p: Row) => ((op = "update"), (payload = [structuredClone(p)]), q),

@@ -6,6 +6,7 @@
  * La base fait foi sur les droits : les triggers refusent toute modification
  * de grille qui ne vient pas du coach principal (cf. staff_core.sql).
  */
+import { STALE_MS } from "@/lib/queryCache";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { errorMessage } from "@/lib/errors";
@@ -28,7 +29,7 @@ export function useAthleteStaff(athleteId: string | undefined) {
   return useQuery<StaffLink[]>({
     queryKey: staffKeys.athlete(athleteId ?? ""),
     enabled: !!athleteId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     queryFn: () => listAthleteStaff(athleteId!),
   });
 }
@@ -38,7 +39,7 @@ export function useStaffInvitations(athleteId: string | undefined) {
   return useQuery<StaffInvitation[]>({
     queryKey: staffKeys.invitations(athleteId ?? ""),
     enabled: !!athleteId,
-    staleTime: 30_000,
+    staleTime: STALE_MS,
     queryFn: () => listStaffInvitations(athleteId!),
   });
 }
@@ -47,7 +48,7 @@ export function useStaffInvitations(athleteId: string | undefined) {
 export function useStaffHealthConsent(athleteId: string) {
   return useQuery({
     queryKey: staffKeys.consent(athleteId),
-    staleTime: 60_000,
+    staleTime: STALE_MS,
     queryFn: () => staffSharingConsented(athleteId),
   });
 }
