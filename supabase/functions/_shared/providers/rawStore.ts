@@ -40,12 +40,12 @@ export function rawPath(athleteId: string, source: string, type: string, id: str
 }
 
 export async function gzip(bytes: Uint8Array): Promise<Uint8Array> {
-  const stream = new Response(bytes).body!.pipeThrough(new CompressionStream("gzip"));
+  const stream = new Response(bytes as Uint8Array<ArrayBuffer>).body!.pipeThrough(new CompressionStream("gzip"));
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
 export async function gunzip(bytes: Uint8Array): Promise<Uint8Array> {
-  const stream = new Response(bytes).body!.pipeThrough(new DecompressionStream("gzip"));
+  const stream = new Response(bytes as Uint8Array<ArrayBuffer>).body!.pipeThrough(new DecompressionStream("gzip"));
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 

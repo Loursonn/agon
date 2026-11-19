@@ -223,7 +223,8 @@ const store: WriteQueueStore = {
 /** `navigator.locks` (Safari ≥ 15.4) ; sans lui, relire-fusionner réduit déjà la fenêtre. */
 const lock: QueueLock | undefined =
   typeof navigator !== "undefined" && navigator.locks?.request
-    ? (name, fn) => navigator.locks.request(name, fn)
+    // TS 5.9 type le retour en Promise<Promise<T>> ; à l'exécution la promesse est déjà aplatie.
+    ? (name, fn) => navigator.locks.request(name, fn) as unknown as ReturnType<typeof fn>
     : undefined;
 
 function createBus(): QueueBus | undefined {
