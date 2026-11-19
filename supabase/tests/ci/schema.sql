@@ -6486,6 +6486,28 @@ CREATE OR REPLACE FUNCTION "public"."sync_extrap_to_performance"() RETURNS "trig
 ALTER FUNCTION "public"."sync_extrap_to_performance"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."sync_test_doc_assignments"("p_athlete" "uuid") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+BEGIN
+  DELETE FROM public.doc_assignments a
+   WHERE a.athlete_id = p_athlete
+     AND a.source = 'test'
+     AND NOT EXISTS (SELECT 1 FROM public.test_sessions t WHERE t.athlete_id = p_athlete AND t.doc_id = a.doc_id);
+
+  INSERT INTO public.doc_assignments (doc_id, athlete_id, assigned_by, source)
+  SELECT DISTINCT t.doc_id, p_athlete, t.coach_id, 'test'
+    FROM public.test_sessions t
+   WHERE t.athlete_id = p_athlete AND t.doc_id IS NOT NULL
+  ON CONFLICT (doc_id, athlete_id, source) DO NOTHING;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."sync_test_doc_assignments"("p_athlete" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."sync_test_session_to_results"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -6520,6 +6542,26 @@ CREATE OR REPLACE FUNCTION "public"."sync_test_session_to_results"() RETURNS "tr
 ALTER FUNCTION "public"."sync_test_session_to_results"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."test_fiche_for"("p_athlete" "uuid", "p_coach" "uuid", "p_type" "text", "p_title" "text") RETURNS "uuid"
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  SELECT f.doc_id
+    FROM public.coach_test_fiches f
+    LEFT JOIN public.test_definitions d ON f.test_key = d.id::text
+   WHERE f.coach_id IN ((SELECT p.coach_id FROM public.profiles p WHERE p.id = p_athlete), p_coach)
+     AND (
+       (p_type = 'biometric' AND f.test_key = 'biometrie')
+       OR (p_type IS DISTINCT FROM 'biometric' AND lower(d.name) = lower(p_title))
+     )
+   ORDER BY (f.coach_id = (SELECT p.coach_id FROM public.profiles p WHERE p.id = p_athlete)) DESC
+   LIMIT 1;
+$$;
+
+
+ALTER FUNCTION "public"."test_fiche_for"("p_athlete" "uuid", "p_coach" "uuid", "p_type" "text", "p_title" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."tg_activity_garmin_device_no_ai"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public'
@@ -6551,6 +6593,31 @@ $$;
 
 
 ALTER FUNCTION "public"."tg_activity_streams_zones"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."tg_coach_test_fiche_changed"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_coach uuid := COALESCE(NEW.coach_id, OLD.coach_id);
+  v_key   text := COALESCE(NEW.test_key, OLD.test_key);
+BEGIN
+  UPDATE public.test_sessions t
+     SET doc_id = public.test_fiche_for(t.athlete_id, t.coach_id, t.type, t.title)
+   WHERE COALESCE(t.completed, false) = false
+     AND (t.coach_id = v_coach OR t.athlete_id IN (SELECT p.id FROM public.profiles p WHERE p.coach_id = v_coach))
+     AND (
+       (v_key = 'biometrie' AND t.type = 'biometric')
+       OR (v_key <> 'biometrie' AND t.type IS DISTINCT FROM 'biometric'
+           AND lower(t.title) = (SELECT lower(d.name) FROM public.test_definitions d WHERE d.id::text = v_key))
+     );
+  RETURN NULL;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."tg_coach_test_fiche_changed"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."tg_competition_link_to_race"() RETURNS "trigger"
@@ -6717,6 +6784,45 @@ $$;
 
 
 ALTER FUNCTION "public"."tg_race_watch_to_competition"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."tg_test_session_assignments"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    IF OLD.doc_id IS NOT NULL THEN PERFORM public.sync_test_doc_assignments(OLD.athlete_id); END IF;
+    RETURN OLD;
+  END IF;
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.doc_id IS NOT NULL THEN PERFORM public.sync_test_doc_assignments(NEW.athlete_id); END IF;
+  ELSIF NEW.doc_id IS DISTINCT FROM OLD.doc_id OR NEW.athlete_id IS DISTINCT FROM OLD.athlete_id THEN
+    PERFORM public.sync_test_doc_assignments(NEW.athlete_id);
+    IF NEW.athlete_id IS DISTINCT FROM OLD.athlete_id THEN PERFORM public.sync_test_doc_assignments(OLD.athlete_id); END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."tg_test_session_assignments"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."tg_test_session_fiche"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+BEGIN
+  IF NEW.doc_id IS NULL THEN
+    NEW.doc_id := public.test_fiche_for(NEW.athlete_id, NEW.coach_id, NEW.type, NEW.title);
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."tg_test_session_fiche"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."tg_test_values_propose_zones"() RETURNS "trigger"
@@ -8182,6 +8288,17 @@ COMMENT ON TABLE "public"."coach_invitations" IS 'Invitations à s''inscrire com
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."coach_test_fiches" (
+    "coach_id" "uuid" NOT NULL,
+    "test_key" "text" NOT NULL,
+    "doc_id" "uuid" NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."coach_test_fiches" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."competitions" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "coach_id" "uuid" NOT NULL,
@@ -8345,7 +8462,7 @@ CREATE TABLE IF NOT EXISTS "public"."doc_assignments" (
     "coach_note" "text",
     "seen_at" timestamp with time zone,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "doc_assignments_source_check" CHECK (("source" = ANY (ARRAY['manuel'::"text", 'programme'::"text", 'energie'::"text"])))
+    CONSTRAINT "doc_assignments_source_check" CHECK (("source" = ANY (ARRAY['manuel'::"text", 'programme'::"text", 'energie'::"text", 'test'::"text"])))
 );
 
 
@@ -9085,7 +9202,9 @@ CREATE TABLE IF NOT EXISTS "public"."measurement_logs" (
     "jump_start_height_cm" numeric(5,1) DEFAULT NULL::numeric,
     "thigh_length_cm" numeric(5,1) DEFAULT NULL::numeric,
     "shank_length_cm" numeric(5,1) DEFAULT NULL::numeric,
-    "arm_length_cm" numeric(5,1) DEFAULT NULL::numeric
+    "arm_length_cm" numeric(5,1) DEFAULT NULL::numeric,
+    "forearm_length_cm" numeric(5,1) DEFAULT NULL::numeric,
+    "leg_standing_cm" numeric(5,1) DEFAULT NULL::numeric
 );
 
 
@@ -9117,6 +9236,14 @@ COMMENT ON COLUMN "public"."measurement_logs"."shank_length_cm" IS 'Longueur de 
 
 
 COMMENT ON COLUMN "public"."measurement_logs"."arm_length_cm" IS 'Longueur de bras : acromion → coude (épicondyle), bras le long du corps (cm)';
+
+
+
+COMMENT ON COLUMN "public"."measurement_logs"."forearm_length_cm" IS 'Longueur d''avant-bras (ulna) : olécrane → tête de l''ulna (cm)';
+
+
+
+COMMENT ON COLUMN "public"."measurement_logs"."leg_standing_cm" IS 'Longueur de jambe debout (morpho) : EIAS → malléole interne (cm)';
 
 
 
@@ -9228,6 +9355,26 @@ CREATE TABLE IF NOT EXISTS "public"."microcycles" (
 
 
 ALTER TABLE "public"."microcycles" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."morpho_observations" (
+    "athlete_id" "uuid" NOT NULL,
+    "abdomen" "text",
+    "clavicules" "text",
+    "cage" "text",
+    "coude_valgus" "text",
+    "muscles" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
+    "note" "text",
+    "updated_by" "uuid",
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "morpho_observations_abdomen_check" CHECK (("abdomen" = ANY (ARRAY['long'::"text", 'court'::"text"]))),
+    CONSTRAINT "morpho_observations_cage_check" CHECK (("cage" = ANY (ARRAY['epaisse'::"text", 'etroite'::"text"]))),
+    CONSTRAINT "morpho_observations_clavicules_check" CHECK (("clavicules" = ANY (ARRAY['longues'::"text", 'courtes'::"text"]))),
+    CONSTRAINT "morpho_observations_coude_valgus_check" CHECK (("coude_valgus" = ANY (ARRAY['aucun'::"text", 'modere'::"text", 'marque'::"text"])))
+);
+
+
+ALTER TABLE "public"."morpho_observations" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."performance_logs" (
@@ -9755,11 +9902,22 @@ CREATE TABLE IF NOT EXISTS "public"."test_sessions" (
     "results_note" "text",
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
-    "planning_block_id" "uuid"
+    "planning_block_id" "uuid",
+    "doc_id" "uuid",
+    "biometry_levels" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    CONSTRAINT "test_sessions_biometry_levels_check" CHECK (("biometry_levels" <@ ARRAY['avancee'::"text", 'myjump'::"text"]))
 );
 
 
 ALTER TABLE "public"."test_sessions" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."test_sessions"."doc_id" IS 'Fiche du test (coach_test_fiches), lue par l''athlète sur la carte du test';
+
+
+
+COMMENT ON COLUMN "public"."test_sessions"."biometry_levels" IS 'Biométrie : niveaux ajoutés à la classique (avancee, myjump)';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."tests" (
@@ -10033,6 +10191,11 @@ ALTER TABLE ONLY "public"."coach_invitations"
 
 
 
+ALTER TABLE ONLY "public"."coach_test_fiches"
+    ADD CONSTRAINT "coach_test_fiches_pkey" PRIMARY KEY ("coach_id", "test_key");
+
+
+
 ALTER TABLE ONLY "public"."competitions"
     ADD CONSTRAINT "competitions_pkey" PRIMARY KEY ("id");
 
@@ -10250,6 +10413,11 @@ ALTER TABLE ONLY "public"."mesocycles"
 
 ALTER TABLE ONLY "public"."microcycles"
     ADD CONSTRAINT "microcycles_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."morpho_observations"
+    ADD CONSTRAINT "morpho_observations_pkey" PRIMARY KEY ("athlete_id");
 
 
 
@@ -10843,6 +11011,10 @@ CREATE INDEX "idx_atv_variable" ON "public"."athlete_test_values" USING "btree" 
 
 
 
+CREATE INDEX "idx_coach_test_fiches_doc" ON "public"."coach_test_fiches" USING "btree" ("doc_id");
+
+
+
 CREATE INDEX "idx_competitions_athlete" ON "public"."competitions" USING "btree" ("athlete_id");
 
 
@@ -11048,6 +11220,10 @@ CREATE INDEX "idx_test_sessions_athlete_date" ON "public"."test_sessions" USING 
 
 
 CREATE INDEX "idx_test_sessions_coach" ON "public"."test_sessions" USING "btree" ("coach_id");
+
+
+
+CREATE INDEX "idx_test_sessions_doc" ON "public"."test_sessions" USING "btree" ("doc_id");
 
 
 
@@ -11375,6 +11551,10 @@ CREATE OR REPLACE TRIGGER "citation_likes_sync" AFTER INSERT OR DELETE ON "publi
 
 
 
+CREATE OR REPLACE TRIGGER "coach_test_fiches_changed" AFTER INSERT OR DELETE OR UPDATE ON "public"."coach_test_fiches" FOR EACH ROW EXECUTE FUNCTION "public"."tg_coach_test_fiche_changed"();
+
+
+
 CREATE OR REPLACE TRIGGER "competitions_plan_links" AFTER INSERT OR DELETE OR UPDATE OF "date", "type", "cancelled_at" ON "public"."competitions" FOR EACH ROW EXECUTE FUNCTION "public"."tg_plan_links_relink"();
 
 
@@ -11536,6 +11716,14 @@ CREATE OR REPLACE TRIGGER "set_workout_logs_updated_at" BEFORE UPDATE ON "public
 
 
 CREATE OR REPLACE TRIGGER "staff_invitations_before_insert" BEFORE INSERT ON "public"."staff_invitations" FOR EACH ROW EXECUTE FUNCTION "public"."staff_invitations_before_insert"();
+
+
+
+CREATE OR REPLACE TRIGGER "test_sessions_fiche" BEFORE INSERT ON "public"."test_sessions" FOR EACH ROW EXECUTE FUNCTION "public"."tg_test_session_fiche"();
+
+
+
+CREATE OR REPLACE TRIGGER "test_sessions_fiche_assignments" AFTER INSERT OR DELETE OR UPDATE OF "doc_id", "athlete_id" ON "public"."test_sessions" FOR EACH ROW EXECUTE FUNCTION "public"."tg_test_session_assignments"();
 
 
 
@@ -11854,6 +12042,16 @@ ALTER TABLE ONLY "public"."coach_invitations"
 
 ALTER TABLE ONLY "public"."coach_invitations"
     ADD CONSTRAINT "coach_invitations_used_by_fkey" FOREIGN KEY ("used_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."coach_test_fiches"
+    ADD CONSTRAINT "coach_test_fiches_coach_id_fkey" FOREIGN KEY ("coach_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."coach_test_fiches"
+    ADD CONSTRAINT "coach_test_fiches_doc_id_fkey" FOREIGN KEY ("doc_id") REFERENCES "public"."docs"("id") ON DELETE CASCADE;
 
 
 
@@ -12272,6 +12470,16 @@ ALTER TABLE ONLY "public"."microcycles"
 
 
 
+ALTER TABLE ONLY "public"."morpho_observations"
+    ADD CONSTRAINT "morpho_observations_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."morpho_observations"
+    ADD CONSTRAINT "morpho_observations_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
 ALTER TABLE ONLY "public"."performance_logs"
     ADD CONSTRAINT "performance_logs_athlete_id_fkey" FOREIGN KEY ("athlete_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
@@ -12488,6 +12696,11 @@ ALTER TABLE ONLY "public"."test_sessions"
 
 ALTER TABLE ONLY "public"."test_sessions"
     ADD CONSTRAINT "test_sessions_coach_id_fkey" FOREIGN KEY ("coach_id") REFERENCES "public"."profiles"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."test_sessions"
+    ADD CONSTRAINT "test_sessions_doc_id_fkey" FOREIGN KEY ("doc_id") REFERENCES "public"."docs"("id") ON DELETE SET NULL;
 
 
 
@@ -12924,6 +13137,9 @@ CREATE POLICY "coach_sees_athlete_prs" ON "public"."exercise_pr_logs" FOR SELECT
 
 
 
+ALTER TABLE "public"."coach_test_fiches" ENABLE ROW LEVEL SECURITY;
+
+
 CREATE POLICY "coaches_can_update_athlete_profiles" ON "public"."profiles" FOR UPDATE USING (("coach_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK (("coach_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
@@ -12956,6 +13172,22 @@ CREATE POLICY "competitions_update" ON "public"."competitions" FOR UPDATE USING 
 
 
 CREATE POLICY "competitions_update_athlete" ON "public"."competitions" FOR UPDATE USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
+
+
+
+CREATE POLICY "ctf_delete" ON "public"."coach_test_fiches" FOR DELETE TO "authenticated" USING (("coach_id" = ( SELECT "auth"."uid"() AS "uid")));
+
+
+
+CREATE POLICY "ctf_insert" ON "public"."coach_test_fiches" FOR INSERT TO "authenticated" WITH CHECK ((("coach_id" = ( SELECT "auth"."uid"() AS "uid")) AND ( SELECT "public"."i_am_coach"() AS "i_am_coach")));
+
+
+
+CREATE POLICY "ctf_select" ON "public"."coach_test_fiches" FOR SELECT TO "authenticated" USING ((("coach_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_partner"("coach_id"))));
+
+
+
+CREATE POLICY "ctf_update" ON "public"."coach_test_fiches" FOR UPDATE TO "authenticated" USING (("coach_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK ((("coach_id" = ( SELECT "auth"."uid"() AS "uid")) AND ( SELECT "public"."i_am_coach"() AS "i_am_coach")));
 
 
 
@@ -13686,6 +13918,29 @@ CASE
     ELSE NULL::"uuid"
 END))));
 
+
+
+CREATE POLICY "morpho_athlete_read" ON "public"."morpho_observations" FOR SELECT TO "authenticated" USING (("athlete_id" = ( SELECT "auth"."uid"() AS "uid")));
+
+
+
+CREATE POLICY "morpho_coach_delete" ON "public"."morpho_observations" FOR DELETE TO "authenticated" USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")));
+
+
+
+CREATE POLICY "morpho_coach_insert" ON "public"."morpho_observations" FOR INSERT TO "authenticated" WITH CHECK ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")));
+
+
+
+CREATE POLICY "morpho_coach_read" ON "public"."morpho_observations" FOR SELECT TO "authenticated" USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")));
+
+
+
+CREATE POLICY "morpho_coach_update" ON "public"."morpho_observations" FOR UPDATE TO "authenticated" USING ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id"))) WITH CHECK ((( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")));
+
+
+
+ALTER TABLE "public"."morpho_observations" ENABLE ROW LEVEL SECURITY;
 
 
 CREATE POLICY "perf_delete" ON "public"."performance_logs" FOR DELETE USING ((("athlete_id" = ( SELECT "auth"."uid"() AS "uid")) OR (( SELECT "public"."i_am_coach"() AS "i_am_coach") AND "public"."is_coach_of"("athlete_id")) OR (EXISTS ( SELECT 1
@@ -22795,6 +23050,11 @@ GRANT ALL ON FUNCTION "public"."sync_extrap_to_performance"() TO "service_role";
 
 
 
+REVOKE ALL ON FUNCTION "public"."sync_test_doc_assignments"("p_athlete" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."sync_test_doc_assignments"("p_athlete" "uuid") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."sync_test_session_to_results"() TO "anon";
 GRANT ALL ON FUNCTION "public"."sync_test_session_to_results"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."sync_test_session_to_results"() TO "service_role";
@@ -22927,6 +23187,11 @@ GRANT ALL ON FUNCTION "public"."tablespaces_are"("name"[], "text") TO "service_r
 
 
 
+REVOKE ALL ON FUNCTION "public"."test_fiche_for"("p_athlete" "uuid", "p_coach" "uuid", "p_type" "text", "p_title" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."test_fiche_for"("p_athlete" "uuid", "p_coach" "uuid", "p_type" "text", "p_title" "text") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."tg_activity_garmin_device_no_ai"() TO "anon";
 GRANT ALL ON FUNCTION "public"."tg_activity_garmin_device_no_ai"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."tg_activity_garmin_device_no_ai"() TO "service_role";
@@ -22936,6 +23201,11 @@ GRANT ALL ON FUNCTION "public"."tg_activity_garmin_device_no_ai"() TO "service_r
 GRANT ALL ON FUNCTION "public"."tg_activity_streams_zones"() TO "anon";
 GRANT ALL ON FUNCTION "public"."tg_activity_streams_zones"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."tg_activity_streams_zones"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."tg_coach_test_fiche_changed"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."tg_coach_test_fiche_changed"() TO "service_role";
 
 
 
@@ -22969,6 +23239,16 @@ GRANT ALL ON FUNCTION "public"."tg_plan_links_relink_hyrox"() TO "service_role";
 
 REVOKE ALL ON FUNCTION "public"."tg_race_watch_to_competition"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."tg_race_watch_to_competition"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."tg_test_session_assignments"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."tg_test_session_assignments"() TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."tg_test_session_fiche"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."tg_test_session_fiche"() TO "service_role";
 
 
 
@@ -23702,6 +23982,12 @@ GRANT ALL ON TABLE "public"."coach_invitations" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."coach_test_fiches" TO "anon";
+GRANT ALL ON TABLE "public"."coach_test_fiches" TO "authenticated";
+GRANT ALL ON TABLE "public"."coach_test_fiches" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."competitions" TO "anon";
 GRANT ALL ON TABLE "public"."competitions" TO "authenticated";
 GRANT ALL ON TABLE "public"."competitions" TO "service_role";
@@ -23919,6 +24205,12 @@ GRANT ALL ON TABLE "public"."mesocycles" TO "service_role";
 GRANT ALL ON TABLE "public"."microcycles" TO "anon";
 GRANT ALL ON TABLE "public"."microcycles" TO "authenticated";
 GRANT ALL ON TABLE "public"."microcycles" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."morpho_observations" TO "anon";
+GRANT ALL ON TABLE "public"."morpho_observations" TO "authenticated";
+GRANT ALL ON TABLE "public"."morpho_observations" TO "service_role";
 
 
 
