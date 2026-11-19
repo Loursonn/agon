@@ -6,17 +6,27 @@ const BTN = "h-9 flex-1 cursor-pointer rounded-[10px] border bg-transparent px-3
 export type { CompetitionActionTarget };
 
 /**
- * Deux boutons « Annuler la compétition » (ou « Rétablir ») et « Supprimer »,
- * puis la confirmation. Pour les fenêtres et les feuilles (téléphone).
+ * « Modifier » (si `onEdit`), puis « Annuler la compétition » (ou « Rétablir »)
+ * et « Supprimer », puis la confirmation. Pour les fenêtres et les feuilles (téléphone).
  */
-export function CompetitionActions({ comp, onDone, className }: {
+export function CompetitionActions({ comp, onDone, onEdit, className }: {
   comp: CompetitionActionTarget;
   onDone?: (what: "cancelled" | "restored" | "deleted") => void;
+  /** Ouvre le formulaire pré-rempli (nom, date, priorité, lieu). */
+  onEdit?: () => void;
   className?: string;
 }) {
   const a = useCompetitionActions(comp, onDone);
   return (
     <div className={className}>
+      {onEdit && (
+        <div className="mb-2 flex">
+          <button type="button" disabled={a.pending} onClick={onEdit}
+            className={cn(BTN, "border-agon-brd-l text-agon-tx")}>
+            Modifier
+          </button>
+        </div>
+      )}
       <div className="flex gap-2">
         <button type="button" disabled={a.pending} onClick={a.toggleCancel}
           aria-pressed={a.confirm === "cancel"}

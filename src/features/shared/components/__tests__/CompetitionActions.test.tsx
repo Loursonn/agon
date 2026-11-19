@@ -77,3 +77,18 @@ describe("CompetitionActions", () => {
     expect(screen.queryByText(/gardé/)).toBeNull();
   });
 });
+
+describe("CompetitionActions · Modifier", () => {
+  it("absent sans onEdit, appelle onEdit sinon", () => {
+    const db = fakeDb({ competitions: [row()] });
+    setDbForTests(db.db);
+    const qc = new QueryClient();
+    const comp = { id: "c1", athlete_id: "a", name: "HYROX Paris", cancelled_at: null };
+    const { rerender } = render(<QueryClientProvider client={qc}><CompetitionActions comp={comp} /></QueryClientProvider>);
+    expect(screen.queryByText("Modifier")).toBeNull();
+    const onEdit = vi.fn();
+    rerender(<QueryClientProvider client={qc}><CompetitionActions comp={comp} onEdit={onEdit} /></QueryClientProvider>);
+    fireEvent.click(screen.getByText("Modifier"));
+    expect(onEdit).toHaveBeenCalledOnce();
+  });
+});

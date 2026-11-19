@@ -4,8 +4,8 @@ import { DateBox } from "./DateBox";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useCreateLifeEvent, useDeleteLifeEvent } from "@/hooks/useLifeEvents";
-import { useCreateCompetition, useDeleteCompetition } from "@/hooks/useCompetitions";
-import type { CompetitionPriority, LifeEventKind } from "@/types/planning";
+import { useCreateCompetition, useDeleteCompetition, useUpdateCompetition } from "@/hooks/useCompetitions";
+import type { Competition, CompetitionPriority, LifeEventKind } from "@/types/planning";
 
 type EventType = "competition" | LifeEventKind;
 
@@ -30,6 +30,8 @@ interface Props {
   coachName: string | null;
   /** Type ouvert par défaut (« + » de « Prochaine compétition » → compétition). */
   initialType?: EventType;
+  /** Compétition à modifier : formulaire pré-rempli, type figé, « Enregistrer » met à jour. */
+  existing?: Competition | null;
   onClose: () => void;
 }
 
@@ -57,23 +59,27 @@ function Field({ label, right, children }: { label: string; right?: ReactNode; c
  * les événements. Compétition → `competitions` (priorité A / B / C, date de fin
  * facultative) ; stage, voyage, examen, autre → `athlete_life_events`
  * (du / au, « Indisponible pour m'entraîner »).
+ *
+ * Avec `existing` : « Modifier la compétition » (athlète, ou coach sur téléphone).
  */
-export function EventFormPage({ athleteId, coachId, coachName, initialType, onClose }: Props) {
-  const canCompete = !!coachId;
-  const [type, setType] = useState<EventType>(initialType && (initialType !== "competition" || canCompete) ? initialType : canCompete ? "competition" : "voyage");
-  const [name, setName] = useState("");
-  const [start, setStart] = useState("");
-  const [end, setEnd] = useState("");
-  const [showEnd, setShowEnd] = useState(false);
-  const [priority, setPriority] = useState<CompetitionPriority>("B");
-  const [location, setLocation] = useState("");
+export function EventFormPage({ athleteId, coachId, coachName, initialType, existing, onClose }: Props) {
+  const isEdit = !!existing;
+  const canCompete = !!coachId || isEdit;
+  const [type, setType] = useState<EventType>(isEdit ? "competition" : initialType && (initialType !== "competition" || canCompete) ? initialType : canCompete ? "competition" : "voyage");
+  const [name, setName] = useState(existing?.name ?? "");
+  const [start, setStart] = useState(existing?.date ?? "");
+  const [end, setEnd] = useState(existing?.date_end ?? "");
+  const [showEnd, setShowEnd] = useState(!!existing?.date_end);
+  const [priority, setPriority] = useState<CompetitionPriority>(existing?.priority ?? "B");
+  const [location, setLocation] = useState(existing?.location ?? "");
   const [unavailable, setUnavailable] = useState(true);
 
   const createLife = useCreateLifeEvent();
   const deleteLife = useDeleteLifeEvent();
   const createComp = useCreateCompetition();
   const deleteComp = useDeleteCompetition();
-  const saving = createLife.isPending || createComp.isPending;
+  const updateComp = useUpdateCompetition();
+  const saving = createLife.isPending || createComp.isPending || updateComp.isPending;
 
   const isComp = type === "competition";
   const coach = coachName ?? "ton coach";
@@ -101,7 +107,18 @@ export function EventFormPage({ athleteId, coachId, coachName, initialType, onCl
     if (!ready) return;
     const title = name.trim();
     const place = location.trim() || null;
-    if (isComp) {
+    if (existing) {
+      updateComp.mutate(
+        {
+          id: existing.id,
+          updates: { name: title, date: start, date_end: showEnd && end && end > start ? end : null, location: place, priority },
+        },
+        {
+          onSuccess: () => { toast.success("Compétition modifiée"); onClose(); },
+          onError: () => toast.error("Compétition non modifiée"),
+        },
+      );
+    } else if (isComp) {
       if (!coachId) return;
       createComp.mutate(
         {
@@ -125,13 +142,13 @@ export function EventFormPage({ athleteId, coachId, coachName, initialType, onCl
   }
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Nouvel événement" className="fixed inset-0 z-[200] flex flex-col bg-agon-bg text-agon-tx">
+    <div role="dialog" aria-modal="true" aria-label={isEdit ? "Modifier la compétition" : "Nouvel événement"} className={cn("fixed inset-0 flex flex-col bg-agon-bg text-agon-tx", isEdit ? "z-[400]" : "z-[200]")}>
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-5 pb-[120px] pt-[calc(env(safe-area-inset-top,0px)+16px)]">
         <div className="flex items-center gap-2">
           <button type="button" aria-label="Retour" onClick={onClose} className="box-border flex size-[34px] flex-none cursor-pointer items-center justify-center rounded-[10px] border border-agon-tx/[0.18] bg-transparent text-agon-tx">
             <ChevronLeft size={18} strokeWidth={1.75} />
           </button>
-          <span className={cn(LABEL, "flex-1 text-center text-agon-tx2")}>Nouvel événement</span>
+          <span className={cn(LABEL, "flex-1 text-center text-agon-tx2")}>{isEdit ? "Modifier la compétition" : "Nouvel événement"}</span>
           <span className="w-[34px] flex-none" />
         </div>
 
@@ -148,7 +165,7 @@ export function EventFormPage({ athleteId, coachId, coachName, initialType, onCl
           </div>
         </Field>
 
-        <Field label="Type">
+        {!isEdit && <Field label="Type">
           <div className="flex flex-wrap gap-2">
             {TYPES.filter((t) => t.value !== "competition" || canCompete).map((t) => {
               const on = t.value === type;
@@ -169,7 +186,7 @@ export function EventFormPage({ athleteId, coachId, coachName, initialType, onCl
               );
             })}
           </div>
-        </Field>
+        </Field>}
 
         {isComp ? (
           <>
@@ -184,7 +201,14 @@ export function EventFormPage({ athleteId, coachId, coachName, initialType, onCl
               <DateBox label="Date" value={start} onChange={setStartDate} withYear />
             </Field>
             {showEnd && (
-              <Field label="Date de fin">
+              <Field
+                label="Date de fin"
+                right={
+                  <button type="button" onClick={() => { setShowEnd(false); setEnd(""); }} className="cursor-pointer border-none bg-transparent p-0 font-[inherit] text-[12px] text-agon-tx3">
+                    Retirer
+                  </button>
+                }
+              >
                 <DateBox label="Date de fin" value={end} min={start || undefined} onChange={setEnd} withYear />
               </Field>
             )}
@@ -254,9 +278,11 @@ export function EventFormPage({ athleteId, coachId, coachName, initialType, onCl
           </div>
         </Field>
 
-        <div className="text-[12px] text-agon-tx3">
-          {isComp ? "" : "Pas de priorité hors compétition. "}Visible par {coach} sur ton planning.
-        </div>
+        {!isEdit && (
+          <div className="text-[12px] text-agon-tx3">
+            {isComp ? "" : "Pas de priorité hors compétition. "}Visible par {coach} sur ton planning.
+          </div>
+        )}
       </div>
 
       <div className="absolute inset-x-0 bottom-0 border-t border-agon-brd bg-agon-bg px-4 pb-[calc(env(safe-area-inset-bottom,0px)+16px)] pt-3">
