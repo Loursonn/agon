@@ -7,12 +7,13 @@ import { localISO } from "@/lib/date";
 import { COMPETITION_META, priorityLabel, type Competition, type CompetitionType } from "@/types/planning";
 import { CompetitionDayCard } from "./CompetitionDayCard";
 import { CompetitionActions } from "@/features/shared/components/CompetitionActions";
+import { EventFormPage } from "./EventFormPage";
 import { cancelledByLabel, isCancelled } from "@shared/domain/competitions";
 import { useAuth } from "@/hooks/useAuth";
 
 /**
  * Liste de toutes les compétitions de l'athlète : à venir puis passées (avec
- * bilan). « ⋯ » sur chaque ligne : annuler (reste barrée), rétablir, supprimer.
+ * bilan). « ⋯ » sur chaque ligne : modifier, annuler (reste barrée), rétablir, supprimer.
  */
 export function AllCompetitionsSheet({ competitions, viewOnly, onClose }: {
   competitions: Competition[];
@@ -22,6 +23,7 @@ export function AllCompetitionsSheet({ competitions, viewOnly, onClose }: {
   const today = localISO();
   const { user } = useAuth();
   const [open, setOpen] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Competition | null>(null);
   const upcoming = competitions.filter((c) => c.date >= today).sort((a, b) => a.date.localeCompare(b.date));
   const past = competitions.filter((c) => c.date < today).sort((a, b) => b.date.localeCompare(a.date));
   const nUp = upcoming.filter((c) => !isCancelled(c)).length;
@@ -29,13 +31,13 @@ export function AllCompetitionsSheet({ competitions, viewOnly, onClose }: {
   const nCancelled = competitions.length - nUp - nPast;
   const toggle = (id: string) => setOpen((o) => (o === id ? null : id));
   const manage = (c: Competition) => !viewOnly && open === c.id && (
-    <CompetitionActions comp={c} onDone={() => setOpen(null)} className="mt-2" />
+    <CompetitionActions comp={c} onDone={() => setOpen(null)} onEdit={() => { setOpen(null); setEditing(c); }} className="mt-2" />
   );
   const moreBtn = (c: Competition) => !viewOnly && (
     <button
       type="button"
       onClick={() => toggle(c.id)}
-      aria-label={`Annuler ou supprimer ${c.name}`}
+      aria-label={`Modifier, annuler ou supprimer ${c.name}`}
       aria-expanded={open === c.id}
       className={cn(
         "flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-[8px] border bg-transparent",
@@ -135,6 +137,16 @@ export function AllCompetitionsSheet({ competitions, viewOnly, onClose }: {
           )}
         </div>
       </div>
+
+      {editing && (
+        <EventFormPage
+          athleteId={editing.athlete_id}
+          coachId={editing.coach_id}
+          coachName={null}
+          existing={editing}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </div>
   );
 }

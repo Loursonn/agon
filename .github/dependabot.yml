@@ -12,6 +12,13 @@ updates:
       # typescript-eslint (peer < 6.1). Monter de version majeure = chantier voulu.
       - dependency-name: typescript
         update-types: ["version-update:semver-major"]
+      # Zod 4 : @hookform/resolvers 3 ne lit plus ses erreurs (formulaires coach).
+      # Il faut monter les deux ensemble et vérifier les formulaires = chantier voulu.
+      - dependency-name: zod
+        update-types: ["version-update:semver-major"]
+      # Tailwind 4 : nouvelle configuration (CSS), build et styles à reprendre = chantier voulu.
+      - dependency-name: tailwindcss
+        update-types: ["version-update:semver-major"]
     groups:
       mineures:
         update-types: [minor, patch]

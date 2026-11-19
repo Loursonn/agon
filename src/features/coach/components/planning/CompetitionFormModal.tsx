@@ -47,7 +47,11 @@ export function CompetitionFormModal({ athleteId, coachId, existing, initialDate
       update(
         {
           id: existing.id,
-          updates: { name: name.trim(), type, date, location: location.trim() || null, priority },
+          updates: {
+            name: name.trim(), type, date, location: location.trim() || null, priority,
+            // Date avancée au-delà de la date de fin : la compétition redevient d'un jour.
+            ...(existing.date_end && existing.date_end <= date ? { date_end: null } : {}),
+          },
         },
         {
           onSuccess: () => { toast.success("Compétition modifiée"); onClose(); },

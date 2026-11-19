@@ -38,6 +38,25 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-19-modifier-competition-telephone",
+    date: "2026-11-19",
+    kind: "feature",
+    title: "Une compétition se modifie aussi depuis le téléphone",
+    summary:
+      "Nom, date, importance ou lieu d'une compétition : vous et vos athlètes pouvez les corriger sur téléphone, sans la supprimer pour la recréer.",
+    sections: [
+      {
+        title: "Ce qui change pour vous",
+        points: [
+          "Sur téléphone, dans le planning d'un athlète, touchez une compétition puis « Modifier » : le formulaire s'ouvre pré-rempli.",
+          "L'athlète a le même bouton dans « Mes compétitions », sous « ⋯ ». Vous voyez le changement sur son planning.",
+          "Une date de fin (compétition sur plusieurs jours) peut maintenant être retirée.",
+          "Sur ordinateur, rien ne change : « Modifier » reste dans la fiche de la compétition du planning.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-17-assistant-cree-exercice-banque",
     date: "2026-11-17",
     kind: "feature",

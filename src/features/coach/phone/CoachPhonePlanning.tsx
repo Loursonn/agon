@@ -22,6 +22,8 @@ import { cancelledByLabel } from "@shared/domain/competitions";
 import { useAuth } from "@/hooks/useAuth";
 import { useCreateTestSession } from "@/features/shared/hooks/useUnifiedCalendar";
 import { PhoneTestPicker } from "./PhoneTestPicker";
+import { EventFormPage } from "@/features/athlete/components/EventFormPage";
+import type { Competition } from "@/types/planning";
 
 const DOW = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 const SHOWN: UnifiedCalendarEvent["type"][] = ["workout", "energy", "test", "competition", "free_activity"];
@@ -67,6 +69,7 @@ export default function CoachPhonePlanning() {
   const [selected, setSelected] = useState<UnifiedCalendarEvent | null>(null);
   const [addDay, setAddDay] = useState<string | null>(null);
   const [compSel, setCompSel] = useState<UnifiedCalendarEvent | null>(null);
+  const [compEdit, setCompEdit] = useState<Competition | null>(null);
 
   const events = useMemo(
     () => (cal.data ?? []).filter((e) => SHOWN.includes(e.type) && e.status !== "skipped"),
@@ -185,7 +188,23 @@ export default function CoachPhonePlanning() {
         />
       )}
 
-      {compSel && <CompetitionSheet event={compSel} onClose={() => setCompSel(null)} />}
+      {compSel && (
+        <CompetitionSheet
+          event={compSel}
+          onClose={() => setCompSel(null)}
+          onEdit={() => { setCompEdit(compSel.raw as unknown as Competition); setCompSel(null); }}
+        />
+      )}
+
+      {compEdit && (
+        <EventFormPage
+          athleteId={compEdit.athlete_id}
+          coachId={compEdit.coach_id}
+          coachName={null}
+          existing={compEdit}
+          onClose={() => setCompEdit(null)}
+        />
+      )}
 
       {addDay && <AddSessionSheet athleteId={athleteId} coachId={coachId} date={addDay} onClose={() => setAddDay(null)} onAdd={(s) => assign.mutate(
         { sessionId: s.id, sessionName: s.name, athleteId, coachId, date: addDay }, { onSuccess: () => setAddDay(null) },
@@ -196,8 +215,8 @@ export default function CoachPhonePlanning() {
   );
 }
 
-/** Compétition touchée dans le planning : annuler (reste barrée), rétablir, supprimer. */
-function CompetitionSheet({ event, onClose }: { event: UnifiedCalendarEvent; onClose: () => void }) {
+/** Compétition touchée dans le planning : modifier, annuler (reste barrée), rétablir, supprimer. */
+function CompetitionSheet({ event, onClose, onEdit }: { event: UnifiedCalendarEvent; onClose: () => void; onEdit: () => void }) {
   const { user } = useAuth();
   const raw = (event.raw ?? {}) as Partial<CompetitionActionTarget> & { cancelled_by?: string | null; location?: string | null };
   const comp: CompetitionActionTarget = {
@@ -216,7 +235,7 @@ function CompetitionSheet({ event, onClose }: { event: UnifiedCalendarEvent; onC
             {new Date(event.date + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
             {raw.location ? ` · ${raw.location}` : ""}
           </DrawerDescription>
-          <CompetitionActions comp={comp} onDone={onClose} className="mt-1" />
+          <CompetitionActions comp={comp} onDone={onClose} onEdit={event.raw ? onEdit : undefined} className="mt-1" />
         </div>
       </DrawerContent>
     </Drawer>

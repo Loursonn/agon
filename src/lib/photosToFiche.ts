@@ -76,5 +76,5 @@ export async function photosToFicheFile(photos: File[], title: string): Promise<
   if (bytes.byteLength > DOC_MAX_BYTES) {
     throw new PhotoFicheError("Fiche trop lourde (10 Mo max). Retire quelques photos.");
   }
-  return new File([bytes], `${slug(title)}.pdf`, { type: "application/pdf", lastModified: Date.now() });
+  return new File([bytes as Uint8Array<ArrayBuffer>], `${slug(title)}.pdf`, { type: "application/pdf", lastModified: Date.now() });
 }
