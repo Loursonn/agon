@@ -11175,6 +11175,10 @@ CREATE INDEX "idx_microcycles_dates" ON "public"."microcycles" USING "btree" ("s
 
 
 
+CREATE INDEX "idx_morpho_observations_updated_by" ON "public"."morpho_observations" USING "btree" ("updated_by");
+
+
+
 CREATE INDEX "idx_performance_logs_athlete_date" ON "public"."performance_logs" USING "btree" ("athlete_id", "date" DESC);
 
 
