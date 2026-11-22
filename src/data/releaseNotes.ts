@@ -38,6 +38,22 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-22-icone-video-exercice",
+    date: "2026-11-22",
+    kind: "fix",
+    title: "Le bouton vidéo d'un exercice se reconnaît enfin",
+    summary:
+      "Quand un exercice de la banque a une vidéo, vos athlètes voient maintenant un bouton lecture ▶ à côté de son nom, au lieu d'un petit carré vide.",
+    sections: [
+      {
+        title: "Ce qui change pour vos athlètes",
+        points: [
+          "Pendant la séance, un bouton ▶ à côté du nom de l'exercice ouvre sa vidéo, superset compris.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-19-modifier-competition-telephone",
     date: "2026-11-19",
     kind: "feature",
