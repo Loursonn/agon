@@ -38,6 +38,9 @@ interface Props {
 
 type Nav = Navigator & { canShare?: (d: ShareData) => boolean };
 
+/** Téléphone / tablette (doigt) : une app web n'écrit pas dans Photos, la feuille de partage du système le fait. */
+const isTouchDevice = () => typeof window !== "undefined" && !!window.matchMedia?.("(pointer: coarse)").matches;
+
 /**
  * « Partager ma séance » (maquette du 25/11/2026) : story 9:16, séance prévue
  * ou faite, prénom / charges / coach au choix. L'image est créée sur le
@@ -67,6 +70,10 @@ export function SessionShareSheet({ variants, initial, day, hasLoads = false, ce
   // Image prête d'avance : iOS n'ouvre la feuille de partage que si l'appel
   // suit directement le toucher (pas d'attente de génération entre les deux).
   const fileRef = useRef<File | null>(null);
+  // Même image en <img> par-dessus l'aperçu : sur iPhone, l'appui long
+  // propose « Ajouter à Photos » (impossible sur un <canvas>).
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const touch = useMemo(isTouchDevice, []);
 
   const people: SharePeople = useMemo(() => ({
     athleteFirstName: firstNameOf(athleteProfile?.first_name, athleteProfile?.full_name),
@@ -102,13 +109,20 @@ export function SessionShareSheet({ variants, initial, day, hasLoads = false, ce
   useEffect(() => {
     const cv = canvasRef.current;
     fileRef.current = null;
+    setPreviewUrl(null);
     if (!cv || !card || !fontsReady) return;
     if (!drawSessionShare(cv, card)) return;
     let alive = true;
+    let url: string | null = null;
     void sessionShareBlob(cv).then((b) => {
-      if (alive && b) fileRef.current = new File([b], shareFileName(day), { type: "image/png" });
+      if (!alive || !b) return;
+      fileRef.current = new File([b], shareFileName(day), { type: "image/png" });
+      if (typeof URL.createObjectURL === "function") {
+        url = URL.createObjectURL(b);
+        setPreviewUrl(url);
+      }
     });
-    return () => { alive = false; };
+    return () => { alive = false; if (url) URL.revokeObjectURL(url); };
   }, [card, fontsReady, day]);
 
   // Échap ferme la feuille.
@@ -137,29 +151,41 @@ export function SessionShareSheet({ variants, initial, day, hasLoads = false, ce
     setTimeout(() => URL.revokeObjectURL(url), 4000);
   };
 
-  const save = async () => {
-    setError(null);
+  /** Feuille de partage du système ; false si elle n'est pas disponible pour cette image. */
+  const openShareSheet = async (): Promise<boolean> => {
+    const nav = navigator as Nav;
+    const ready = fileRef.current;
+    if (!ready || !nav.share || !nav.canShare?.({ files: [ready] })) return false;
+    setBusy(true);
+    try {
+      await nav.share({ files: [ready] });
+    } catch (e) {
+      // Annulé par l'athlète : rien à dire. Autre refus : on enregistre l'image.
+      if ((e as DOMException)?.name !== "AbortError") download(ready);
+    } finally {
+      setBusy(false);
+    }
+    return true;
+  };
+
+  const downloadCurrent = async () => {
     const f = await currentFile();
     if (f) download(f); else setError("L'image n'a pas pu être créée.");
   };
 
+  // Téléphone : « Enregistrer l'image » de la feuille iOS / Android range
+  // l'image dans Photos (un téléchargement finirait dans Fichiers, en PNG).
+  // Ordinateur : téléchargement.
+  const save = async () => {
+    setError(null);
+    if (touch && (await openShareSheet())) return;
+    await downloadCurrent();
+  };
+
   const share = async () => {
     setError(null);
-    const nav = navigator as Nav;
-    const ready = fileRef.current;
-    if (ready && nav.share && nav.canShare?.({ files: [ready] })) {
-      setBusy(true);
-      try {
-        await nav.share({ files: [ready] });
-      } catch (e) {
-        // Annulé par l'athlète : rien à dire. Autre refus : on enregistre l'image.
-        if ((e as DOMException)?.name !== "AbortError") download(ready);
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-    await save();
+    if (await openShareSheet()) return;
+    await downloadCurrent();
   };
 
   const toggles: Array<{ key: keyof ShareOptions; label: string; show: boolean }> = [
@@ -216,6 +242,13 @@ export function SessionShareSheet({ variants, initial, day, hasLoads = false, ce
           <div style={{ alignSelf: "center", position: "relative", height: "min(50dvh, 440px)", aspectRatio: `${CARD_W} / ${CARD_H}`, maxWidth: "100%" }}>
             <canvas ref={canvasRef} aria-label="Aperçu de l'image à partager"
               style={{ width: "100%", height: "100%", borderRadius: 12, border: `1px solid ${C.brdL}`, background: C.bg, display: "block" }} />
+            {previewUrl && ready && (
+              <img src={previewUrl} alt="Aperçu de l'image à partager" draggable={false}
+                style={{
+                  position: "absolute", inset: 0, width: "100%", height: "100%", borderRadius: 12, border: `1px solid ${C.brdL}`,
+                  display: "block", WebkitTouchCallout: "default", userSelect: "auto",
+                }} />
+            )}
             {!ready && (
               <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: C.tx2, fontSize: 13 }}>
                 {card ? "Préparation…" : "Aperçu indisponible"}
@@ -281,7 +314,7 @@ export function SessionShareSheet({ variants, initial, day, hasLoads = false, ce
             </button>
           )}
           <span style={{ fontSize: 11.5, color: C.tx3, lineHeight: 1.5, textAlign: "center" }}>
-            Image créée sur ton téléphone, rien n'est envoyé.
+            {touch ? "« Enregistrer » puis « Enregistrer l'image » : elle va dans tes Photos. Ou appui long sur l'image. " : ""}Image créée sur ton téléphone, rien n'est envoyé.
           </span>
         </div>
       </div>

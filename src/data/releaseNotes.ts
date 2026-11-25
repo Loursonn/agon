@@ -38,6 +38,24 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-25-partage-photos-iphone",
+    date: "2026-11-25",
+    kind: "fix",
+    title: "La story partagée s'enregistre dans les Photos du téléphone",
+    summary:
+      "Sur téléphone, « Enregistrer » ne range plus l'image dans Fichiers : il ouvre le menu du téléphone, où « Enregistrer l'image » la met dans Photos.",
+    sections: [
+      {
+        title: "Ce qui change pour vos athlètes",
+        points: [
+          "« Enregistrer » puis « Enregistrer l'image » : la story arrive dans les Photos, prête pour Instagram.",
+          "Un appui long sur l'aperçu propose aussi « Ajouter à Photos ».",
+          "À l'ordinateur, rien ne change : l'image se télécharge.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-25-partage-seance-partout",
     date: "2026-11-25",
     kind: "feature",
