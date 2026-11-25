@@ -1,3 +1,4 @@
+import { ShareSessionButton, type ShareTarget } from "@/features/athlete/components/share/ShareSessionButton";
 import { cn } from "@/lib/utils";
 import { Check, Dumbbell } from "lucide-react";
 import { CompetitionDayCard, type CompetitionDayCardData } from "@/features/athlete/components/CompetitionDayCard";
@@ -46,6 +47,8 @@ export interface DayPreviewSheetProps {
   freeSessions: FreeSession[];
   energyByDate: Map<string, UnifiedCalendarEvent[]>;
   onEnergyPreview: (ev: UnifiedCalendarEvent) => void;
+  /** Partage en story : le tiroir se ferme, la page ouvre le partage. */
+  onShare: (t: ShareTarget) => void;
   onAddActivity: (date: string) => void;
   onEditActivity: (session: FreeSession) => void;
   onTestPress: (id: string) => void;
@@ -56,7 +59,7 @@ export interface DayPreviewSheetProps {
   watchByPlanned?: Map<string, RunMatch>;
 }
 
-export function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, energyByDate, onEnergyPreview, onAddActivity, onEditActivity, onTestPress, competitionsByDate, viewOnly, dayTheme, watchByPlanned }: DayPreviewSheetProps) {
+export function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, energyByDate, onEnergyPreview, onShare, onAddActivity, onEditActivity, onTestPress, competitionsByDate, viewOnly, dayTheme, watchByPlanned }: DayPreviewSheetProps) {
   if (!day) return null;
   const date = new Date(day.date + "T12:00:00");
   const dateLabel = `${DAYS_FULL_FR[day.dow]} ${date.getDate()} ${MONTHS_FR[date.getMonth()]}`;
@@ -130,6 +133,7 @@ export function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, en
                         {isCompleted ? " · Complétée ✓" : isPast ? " · Manquée" : ""}
                       </div>
                     </div>
+                    {workoutLogId && <ShareSessionButton target={{ kind: "workout", id: workoutLogId }} onOpen={(t) => { onClose(); onShare(t); }} />}
                   </div>
 
                   {/* Exercise preview (up to 5) */}
@@ -173,10 +177,10 @@ export function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, en
                 const isDone = ev.status === "completed";
                 const watchRun = watchByPlanned?.get(ev.id);
                 return (
+                  <div key={ev.id} className="relative">
                   <button
-                    key={ev.id}
                     onClick={() => { onEnergyPreview(ev); onClose(); haptic(); }}
-                    className={cn(CARD_BTN, "px-4 py-3.5", isDone ? DONE_CARD : kt.card)}
+                    className={cn(CARD_BTN, "py-3.5 pl-4 pr-14", isDone ? DONE_CARD : kt.card)}
                   >
                     <div className="flex size-8 items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="square" strokeLinejoin="miter"><path d="M13 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM7 21l3-9 3 2v7M5 16l3-4 3 2M14 8l4 2 3-3"/></svg></div>
                     <div className="flex-1">
@@ -188,6 +192,10 @@ export function DayPreviewSheet({ day, onClose, onStartSession, freeSessions, en
                     </div>
                     <span className="text-[11px] text-agon-tx3">Voir →</span>
                   </button>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <ShareSessionButton target={{ kind: "energy", id: ev.id }} onOpen={(t) => { onClose(); onShare(t); }} />
+                  </span>
+                  </div>
                 );
               })}
 

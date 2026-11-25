@@ -24,6 +24,7 @@ export function TodaySessionCard({
   time,
   badge,
   pattern = false,
+  share,
 }: {
   color: string;
   typeLabel: string;
@@ -42,6 +43,8 @@ export function TodaySessionCard({
   badge?: ReactNode;
   /** Motif doré en fond (séance de musculation, maquette). */
   pattern?: boolean;
+  /** Icône « Partager ma séance » dans l'en-tête. */
+  share?: ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const hasPreview = !!items && items.length > 0;
@@ -69,6 +72,7 @@ export function TodaySessionCard({
           </div>
           <div className="agon-display text-[14px] font-medium leading-[1.3] tracking-[0.06em] text-agon-tx [overflow-wrap:anywhere]">{title}</div>
         </div>
+        {share}
         {canOpen ? (
           <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className={headBtn}>
             {open ? "Fermer" : "Aperçu"} {chevron(open)}

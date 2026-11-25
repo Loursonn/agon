@@ -44,6 +44,12 @@ type Nav = Navigator & { canShare?: (d: ShareData) => boolean };
  * téléphone ; « Partager » ouvre la feuille de partage du système (Instagram,
  * WhatsApp, Messages…), sinon l'image est enregistrée.
  */
+/**
+ * Au-dessus de tout l'écran athlète (bandeau « Séance non terminée », barre
+ * d'onglets, invite de mise à jour à 1000), sous les toasts.
+ */
+export const SHARE_Z = 1100;
+
 export function SessionShareSheet({ variants, initial, day, hasLoads = false, celebrate = false, onClose }: Props) {
   const ctx = useOptionalAthleteContext();
   const athleteId = ctx?.athleteId ?? null;
@@ -166,10 +172,10 @@ export function SessionShareSheet({ variants, initial, day, hasLoads = false, ce
 
   return (
     <>
-      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 60 }} />
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: SHARE_Z }} />
       <div role="dialog" aria-modal="true" aria-label="Partager ma séance"
         style={{
-          position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 61, maxWidth: 480, margin: "0 auto",
+          position: "fixed", bottom: 0, left: 0, right: 0, zIndex: SHARE_Z + 1, maxWidth: 480, margin: "0 auto",
           borderRadius: "24px 24px 0 0", borderTop: `1px solid ${alpha(C.ac, 0.5)}`, background: C.s1,
           maxHeight: "94dvh", overflowY: "auto", overscrollBehavior: "contain",
         }}>

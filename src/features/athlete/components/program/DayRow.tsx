@@ -13,6 +13,7 @@ import type { ScheduledDoc } from "@/features/shared/hooks/fiches/useDocSchedule
 import { SessionChip } from "@/features/athlete/components/program/SessionChip";
 import { TYPE_COLOR } from "@/lib/peps";
 import { TestChip } from "@/features/athlete/components/program/TestChip";
+import { ShareSessionButton } from "@/features/athlete/components/share/ShareSessionButton";
 import { WatchCard } from "@/features/shared/components/planning/WatchCard";
 import type { WeekDay, WeekSession } from "@/features/shared/hooks/useActivePlan";
 import { haptic } from "@/features/athlete/components/program/programUtils";
@@ -136,7 +137,14 @@ export function DayRow({
         {day.sessions.map(s => {
           const c = linkedCard.get(`${s.kind}:${s.id}`);
           return c ? (
-            <div key={s.id}>{watchCard(c)}</div>
+            // Séance faite avec la montre : la carte de la montre remplace la carte prévue ;
+            // l'icône de partage reste en haut à droite (la ligne des pastilles est à gauche).
+            <div key={s.id} style={{ position: "relative" }}>
+              {watchCard(c)}
+              <span style={{ position: "absolute", top: 8, right: 8 }}>
+                <ShareSessionButton target={{ kind: s.kind, id: s.id }} />
+              </span>
+            </div>
           ) : (
             <SessionChip
               key={s.id}

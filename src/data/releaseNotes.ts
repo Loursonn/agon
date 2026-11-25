@@ -38,6 +38,25 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-25-partage-seance-partout",
+    date: "2026-11-25",
+    kind: "feature",
+    title: "Le partage en story se trouve maintenant partout",
+    summary:
+      "Vos athlètes n'ont plus besoin d'ouvrir la séance pour la partager : le bouton partager est sur chaque carte de séance.",
+    sections: [
+      {
+        title: "Où vos athlètes le trouvent",
+        points: [
+          "Accueil : sur la carte de la séance du jour, et sur le récapitulatif « Séance terminée » une fois la journée faite.",
+          "Aperçu du jour : sur chaque séance de la journée.",
+          "Programme : sur chaque séance de la semaine, prévue, faite ou manquée, y compris quand elle a été faite avec la montre, et dans le détail de la séance.",
+          "Musculation, énergie et spécifique : la séance prévue, ou la séance faite avec ses vraies séries et les données de la montre.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-25-partage-seance-story",
     date: "2026-11-25",
     kind: "feature",

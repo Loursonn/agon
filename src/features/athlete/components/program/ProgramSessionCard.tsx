@@ -21,6 +21,7 @@ export function ProgramSessionCard({
   startLabel = "Démarrer",
   onMenu,
   menuLabel = "Options de la séance",
+  share,
 }: {
   color: string;
   typeLabel: string;
@@ -38,6 +39,8 @@ export function ProgramSessionCard({
   startLabel?: string;
   onMenu?: () => void;
   menuLabel?: string;
+  /** Icône « Partager ma séance ». */
+  share?: ReactNode;
 }) {
   return (
     <div
@@ -61,6 +64,7 @@ export function ProgramSessionCard({
           {status && <span className={cn("text-[11.5px]", !statusColor && "text-agon-tx3")} style={statusColor ? { color: statusColor } : undefined}>{status}</span>}
         </span>
       </button>
+      {share}
       {onStart && (
         <button
           type="button"
