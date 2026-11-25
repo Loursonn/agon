@@ -536,11 +536,46 @@ function layoutContent(card: ShareCard, level: number, w: number, m: Measure, p:
 
 // ── En-tête et pied ─────────────────────────────────────────────────────────
 
+/**
+ * Bandeau objectif (maquette du 25/11, validée) : pastille « J-180 » de la
+ * couleur du type, « OBJECTIF » puis le nom de la compétition, la date à
+ * droite, un filet dessous. Nom et date mesurés : rien ne déborde.
+ */
+function objectiveOps(o: NonNullable<ShareCard["objective"]>, accent: string, w: number, m: Measure, p: SharePalette): { ops: DrawOp[]; bottom: number } {
+  const ops: DrawOp[] = [];
+  const y0 = BAND + 22;
+  const h = 36;
+  const pf = data(19, 0);
+  const pill = fitLine(o.countdown.toLocaleUpperCase("fr-FR"), { ...pf, weight: 500 }, w * 0.34, m);
+  const pillW = m(pill.text, pill.font) + 24;
+  ops.push({ t: "rect", x: PAD, y: y0, w: pillW, h, r: 10, fill: accent });
+  ops.push({ t: "text", x: PAD + pillW / 2, y: y0 + h / 2 + pill.font.size * 0.36, text: pill.text, font: pill.font, color: p.onAccent, align: "center" });
+  const df = caps(13, 1.5);
+  const dateText = o.date ? o.date.toLocaleUpperCase("fr-FR") : "";
+  const date = dateText ? fitLine(dateText, df, w * 0.3, m) : null;
+  const dateW = date ? m(date.text, date.font) : 0;
+  if (date) ops.push({ t: "text", x: CARD_W - PAD, y: y0 + h / 2 + 4.5, text: date.text, font: date.font, color: p.tx2, align: "right" });
+  const tx0 = PAD + pillW + 14;
+  const textW = Math.max(40, w - pillW - 14 - (dateW ? dateW + 14 : 0));
+  const lf = caps(11.5, 2);
+  ops.push({ t: "text", x: tx0, y: y0 + 13, text: fitLine("OBJECTIF", lf, textW, m).text, font: lf, color: p.tx2, align: "left" });
+  const name = fitLine(o.name.toLocaleUpperCase("fr-FR"), caps(16, 1.4), textW, m);
+  ops.push({ t: "text", x: tx0, y: y0 + h - 1, text: name.text, font: name.font, color: p.tx, align: "left" });
+  const bottom = y0 + h + 14;
+  ops.push({ t: "rect", x: PAD, y: bottom, w, h: 1, r: 0, fill: p.brd });
+  return { ops, bottom };
+}
+
 function headerOps(card: ShareCard, m: Measure, p: SharePalette): Box {
   const w = CARD_W - PAD * 2;
   const ops: DrawOp[] = [{ t: "rect", x: 0, y: 0, w: CARD_W, h: BAND, r: 0, fill: card.accent }];
   const kf = caps(13, 2.2);
-  const kickerY = BAND + 40;
+  let kickerY = BAND + 40;
+  if (card.objective) {
+    const o = objectiveOps(card.objective, card.accent, w, m, p);
+    ops.push(...o.ops);
+    kickerY = o.bottom + 34;
+  }
   const whoText = card.who?.toLocaleUpperCase("fr-FR") ?? "";
   const whoW = whoText ? Math.min(m(whoText, kf), w * 0.42) : 0;
   const k = fitLine(card.kicker.toLocaleUpperCase("fr-FR"), kf, w - (whoW ? whoW + 14 : 0), m);

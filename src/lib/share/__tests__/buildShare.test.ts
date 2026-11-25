@@ -3,7 +3,7 @@ import type { ExerciceParams } from "@/features/coach/components/programmation/t
 import type { EnergyStep } from "@/types/energy";
 import { buildMuscuShare, sessionRecords, setLabel, setsSummary, type MuscuShareInput } from "../buildMuscuShare";
 import { buildEnergyShare, type EnergyShareInput } from "../buildEnergyShare";
-import { coachLabel, DEFAULT_SHARE_OPTIONS, firstNameOf, shareDayLabel, type ShareCard } from "../sessionShare";
+import { coachLabel, DEFAULT_SHARE_OPTIONS, defaultObjectiveId, firstNameOf, objectiveChoices, shareDayLabel, shareObjective, type ShareCard } from "../sessionShare";
 import { CARD_H, CARD_W, layoutShareCard, opBounds, type FontSpec, type Measure } from "../shareLayout";
 
 const measure: Measure = (t: string, f: FontSpec) => Array.from(t).length * f.size * (f.family === "data" ? 0.62 : f.wide ? 0.82 : 0.56) + (f.spacing ?? 0) * Math.max(0, Array.from(t).length - 1);
@@ -237,5 +237,30 @@ describe("sessionRecords", () => {
     ];
     expect(sessionRecords(logs, refs, sets, ["2026-11-25", null])).toEqual({});
     expect(sessionRecords(null, refs, sets, ["2026-11-25"])).toEqual({});
+  });
+});
+
+describe("objectif (compétition visée)", () => {
+  const comps = [
+    { id: "old", name: "Cross", date: "2026-11-01", priority: "A" },
+    { id: "c", name: "Trail", date: "2027-03-01", priority: "C" },
+    { id: "x", name: "Annulée", date: "2026-12-01", priority: "A", cancelled_at: "2026-11-02" },
+    { id: "a", name: "HYROX Paris", date: "2027-05-24", priority: "A" },
+    { id: "multi", name: "Stage", date: "2026-11-24", date_end: "2026-11-26", priority: "B" },
+  ];
+  it("choix : maintenues, pas terminées le jour de la séance, par date ; A proposée d'office", () => {
+    const ch = objectiveChoices(comps, "2026-11-25");
+    expect(ch.map((c) => c.id)).toEqual(["multi", "c", "a"]);
+    expect(defaultObjectiveId(ch)).toBe("a");
+    expect(defaultObjectiveId(ch.filter((c) => c.id !== "a"))).toBe("multi");
+    expect(objectiveChoices(comps, null)).toEqual([]);
+    expect(defaultObjectiveId([])).toBeNull();
+  });
+  it("compte à rebours depuis le jour de la séance", () => {
+    expect(shareObjective(comps[3], "2026-11-25")).toEqual({ countdown: "J-180", name: "HYROX Paris", date: "lun. 24 mai 2027" });
+    expect(shareObjective({ id: "t", name: "Test", date: "2026-11-26" }, "2026-11-25")?.countdown).toBe("J-1");
+    expect(shareObjective(comps[4], "2026-11-25")?.countdown).toBe("Jour J");
+    expect(shareObjective({ id: "t", name: "  ", date: "2026-12-24" }, "2026-11-25")).toEqual({ countdown: "J-29", name: "Compétition", date: "jeu. 24 déc." });
+    expect(shareObjective(comps[0], "2026-11-25")).toBeNull();
   });
 });

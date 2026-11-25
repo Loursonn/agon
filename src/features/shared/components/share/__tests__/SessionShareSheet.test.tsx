@@ -10,6 +10,9 @@ vi.mock("@/features/shared/hooks/useCoCoach", () => ({
   useAthleteCoaches: () => ({ data: { referent: { id: "c", full_name: "Agon Démo" }, coCoach: null } }),
 }));
 
+let comps: unknown[] = [];
+vi.mock("@/features/shared/hooks/useCompetitionList", () => ({ useCompetitionList: () => ({ data: comps }) }));
+
 const { SessionShareSheet } = await import("../SessionShareSheet");
 
 const card = (done: boolean, opts: ShareOptions, people: { athleteFirstName: string | null; coach: string | null }): ShareCard => ({
@@ -59,5 +62,31 @@ describe("SessionShareSheet", () => {
       <SessionShareSheet variants={[{ key: "done", build: () => { throw new Error("boom"); } }]} day={null} onClose={() => {}} />,
     );
     expect(screen.getByText("Aperçu indisponible")).toBeTruthy();
+  });
+
+  it("objectif : éteint par défaut, compétition A proposée, l'athlète en choisit une autre", () => {
+    comps = [
+      { id: "b", name: "Trail des Lacs", date: "2026-12-20", priority: "B" },
+      { id: "a", name: "HYROX Paris", date: "2027-05-24", priority: "A" },
+      { id: "x", name: "Passée", date: "2026-10-01", priority: "A" },
+    ];
+    render(<SessionShareSheet variants={[{ key: "done", build: (o, p) => card(true, o, p) }]} day="2026-11-25" onClose={() => {}} />);
+    const toggle = screen.getByRole("switch", { name: "Mon objectif" });
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+    expect(screen.queryByRole("radiogroup", { name: "Compétition visée" })).toBeNull();
+    fireEvent.click(toggle);
+    const radios = screen.getAllByRole("radio");
+    expect(radios.map((r) => r.textContent)).toEqual(["J-25 · Trail des Lacs", "J-180 · HYROX Paris"]);
+    expect(radios[1].getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(radios[0]);
+    expect(screen.getAllByRole("radio")[0].getAttribute("aria-checked")).toBe("true");
+    comps = [];
+  });
+
+  it("sans compétition à venir : pas d'interrupteur objectif", () => {
+    comps = [{ id: "x", name: "Passée", date: "2026-10-01", priority: "A" }];
+    render(<SessionShareSheet variants={[{ key: "planned", build: (o, p) => card(false, o, p) }]} day="2026-11-25" onClose={() => {}} />);
+    expect(screen.queryByRole("switch", { name: "Mon objectif" })).toBeNull();
+    comps = [];
   });
 });

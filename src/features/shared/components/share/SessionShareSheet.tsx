@@ -3,7 +3,12 @@ import { C, alpha } from "@/lib/theme";
 import { DISPLAY, MONO, buttonStyle } from "@/features/shared/components/seance/seanceUi";
 import { useOptionalAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useAthleteCoaches } from "@/features/shared/hooks/useCoCoach";
-import { coachLabel, DEFAULT_SHARE_OPTIONS, firstNameOf, type ShareCard, type ShareOptions } from "@/lib/share/sessionShare";
+import {
+  coachLabel, DEFAULT_SHARE_OPTIONS, defaultObjectiveId, firstNameOf, objectiveChoices, shareObjective,
+  type ShareCard, type ShareOptions,
+} from "@/lib/share/sessionShare";
+import { useCompetitionList } from "@/features/shared/hooks/useCompetitionList";
+import { localIsoDay } from "@shared/domain/dates";
 import { CARD_H, CARD_W } from "@/lib/share/shareLayout";
 import { drawSessionShare, loadSessionShareFonts, sessionShareBlob, shareFileName } from "./sessionShareCanvas";
 
@@ -44,6 +49,7 @@ export function SessionShareSheet({ variants, initial, day, hasLoads = false, ce
   const athleteId = ctx?.athleteId ?? null;
   const athleteProfile = ctx?.athleteProfile ?? null;
   const { data: coaches } = useAthleteCoaches(athleteId);
+  const { data: competitions } = useCompetitionList(athleteId);
   const [which, setWhich] = useState<"planned" | "done">(
     initial && variants.some((v) => v.key === initial) ? initial : variants[variants.length - 1]?.key ?? "done",
   );
@@ -61,10 +67,25 @@ export function SessionShareSheet({ variants, initial, day, hasLoads = false, ce
     coach: coachLabel(coaches?.referent?.full_name),
   }), [athleteProfile?.first_name, athleteProfile?.full_name, coaches?.referent?.full_name]);
 
+  // Objectif : compte à rebours vers une compétition choisie par l'athlète,
+  // depuis le jour de la séance. Masqué par défaut (Hugo, 25/11).
+  const refDay = day ?? localIsoDay();
+  const choices = useMemo(() => objectiveChoices(competitions, refDay), [competitions, refDay]);
+  const [objectiveOn, setObjectiveOn] = useState(false);
+  const [objectiveId, setObjectiveId] = useState<string | null>(null);
+  const chosen = choices.find((c) => c.id === objectiveId) ?? choices.find((c) => c.id === defaultObjectiveId(choices)) ?? null;
+  const objective = useMemo(
+    () => (objectiveOn && chosen ? shareObjective(chosen, refDay) : null),
+    [objectiveOn, chosen, refDay],
+  );
+
   const variant = variants.find((v) => v.key === which) ?? variants[0];
   const card = useMemo(() => {
-    try { return variant ? variant.build(opts, people) : null; } catch { return null; }
-  }, [variant, opts, people]);
+    try {
+      const c = variant ? variant.build(opts, people) : null;
+      return c ? { ...c, objective } : null;
+    } catch { return null; }
+  }, [variant, opts, people, objective]);
 
   useEffect(() => {
     let alive = true;
@@ -76,7 +97,7 @@ export function SessionShareSheet({ variants, initial, day, hasLoads = false, ce
     const cv = canvasRef.current;
     fileRef.current = null;
     if (!cv || !card || !fontsReady) return;
-    drawSessionShare(cv, card);
+    if (!drawSessionShare(cv, card)) return;
     let alive = true;
     void sessionShareBlob(cv).then((b) => {
       if (alive && b) fileRef.current = new File([b], shareFileName(day), { type: "image/png" });
@@ -196,13 +217,15 @@ export function SessionShareSheet({ variants, initial, day, hasLoads = false, ce
             )}
           </div>
 
-          {visibleToggles.length > 0 && (
+          {(visibleToggles.length > 0 || choices.length > 0) && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
-              {visibleToggles.map((t) => {
-                const on = opts[t.key];
+              {[...visibleToggles.map((t) => ({ key: t.key as string, label: t.label, on: opts[t.key], toggle: () => setOpts((o) => ({ ...o, [t.key]: !o[t.key] })) })),
+                ...(choices.length > 0 ? [{ key: "objective", label: "Mon objectif", on: objectiveOn, toggle: () => setObjectiveOn((v) => !v) }] : []),
+              ].map((t) => {
+                const on = t.on;
                 return (
                   <button key={t.key} type="button" role="switch" aria-checked={on}
-                    onClick={() => setOpts((o) => ({ ...o, [t.key]: !o[t.key] }))}
+                    onClick={t.toggle}
                     style={{
                       minHeight: 36, padding: "0 14px", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", fontSize: 13,
                       display: "inline-flex", alignItems: "center", gap: 7,
@@ -211,6 +234,25 @@ export function SessionShareSheet({ variants, initial, day, hasLoads = false, ce
                     }}>
                     <span aria-hidden style={{ width: 8, height: 8, borderRadius: 4, background: on ? C.ac : "transparent", border: `1px solid ${on ? C.ac : C.tx3}` }} />
                     {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {objectiveOn && choices.length > 1 && (
+            <div role="radiogroup" aria-label="Compétition visée" style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 2, scrollbarWidth: "none" }}>
+              {choices.map((c) => {
+                const on = c.id === chosen?.id;
+                const o = shareObjective(c, refDay);
+                return (
+                  <button key={c.id} type="button" role="radio" aria-checked={on} onClick={() => setObjectiveId(c.id)}
+                    style={{
+                      flex: "none", maxWidth: 220, minHeight: 36, padding: "0 12px", borderRadius: 10, cursor: "pointer", fontFamily: "inherit", fontSize: 12.5,
+                      border: `1px solid ${on ? alpha(C.ac, 0.5) : C.brdL}`, background: on ? alpha(C.ac, 0.12) : "transparent", color: on ? C.tx : C.tx2,
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    }}>
+                    <span style={{ ...MONO, color: on ? C.ac : C.tx3 }}>{o?.countdown}</span> · {c.name}
                   </button>
                 );
               })}

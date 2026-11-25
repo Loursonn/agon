@@ -81,6 +81,8 @@ export interface ShareCard {
   sections: ShareSection[];
   /** Commentaire de l'athlète, cité en bas (retiré si la place manque). */
   quote?: string | null;
+  /** Compte à rebours vers la compétition visée, en tête de story ; `null` = masqué (par défaut). */
+  objective?: ShareObjective | null;
   /** « Hugo T. » ; `null` = coach masqué. */
   coach: string | null;
   /** Coin bas droit (« Ma séance du jour », « 1 record »). */
@@ -135,4 +137,62 @@ export function shareKicker(typeLabel: string, done: boolean, day: string | null
 export function nf(v: number, digits = 1): string {
   const r = Math.round(v * 10 ** digits) / 10 ** digits;
   return r.toLocaleString("fr-FR", { maximumFractionDigits: digits }).replace(/[\u202f\u00a0]/g, " ");
+}
+
+// ── Objectif (compétition visée) ────────────────────────────────────────────
+
+/** Bandeau « J-180 · Objectif HYROX Paris · lun. 24 mai ». */
+export interface ShareObjective {
+  /** « J-180 », « J-1 », « Jour J ». */
+  countdown: string;
+  name: string;
+  /** « lun. 24 mai », « sam. 6 févr. 2027 » si l'année diffère de la séance. */
+  date: string | null;
+}
+
+/** Compétition telle que lue dans `competitions`. */
+export interface ShareCompetition {
+  id: string;
+  name: string;
+  date: string;
+  date_end?: string | null;
+  priority?: string | null;
+  cancelled_at?: string | null;
+}
+
+const isoOf = (d: string | null | undefined) => /^\d{4}-\d{2}-\d{2}/.exec(d ?? "")?.[0] ?? null;
+const utc = (iso: string) => Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10));
+
+/**
+ * Compétitions proposables pour une séance du jour `day` : maintenues, pas
+ * encore terminées ce jour-là, par date croissante.
+ */
+export function objectiveChoices(comps: readonly ShareCompetition[] | null | undefined, day: string | null | undefined): ShareCompetition[] {
+  const d = isoOf(day);
+  if (!d || !comps?.length) return [];
+  return comps
+    .filter((c) => !c.cancelled_at && isoOf(c.date) && (isoOf(c.date_end) ?? isoOf(c.date))! >= d)
+    .slice()
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/** Choix proposé d'office : la prochaine compétition d'importance A, sinon la plus proche. */
+export function defaultObjectiveId(choices: readonly ShareCompetition[]): string | null {
+  return (choices.find((c) => c.priority === "A") ?? choices[0])?.id ?? null;
+}
+
+/** Bandeau d'une compétition vue depuis le jour de la séance. */
+export function shareObjective(comp: ShareCompetition, day: string): ShareObjective | null {
+  const d = isoOf(day);
+  const start = isoOf(comp.date);
+  if (!d || !start) return null;
+  const end = isoOf(comp.date_end) ?? start;
+  if (end < d) return null;
+  const days = Math.round((utc(start) - utc(d)) / 86_400_000);
+  const label = shareDayLabel(start);
+  return {
+    countdown: days <= 0 ? "Jour J" : `J-${days}`,
+    name: comp.name?.trim() || "Compétition",
+    date: label ? (start.slice(0, 4) !== d.slice(0, 4) ? `${label} ${start.slice(0, 4)}` : label) : null,
+  };
 }

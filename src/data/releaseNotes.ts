@@ -53,6 +53,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
           "Musculation faite : les séries réellement faites, les records battus mis en avant en or, l'effort ressenti. Jamais de tonnage ni de durée.",
           "Énergie faite avec une montre : distance, allure de chaque répétition, temps dans les zones. Spécifique : le temps de chaque segment et l'écart au prévu. Sans montre : la séance prévue, cochée.",
           "L'athlète choisit d'afficher ou non son prénom, ses charges et votre nom (prénom + initiale). Tout tient toujours dans l'image, même une séance très longue.",
+          "Option « Mon objectif » : un compte à rebours en haut de l'image vers la compétition choisie (« J-180 · HYROX Paris »), compté depuis le jour de la séance.",
           "L'image est créée sur le téléphone : rien n'est envoyé à Agon.",
         ],
       },

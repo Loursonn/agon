@@ -130,6 +130,22 @@ describe("layoutShareCard : tout rentre", () => {
     for (let i = 1; i < labels.length; i++) expect(labels[i].x0).toBeGreaterThanOrEqual(labels[i - 1].x1);
   });
 
+  it("objectif en tête : pastille J-X, nom et date dans le cadre, contenu décalé", () => {
+    const without = layoutShareCard(card(), measure, P);
+    const out = expectInside(card({ objective: { countdown: "J-180", name: "HYROX Paris", date: "lun. 24 mai" } }));
+    expect(out.ops.some((o) => o.t === "text" && o.text === "J-180")).toBe(true);
+    expect(out.ops.some((o) => o.t === "text" && o.text === "HYROX PARIS")).toBe(true);
+    const kicker = (l: typeof out) => l.ops.find((o) => o.t === "text" && o.text.startsWith("FAITE"));
+    expect(kicker(out)!.y).toBeGreaterThan(kicker(without)!.y);
+  });
+
+  it("objectif au nom démesuré, Jour J, séance très longue : tout tient", () => {
+    expectInside(card({
+      objective: { countdown: "Jour J", name: "Championnats de France élite de cross-country long par équipes ".repeat(3), date: "sam. 6 févr. 2027" },
+      sections: [{ type: "rows", label: "Corps", rows: Array.from({ length: 30 }, (_, i) => row(i, 10)) }],
+    }));
+  });
+
   it("sans prénom, sans coach, sans sections : rien ne casse", () => {
     expectInside(card({ who: null, coach: null, footerRight: null, sections: [], stats: [], meta: null }));
   });
