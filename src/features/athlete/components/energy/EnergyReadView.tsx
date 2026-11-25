@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { ShareIconButton } from "@/features/shared/components/share/SessionShareSheet";
 import { ChevronDown, ChevronLeft, FileText } from "lucide-react";
 import { C, alpha } from "@/lib/theme";
 import { zoneColor } from "@/lib/seance";
@@ -17,7 +18,7 @@ import { tintColor } from "./energyTint";
  * une phrase avec UNE cible en grand, consignes du coach repliées.
  */
 export function EnergyReadView({
-  session, refs, hrZones, badge, onClose, onStart, onNote, onDetail,
+  session, refs, hrZones, badge, onClose, onStart, onNote, onDetail, onShare,
 }: {
   session: EnergySessionRow;
   refs: Refs;
@@ -29,6 +30,7 @@ export function EnergyReadView({
   onStart: () => void;
   onNote: () => void;
   onDetail: () => void;
+  onShare?: () => void;
 }) {
   const steps = useMemo(() => session.intervals ?? [], [session.intervals]);
   const blocks = useMemo(() => readBlocks(steps, refs, { hrZones }), [steps, refs, hrZones]);
@@ -50,6 +52,7 @@ export function EnergyReadView({
         }}><ChevronLeft size={16} color={C.tx} /></button>
         <span style={{ ...KICKER, flex: 1, minWidth: 0 }}>Séance d'énergie</span>
         {badge}
+        {onShare && <ShareIconButton onClick={onShare} />}
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", padding: "0 18px 24px", display: "flex", flexDirection: "column", gap: 14 }}>

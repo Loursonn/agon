@@ -26,6 +26,8 @@ import type { IsoDay } from "@shared/domain/dates";
 import { SessionPainQuestion } from "@/features/athlete/components/session/SessionPainQuestion";
 import { useSaveSessionPain } from "@/features/shared/hooks/useSessionPain";
 import { EMPTY_SESSION_PAIN, sessionPainPayload, type SessionPainAnswer } from "@/lib/sessionPain";
+import { EnergyShareSheet, type EnergyShareDone } from "@/features/athlete/components/energy/EnergyShareSheet";
+import { parseKm } from "@/features/shared/components/runDistance";
 
 export function EnergyPreviewOverlay({
   event,
@@ -54,6 +56,8 @@ export function EnergyPreviewOverlay({
   const savePain                        = useSaveSessionPain();
   // Minutes mesurées par le minuteur (null : durée préremplie avec le prévu).
   const [timerMin, setTimerMin]         = useState<number | null>(null);
+  // Partage en story : « celebrate » = juste après le RPE de fin de séance.
+  const [share, setShare]               = useState<null | "plain" | "celebrate">(null);
 
   const { data: session, isLoading, isError } = useEnergySession(sessionId);
   const { data: refs } = useAthleteReferences(athleteId);
@@ -172,6 +176,34 @@ export function EnergyPreviewOverlay({
   }
   if (!session) return null;
 
+  // ── Partage en story ───────────────────────────────────────────────────────
+  if (share) {
+    const raw = (event.raw ?? {}) as Record<string, unknown>;
+    const numOrNull = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+    const justDone = share === "celebrate";
+    const durationMin = justDone ? parseInt(actualDuration, 10) : numOrNull(raw.actual_duration_min);
+    const done: EnergyShareDone | null = justDone || isCompleted ? {
+      rpe: justDone ? rpeSelected : numOrNull(raw.rpe_score),
+      durationMin: durationMin != null && Number.isFinite(durationMin) ? durationMin : null,
+      distanceKm: justDone ? (runDist.activity === "course" ? parseKm(runDist.km) : null) : numOrNull(raw.distance_km),
+      blockLogs: justDone ? (isComplex ? localBlocks : null) : ((raw.block_logs ?? null) as BlockLogs | null),
+      comment: justDone ? globalNote || null : (typeof raw.notes === "string" ? raw.notes : null),
+    } : null;
+    return (
+      <EnergyShareSheet
+        session={session}
+        refs={refs}
+        day={event.date ?? null}
+        athleteId={athleteId}
+        completed={isCompleted || justDone}
+        done={done}
+        activity={watchActivity}
+        celebrate={justDone}
+        onClose={() => { setShare(null); if (justDone) onClose(); }}
+      />
+    );
+  }
+
   // ── Phase RPE ──────────────────────────────────────────────────────────────
   if (phase === "rpe" || complete.isSuccess) {
     const painPayload = sessionPainPayload(pain);
@@ -179,9 +211,9 @@ export function EnergyPreviewOverlay({
     const save = () => {
       if (painPayload) savePain.mutate({ target: { kind: "energy", id: assignmentId }, athleteId, ...painPayload });
       if (rpeSelected != null)
-        upsertRpe.mutate({ id: assignmentId, athleteId, rpe_score: rpeSelected }, { onSettled: onClose });
+        upsertRpe.mutate({ id: assignmentId, athleteId, rpe_score: rpeSelected }, { onSettled: () => setShare("celebrate") });
       else
-        onClose();
+        setShare("celebrate");
     };
     return (
       <>
@@ -227,7 +259,7 @@ export function EnergyPreviewOverlay({
               fontFamily: "inherit",
             }}
           >{upsertRpe.isPending ? "Enregistrement…" : "Enregistrer"}</button>
-          <button onClick={onClose} style={{
+          <button onClick={() => setShare("celebrate")} style={{
             width: "100%", marginTop: 12, padding: "10px 0", border: "none",
             background: "transparent", color: C.tx3, fontSize: 13, cursor: "pointer", fontFamily: "inherit",
           }}>Passer</button>
@@ -293,6 +325,7 @@ export function EnergyPreviewOverlay({
         onNote={!isCompleted ? () => setPhase("log") : undefined}
         onLaps={() => navigate(`/athlete/program/activity/${watchActivity.id}`)}
         onDetail={() => setShowDetail(true)}
+        onShare={() => setShare("plain")}
       />
     );
   }
@@ -308,6 +341,7 @@ export function EnergyPreviewOverlay({
         onStart={() => setPhase("run")}
         onNote={() => setPhase("log")}
         onDetail={() => setShowDetail(true)}
+        onShare={() => setShare("plain")}
       />
     );
   }
@@ -318,6 +352,7 @@ export function EnergyPreviewOverlay({
       onClose={readable || (energyKind && watchActivity) ? () => setShowDetail(false) : onClose}
       onValidate={!isCompleted ? () => setPhase("log") : undefined}
       onUnvalidate={isCompleted ? handleUnvalidate : undefined}
+      onShare={() => setShare("plain")}
     />
   );
 }

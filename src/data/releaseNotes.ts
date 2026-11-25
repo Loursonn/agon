@@ -38,6 +38,27 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-25-partage-seance-story",
+    date: "2026-11-25",
+    kind: "feature",
+    title: "Vos athlètes partagent leur séance en story, avec votre nom",
+    summary:
+      "Une image au format story (Instagram, WhatsApp, Messages) de la séance prévue ou faite, signée discrètement « Programmé par » et votre prénom.",
+    sections: [
+      {
+        title: "Ce qui change pour vos athlètes",
+        points: [
+          "À la fin d'une séance, après la note d'effort, un écran « Bravo ! » propose de partager la séance. « Plus tard » ferme sans rien partager.",
+          "Le bouton partager est aussi en haut de chaque séance, prévue ou faite : musculation, énergie et spécifique (HYROX, WOD).",
+          "Musculation faite : les séries réellement faites, les records battus mis en avant en or, l'effort ressenti. Jamais de tonnage ni de durée.",
+          "Énergie faite avec une montre : distance, allure de chaque répétition, temps dans les zones. Spécifique : le temps de chaque segment et l'écart au prévu. Sans montre : la séance prévue, cochée.",
+          "L'athlète choisit d'afficher ou non son prénom, ses charges et votre nom (prénom + initiale). Tout tient toujours dans l'image, même une séance très longue.",
+          "L'image est créée sur le téléphone : rien n'est envoyé à Agon.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-22-icone-video-exercice",
     date: "2026-11-22",
     kind: "fix",
