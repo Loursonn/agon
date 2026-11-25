@@ -1,5 +1,6 @@
 import { C } from "@/lib/theme";
 import { EnergyActiveSession } from "@/features/athlete/components/program/EnergyActiveSession";
+import { ShareSessionLauncher } from "@/features/athlete/components/share/ShareSessionButton";
 import { SessionPreviewModal } from "@/features/coach/components/energy/SessionPreviewModal";
 import type { StepState } from "@/features/athlete/components/program/programTypes";
 import { useEnergySession } from "@/features/shared/hooks/useEnergySessions";
@@ -28,6 +29,8 @@ export function EnergyPreviewOverlay({
   const { data: session, isLoading, isError } = useEnergySession(energySessionId);
   const [isNowToday,    setIsNowToday]    = useState(scheduledDate === today);
   const [sessionActive, setSessionActive] = useState(false);
+  // Partage en story (séance prévue ou faite), comme partout ailleurs.
+  const [sharing, setSharing] = useState(false);
 
   if (!energySessionId || isError || (!isLoading && !session)) return (
     <>
@@ -93,13 +96,17 @@ export function EnergyPreviewOverlay({
     : undefined;
 
   return (
-    <SessionPreviewModal
-      session={session}
-      athleteId={athleteId}
-      onClose={onClose}
-      onStart={onStartFn}
-      startLabel={startLabel}
-      onCancel={isCompleted ? onCancel : undefined}
-    />
+    <>
+      <SessionPreviewModal
+        session={session}
+        athleteId={athleteId}
+        onClose={onClose}
+        onStart={onStartFn}
+        startLabel={startLabel}
+        onCancel={isCompleted ? onCancel : undefined}
+        onShare={() => setSharing(true)}
+      />
+      {sharing && <ShareSessionLauncher target={{ kind: "energy", id: assignmentId }} onClose={() => setSharing(false)} />}
+    </>
   );
 }

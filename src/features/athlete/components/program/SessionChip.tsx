@@ -1,3 +1,4 @@
+import { ShareSessionButton } from "@/features/athlete/components/share/ShareSessionButton";
 import { C } from "@/lib/theme";
 import { DOW_SHORT_FR, ENERGY_KIND_LABEL } from "@/features/athlete/components/program/programConstants";
 import { ProgramSessionCard } from "@/features/athlete/components/program/ProgramSessionCard";
@@ -45,6 +46,7 @@ export function SessionChip({
       statusColor={isMissed ? C.tx3 : TYPE_COLOR.hyrox}
       highlight={isToday && canAct}
       onPress={() => { haptic(); onPress(session); }}
+      share={<ShareSessionButton target={{ kind: session.kind, id: session.id }} />}
       onStart={canAct && isToday && session.kind === "workout" && onStart ? () => { haptic(); onStart(session); } : undefined}
       onMenu={(canAct || isMissed) && onReschedule ? () => { haptic(); onReschedule(session); } : undefined}
     />

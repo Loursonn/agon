@@ -1,3 +1,4 @@
+import { ShareSessionButton, ShareSessionLauncher, type ShareTarget } from "@/features/athlete/components/share/ShareSessionButton";
 import { AllCompetitionsSheet } from "@/features/athlete/components/AllCompetitionsSheet";
 import { AthletePageHeader } from "@/features/athlete/components/AthletePageHeader";
 import { C } from "@/lib/theme";
@@ -74,6 +75,8 @@ export default function TodayPage() {
   const [activityDate, setActivityDate] = useState<string | null>(null);
   const [editActivity, setEditActivity] = useState<FreeSession | null>(null);
   const [energyPreview, setEnergyPreview] = useState<UnifiedCalendarEvent | null>(null);
+  // Partage en story ouvert depuis l'aperçu du jour (le tiroir se ferme avant).
+  const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null);
   const [fbExpanded, setFbExpanded] = useState(false);
   const [confirmDelEvt, setConfirmDelEvt] = useState<string | null>(null);
   const [showOtherSessions, setShowOtherSessions] = useState(false);
@@ -562,6 +565,21 @@ export default function TodayPage() {
                     {totalToday > 1 ? "Séances terminées" : "Séance terminée"}
                   </div>
                   <div className="mt-1 text-[13px] text-agon-tx3">Bien joué, récupère bien.</div>
+                  {/* Partage en story de chaque séance faite du jour. */}
+                  <div className="mt-3 flex flex-col gap-2 text-left">
+                    {workouts.filter((w) => w.workoutLogId).map((w) => (
+                      <div key={w.session.id} className="flex items-center gap-2.5 rounded-[10px] border border-agon-brd bg-agon-bg/[0.35] py-1.5 pl-3 pr-1.5">
+                        <span className="min-w-0 flex-1 truncate text-[13px] text-agon-tx">{w.session.name}</span>
+                        <ShareSessionButton target={{ kind: "workout", id: w.workoutLogId! }} />
+                      </div>
+                    ))}
+                    {todayEnergySessions.map((ev) => (
+                      <div key={ev.id} className="flex items-center gap-2.5 rounded-[10px] border border-agon-brd bg-agon-bg/[0.35] py-1.5 pl-3 pr-1.5">
+                        <span className="min-w-0 flex-1 truncate text-[13px] text-agon-tx">{ev.title}</span>
+                        <ShareSessionButton target={{ kind: "energy", id: ev.id }} />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <>
@@ -576,6 +594,7 @@ export default function TodayPage() {
                       defaultOpen={wi === 0 && pendingWorkouts.length + pendingEnergy.length === 1}
                       extra={w.workoutLogId ? <TodayWorkoutFiches workoutLogId={w.workoutLogId} athleteId={athleteId} /> : undefined}
                       badge={<WatchPushBadge athleteId={athleteId} kind="strength" sourceId={w.workoutLogId} />}
+                      share={w.workoutLogId ? <ShareSessionButton target={{ kind: "workout", id: w.workoutLogId }} size={36} /> : undefined}
                       onDetail={todayDay ? () => { setSelectedDay(todayDay); haptic(); } : undefined}
                       onStart={viewOnly || !w.workoutLogId ? undefined : () => { haptic(); navigate("/athlete/program/workout/" + w.workoutLogId); }}
                     />
@@ -592,6 +611,7 @@ export default function TodayPage() {
                         title={ev.title}
                         onDetail={open}
                         badge={<WatchPushBadge athleteId={athleteId} kind="energy" sourceId={ev.id} />}
+                        share={<ShareSessionButton target={{ kind: "energy", id: ev.id }} size={36} />}
                       />
                     );
                   })}
@@ -849,6 +869,7 @@ export default function TodayPage() {
         freeSessions={freeSessions}
         energyByDate={energyByDate}
         watchByPlanned={watchByPlanned}
+        onShare={setShareTarget}
         onEnergyPreview={(ev) => {
           if (ev.sessionKind === "specifique" && !viewOnly) {
             navigate(`/athlete/specific/${ev.id}`);
@@ -863,6 +884,8 @@ export default function TodayPage() {
         onTestPress={openTest}
         dayTheme={selectedDay ? dayThemesByDate[selectedDay.date] ?? null : null}
       />
+
+      {shareTarget && <ShareSessionLauncher target={shareTarget} onClose={() => setShareTarget(null)} />}
 
       {/* Energy session preview overlay */}
       {energyPreview && (

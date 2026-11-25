@@ -1,3 +1,4 @@
+import { ShareSessionButton } from "@/features/athlete/components/share/ShareSessionButton";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import type { WeekSession } from "@/features/shared/hooks/useActivePlan";
 import { formatClusterReps } from "@/features/coach/components/programmation/clusterFormat";
@@ -15,12 +16,15 @@ export function WorkoutPreviewDrawer({
   today,
   onStart,
   onReschedule,
+  onShare,
   onClose,
 }: {
   session: WeekSession;
   today: string;
   onStart?: () => void;
   onReschedule: () => void;
+  /** Partage en story : le tiroir se ferme, la page ouvre le partage. */
+  onShare: () => void;
   onClose: () => void;
 }) {
   const workout = useWorkoutSession(session.id);
@@ -30,10 +34,11 @@ export function WorkoutPreviewDrawer({
   return (
     <Drawer open onOpenChange={(v) => !v && onClose()}>
       <DrawerContent className="flex max-h-[86vh] flex-col border-t-agon-brd bg-agon-s1 p-0">
-        <DrawerHeader className="shrink-0 px-5 pb-2 pt-4">
-          <DrawerTitle className="text-[17px] font-semibold leading-none text-agon-tx">
+        <DrawerHeader className="flex shrink-0 flex-row items-center gap-3 space-y-0 px-5 pb-2 pt-4">
+          <DrawerTitle className="min-w-0 flex-1 text-[17px] font-semibold leading-tight text-agon-tx">
             {session.sessionName}
           </DrawerTitle>
+          <ShareSessionButton target={{ kind: "workout", id: session.id }} onOpen={onShare} />
         </DrawerHeader>
 
         {/* Blocs — scrollable */}

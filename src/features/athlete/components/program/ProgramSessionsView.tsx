@@ -16,6 +16,7 @@ import { RescheduleSheet } from "@/features/athlete/components/program/Reschedul
 import { TYPE_COLOR, TYPE_LABEL } from "@/lib/peps";
 import { TestEntryPage } from "@/features/athlete/components/TestEntryPage";
 import { WEEK_NAV_BTN } from "@/features/athlete/components/program/programConstants";
+import { ShareSessionLauncher, type ShareTarget } from "@/features/athlete/components/share/ShareSessionButton";
 import { type WeekSession, useActivePlan } from "@/features/shared/hooks/useActivePlan";
 import { WorkoutPreviewDrawer } from "@/features/athlete/components/program/WorkoutPreviewDrawer";
 import { cn } from "@/lib/utils";
@@ -48,6 +49,7 @@ export function ProgramSessionsView() {
   const { data, isLoading, isPlaceholderData } = useActivePlan(athleteId ?? "", weekOffset);
 
   const [workoutPreview,   setWorkoutPreview]   = useState<WeekSession | null>(null);
+  const [shareTarget,      setShareTarget]      = useState<ShareTarget | null>(null);
   const [energyPreview,    setEnergyPreview]    = useState<{ sessionId: string; assignmentId: string; status: string; scheduledDate: string } | null>(null);
   const [rescheduleTarget, setRescheduleTarget] = useState<WeekSession | null>(null);
   const [testPreviewId,    setTestPreviewId]    = useState<string | null>(null);
@@ -295,9 +297,12 @@ export function ProgramSessionsView() {
             navigate("/athlete/program/workout/" + workoutPreview.id);
           })}
           onReschedule={() => { setRescheduleTarget(workoutPreview); setWorkoutPreview(null); }}
+          onShare={() => { setShareTarget({ kind: "workout", id: workoutPreview.id }); setWorkoutPreview(null); }}
           onClose={() => setWorkoutPreview(null)}
         />
       )}
+
+      {shareTarget && <ShareSessionLauncher target={shareTarget} onClose={() => setShareTarget(null)} />}
 
       {/* Energy preview overlay */}
       {energyPreview && (

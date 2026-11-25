@@ -117,6 +117,8 @@ export const energyKeys = {
   library: (ownerId: string, filters?: EnergySessionFilters) => ["energy", ownerId, "library", filters ?? {}] as const,
   libraryAll: (ownerId: string) => ["energy", ownerId, "library"] as const,
   session: (ownerId: string, id: string) => ["energy", ownerId, "session", id] as const,
+  /** Une séance programmée (préfixe athlète : couverte par invalidateEnergy). */
+  assignment: (aid: string, id: string) => ["energy", aid, "assignment", id] as const,
 };
 
 // ── Lectures : séances programmées ────────────────────────────────────────────
