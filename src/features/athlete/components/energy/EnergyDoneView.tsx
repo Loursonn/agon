@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { ShareIconButton } from "@/features/shared/components/share/SessionShareSheet";
 import { Check, ChevronLeft, ChevronRight, Watch } from "lucide-react";
 import { C } from "@/lib/theme";
 import { TYPE_COLOR } from "@/lib/peps";
@@ -19,7 +20,7 @@ const COLS = "minmax(0, 1.1fr) minmax(0, 0.9fr) minmax(0, 1.1fr)";
  * Toute donnée de montre porte son attribution (« Garmin Forerunner 265 »).
  */
 export function EnergyDoneView({
-  session, refs, activity, isCompleted, onClose, onNote, onLaps, onDetail,
+  session, refs, activity, isCompleted, onClose, onNote, onLaps, onDetail, onShare,
 }: {
   session: EnergySessionRow;
   refs: Refs;
@@ -29,6 +30,7 @@ export function EnergyDoneView({
   onNote?: () => void;
   onLaps: () => void;
   onDetail: () => void;
+  onShare?: () => void;
 }) {
   const plannedS = useMemo(
     () => session.total_duration_s ?? readBlocks(session.intervals ?? [], refs).reduce((a, b) => a + b.durationS, 0),
@@ -52,6 +54,7 @@ export function EnergyDoneView({
           display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none",
         }}><ChevronLeft size={16} color={C.tx} /></button>
         <span style={{ ...KICKER, flex: 1 }}>Séance d'énergie</span>
+        {onShare && <ShareIconButton onClick={onShare} />}
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", padding: "0 18px 24px", display: "flex", flexDirection: "column", gap: 12 }}>

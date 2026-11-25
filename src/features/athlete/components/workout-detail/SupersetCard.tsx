@@ -1,3 +1,4 @@
+import { Play } from "lucide-react";
 import { MONO } from "@/features/shared/components/seance/seanceUi";
 import { ACCENT, SS_LETTERS, SS_ORANGE } from "@/features/athlete/components/workout-detail/workoutDetailConstants";
 import { BadgeTag } from "@/features/athlete/components/workout-detail/BadgeTag";
@@ -123,6 +124,7 @@ export function SupersetCard({
                   <button
                     onClick={m.onShowVideo}
                     title="Voir la vidéo de l'exercice"
+                    aria-label="Voir la vidéo de l'exercice"
                     style={{
                       width: 20, height: 20, borderRadius: 6, flexShrink: 0,
                       border: `1px solid ${hexToRgba(ACCENT, 0.4)}`,
@@ -131,7 +133,9 @@ export function SupersetCard({
                       display: "inline-flex", alignItems: "center", justifyContent: "center",
                       padding: 0,
                     }}
-                  ></button>
+                  >
+                    <Play size={10} fill="currentColor" strokeWidth={0} aria-hidden />
+                  </button>
                 )}
                 <span style={{ flexShrink: 0 }}>
                   <BadgeTag label={m.prescription} color={ACCENT} />

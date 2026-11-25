@@ -38,6 +38,9 @@ import { ClassiqueBlockPreview } from "@/features/athlete/components/specific/Cl
 import { WodBlockPreview } from "@/features/athlete/components/specific/WodBlockPreview";
 import { ClassiqueBlockExecution, WodBlockExecution } from "@/features/athlete/components/specific/ClassiqueBlockExecution";
 import { FicheLinks } from "@/features/shared/components/fiches/FicheLinks";
+import { ShareIconButton } from "@/features/shared/components/share/SessionShareSheet";
+import { EnergyShareSheet, type EnergyShareDone } from "@/features/athlete/components/energy/EnergyShareSheet";
+import { parseKm } from "@/features/shared/components/runDistance";
 
 
 // ── Main page ───────────────────────────────────────────────────────────────
@@ -66,6 +69,8 @@ export default function SpecificExecutionPage() {
 
   // Format WOD : le minuteur parcourt session.intervals.
   // Format classique : le minuteur parcourt le bloc WOD lancé (« Minuteur »).
+  // Partage en story : « just » = saisie de fin de séance, avant le retour à l'accueil.
+  const [share, setShare] = useState<null | { celebrate: boolean; done: EnergyShareDone | null }>(null);
   const [wodBlockId, setWodBlockId] = useState<string | null>(null);
   const [wodDone, setWodDone] = useState<Set<string>>(() => new Set());
   const allIntervals: EnergyStep[] = useMemo(() => {
@@ -218,7 +223,17 @@ export default function SpecificExecutionPage() {
       const painPayload = sessionPainPayload(data.pain);
       if (painPayload) savePain.mutate({ target: { kind: "energy", id: assignment.id }, athleteId: user.id, ...painPayload });
       // Envoyée ou gardée sur le téléphone : la séance est enregistrée.
-      navigate("/athlete");
+      // Étape « Bravo / Partager » avant le retour à l'accueil.
+      setShare({
+        celebrate: true,
+        done: {
+          rpe: data.rpe ?? null,
+          durationMin: dur ?? null,
+          distanceKm: runDist.activity === "course" ? parseKm(runDist.km) : null,
+          blockLogs: isClassique ? blockLogsOut : null,
+          comment: data.comment?.trim() || null,
+        },
+      });
     } catch { /* Error handled by mutation toast */ }
   }
 
@@ -230,13 +245,25 @@ export default function SpecificExecutionPage() {
   return (
     <div className="min-h-screen bg-agon-bg px-agon-lg pb-6 pt-5 font-ui text-agon-tx lg:px-agon-2xl lg:pt-agon-xl">
       <div className="mx-auto w-full max-w-[480px] lg:max-w-5xl">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="mb-agon-sm min-h-10 text-agon-base text-agon-tx2"
-        >
-          ← Retour
-        </button>
+        <div className="mb-agon-sm flex items-center justify-between gap-agon-sm">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="min-h-10 text-agon-base text-agon-tx2"
+          >
+            ← Retour
+          </button>
+          <ShareIconButton onClick={() => setShare({
+            celebrate: false,
+            done: assignment.status === "completed" ? {
+              rpe: assignment.rpe_score ?? null,
+              durationMin: assignment.actual_duration_min ?? null,
+              distanceKm: null,
+              blockLogs: assignment.block_logs ?? null,
+              comment: assignment.notes ?? null,
+            } : null,
+          })} />
+        </div>
 
         <h1 className={cn("font-display text-agon-2xl font-bold", isClassique ? "mb-agon-xs" : "mb-agon-sm")}>{sessionName}</h1>
         {isClassique && <div className="mb-agon-sm text-agon-sm text-agon-tx2">{typeLabel} · Format classique</div>}
@@ -360,6 +387,24 @@ export default function SpecificExecutionPage() {
           </div>
         )}
       </div>
+
+      {share && user && (
+        <EnergyShareSheet
+          session={session}
+          refs={refs}
+          day={assignment.scheduled_date ?? null}
+          athleteId={user.id}
+          completed={share.celebrate || assignment.status === "completed"}
+          done={share.done}
+          activity={null}
+          celebrate={share.celebrate}
+          onClose={() => {
+            const leave = share.celebrate;
+            setShare(null);
+            if (leave) navigate("/athlete");
+          }}
+        />
+      )}
     </div>
   );
 }

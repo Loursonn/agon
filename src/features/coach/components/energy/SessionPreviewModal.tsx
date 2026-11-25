@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ShareIconButton } from "@/features/shared/components/share/SessionShareSheet";
 import { X, Zap } from "lucide-react";
 import { C, H } from "@/lib/theme";
 import SessionPreview from "./SessionPreview";
@@ -243,10 +244,12 @@ interface SessionPreviewModalProps {
   onValidate?: () => void;
   /** If provided (athlete view, already completed), shows "Dévalider" button */
   onUnvalidate?: () => void;
+  /** Athlète : « Partager ma séance » (story). */
+  onShare?: () => void;
   onClose: () => void;
 }
 
-export function SessionPreviewModal({ session, athleteId, onEdit, onStart, startLabel, onCancel, onValidate, onUnvalidate, onClose }: SessionPreviewModalProps) {
+export function SessionPreviewModal({ session, athleteId, onEdit, onStart, startLabel, onCancel, onValidate, onUnvalidate, onShare, onClose }: SessionPreviewModalProps) {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const kc = KIND_COLOR[session.session_kind] ?? H.gris;
   const rootGroup = buildRootGroup(session);
@@ -295,6 +298,7 @@ export function SessionPreviewModal({ session, athleteId, onEdit, onStart, start
               {session.is_verified && <span style={{ fontSize: 9, color: C.g, fontWeight: 700 }}>✓ vérifiée</span>}
             </div>
           </div>
+          {onShare && <ShareIconButton onClick={onShare} size={28} />}
           <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 7, border: "1px solid " + C.brdL, background: "transparent", color: C.tx3, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <X size={13} />
           </button>

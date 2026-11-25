@@ -42,7 +42,9 @@ import { useAthleteContext } from "@/features/shared/context/AthleteContext";
 import { useExerciseVideos } from "@/features/shared/hooks/useExerciseVideos";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { usePRsByRef, useRecordLinks } from "@/features/shared/hooks/usePRLogs";
+import { usePRLogs, usePRsByRef, useRecordLinks } from "@/features/shared/hooks/usePRLogs";
+import { MuscuShareSheet } from "@/features/athlete/components/workout-detail/MuscuShareSheet";
+import { ShareIconButton } from "@/features/shared/components/share/SessionShareSheet";
 import { usePrevWorkoutSets } from "@/features/shared/hooks/usePrevWorkoutSets";
 import { useSaveWorkoutSets } from "@/features/shared/hooks/useSaveWorkoutSets";
 
@@ -75,6 +77,8 @@ export default function WorkoutDetailPage() {
   const [restActiveKey, setRestActiveKey] = useState<string | null>(null);
   const [showFinish, setShowFinish] = useState(false);
   const [showRpe, setShowRpe] = useState(false);
+  // Partage en story : « celebrate » = juste après le RPE de fin de séance.
+  const [share, setShare] = useState<null | "plain" | "celebrate">(null);
   const [videoModal, setVideoModal] = useState<{ name: string; ytId: string } | null>(null);
   const [elapsed, setElapsed] = useState(() => {
     // Recover elapsed from persisted startedAt
@@ -121,6 +125,8 @@ export default function WorkoutDetailPage() {
 
   // ── Records : 1RM pour convertir les %RM, références pour les nouveaux records ──
   const { bestByRef } = usePRsByRef(athleteId);
+  // Même requête (cache partagé) : records datés de la séance pour la story.
+  const { data: prLogs } = usePRLogs(athleteId);
   const { data: recordLinks } = useRecordLinks(athleteId);
   const recordRefByEx = useMemo(() => {
     const out: Record<string, string | null> = {};
@@ -1004,6 +1010,10 @@ export default function WorkoutDetailPage() {
             )}
           </div>
 
+          {workout.workoutLogId && blocs.length > 0 && (
+            <ShareIconButton onClick={() => setShare("plain")} size={32} />
+          )}
+
           {/* Timer or "completed" badge */}
           {!isCompleted ? (
             <div
@@ -1792,7 +1802,31 @@ export default function WorkoutDetailPage() {
           workoutLogId={workout.workoutLogId}
           onClose={() => {
             setShowRpe(false);
-            navigate(-1);
+            // Étape « Bravo / Partager » avant de quitter la séance.
+            setShare("celebrate");
+          }}
+        />
+      )}
+
+      {/* ── Partage en story ── */}
+      {share && (
+        <MuscuShareSheet
+          title={workout.sessionName}
+          day={workout.scheduledDate}
+          weekNumber={workout.weekNumber}
+          blocs={blocs}
+          sets={sets}
+          completed={isCompleted || share === "celebrate"}
+          rpe={workout.rpeScore}
+          comment={(setsInit ? localMods.sessionComment : workout.athleteModifications?.sessionComment) ?? null}
+          oneRmByEx={oneRmByEx}
+          recordRefByEx={recordRefByEx}
+          prLogs={prLogs}
+          celebrate={share === "celebrate"}
+          onClose={() => {
+            const leave = share === "celebrate";
+            setShare(null);
+            if (leave) navigate(-1);
           }}
         />
       )}

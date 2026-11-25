@@ -38,6 +38,44 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: "2026-11-25-partage-seance-story",
+    date: "2026-11-25",
+    kind: "feature",
+    title: "Vos athlètes partagent leur séance en story, avec votre nom",
+    summary:
+      "Une image au format story (Instagram, WhatsApp, Messages) de la séance prévue ou faite, signée discrètement « Programmé par » et votre prénom.",
+    sections: [
+      {
+        title: "Ce qui change pour vos athlètes",
+        points: [
+          "À la fin d'une séance, après la note d'effort, un écran « Bravo ! » propose de partager la séance. « Plus tard » ferme sans rien partager.",
+          "Le bouton partager est aussi en haut de chaque séance, prévue ou faite : musculation, énergie et spécifique (HYROX, WOD).",
+          "Musculation faite : les séries réellement faites, les records battus mis en avant en or, l'effort ressenti. Jamais de tonnage ni de durée.",
+          "Énergie faite avec une montre : distance, allure de chaque répétition, temps dans les zones. Spécifique : le temps de chaque segment et l'écart au prévu. Sans montre : la séance prévue, cochée.",
+          "L'athlète choisit d'afficher ou non son prénom, ses charges et votre nom (prénom + initiale). Tout tient toujours dans l'image, même une séance très longue.",
+          "Option « Mon objectif » : un compte à rebours en haut de l'image vers la compétition choisie (« J-180 · HYROX Paris »), compté depuis le jour de la séance.",
+          "L'image est créée sur le téléphone : rien n'est envoyé à Agon.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "2026-11-22-icone-video-exercice",
+    date: "2026-11-22",
+    kind: "fix",
+    title: "Le bouton vidéo d'un exercice se reconnaît enfin",
+    summary:
+      "Quand un exercice de la banque a une vidéo, vos athlètes voient maintenant un bouton lecture ▶ à côté de son nom, au lieu d'un petit carré vide.",
+    sections: [
+      {
+        title: "Ce qui change pour vos athlètes",
+        points: [
+          "Pendant la séance, un bouton ▶ à côté du nom de l'exercice ouvre sa vidéo, superset compris.",
+        ],
+      },
+    ],
+  },
+  {
     id: "2026-11-19-modifier-competition-telephone",
     date: "2026-11-19",
     kind: "feature",

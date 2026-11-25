@@ -11,6 +11,7 @@ import { blocColor } from "@/lib/peps";
 import { hasIso, isAllIso, isIsoAt } from "@/lib/formatSetsReps";
 import { hexToRgba } from "@/features/athlete/components/workout-detail/workoutDetailUtils";
 import { useState } from "react";
+import { Play } from "lucide-react";
 import { DISPLAY, MONO } from "@/features/shared/components/seance/seanceUi";
 
 // ── ExerciceCard ───────────────────────────────────────────────────────────────
@@ -136,6 +137,7 @@ export function ExerciceCard({
             <button
               onClick={onShowVideo}
               title="Voir la vidéo de l'exercice"
+              aria-label="Voir la vidéo de l'exercice"
               style={{
                 width: 24, height: 24, borderRadius: 7, flexShrink: 0,
                 border: `1px solid ${hexToRgba(ACCENT, 0.4)}`,
@@ -144,7 +146,9 @@ export function ExerciceCard({
                 display: "flex", alignItems: "center", justifyContent: "center",
                 padding: 0,
               }}
-            ></button>
+            >
+              <Play size={12} fill="currentColor" strokeWidth={0} aria-hidden />
+            </button>
           )}
           {doneSets > 0 && (
             <div
